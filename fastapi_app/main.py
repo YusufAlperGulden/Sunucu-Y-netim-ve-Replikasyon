@@ -116,7 +116,7 @@ async def add_node(project_id: int, node: NodeCreate, db: Session = Depends(get_
     # 1. PING (Test Connection)
     is_alive = await test_connection(node.url)
     if not is_alive:
-        return JSONResponse(status_code=400, content={"success": False, "message": "Connection test failed. Sunucuya ulaÅŸÄ±lamÄ±yor veya URL hatalÄ±."})
+        return JSONResponse(status_code=400, content={"success": False, "message": "Connection test failed. Sunucuya ulaşılamıyor veya URL hatalı."})
     
     # 2. SAVE (Vault Encryption)
     db_node = DatabaseNode(project_id=proj.id, role=node.role, name=node.name)
@@ -136,7 +136,7 @@ async def sync_replication(project_id: int, db: Session = Depends(get_db)):
     standby = next((n for n in proj.nodes if n.role.lower() == 'standby'), None)
     
     if not primary or not standby:
-        return JSONResponse(status_code=400, content={"success": False, "message": "Projenizde senkronizasyon iÃ§in en az 1 Primary ve 1 Standby node bulunmalÄ±dÄ±r."})
+        return JSONResponse(status_code=400, content={"success": False, "message": "Projenizde senkronizasyon için en az 1 Primary ve 1 Standby node bulunmalıdır."})
     
     # 3. Setup Logical Replication
     result = await setup_replication(primary.encrypted_url, standby.encrypted_url)
