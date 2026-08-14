@@ -21,6 +21,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const btnOpenNodeModal = document.getElementById('btn-open-node-modal');
     const btnSyncReplication = document.getElementById('btn-sync-replication');
     const btnSubmitNode = document.getElementById('btn-submit-node');
+    const btnEditProjectDetail = document.getElementById('btn-edit-project-detail');
 
     let currentProjectId = null;
 
@@ -128,19 +129,20 @@ document.addEventListener('DOMContentLoaded', () => {
             data.forEach(proj => {
                 const card = document.createElement('div');
                 card.className = 'project-card glass-panel';
-                card.style.position = 'relative'; // For absolute positioning of buttons
                 card.innerHTML = `
-                    <div style="position: absolute; top: 15px; right: 15px; display: flex; gap: 8px; z-index: 2;">
-                        <button class="icon-btn edit-proj-btn" title="Edit Project" data-id="${proj.id}" data-name="${proj.name}" data-desc="${proj.description || ''}">
-                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
-                        </button>
-                        <button class="icon-btn delete-proj-btn" title="Delete Project" data-id="${proj.id}">
-                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color: var(--danger)"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path><line x1="10" y1="11" x2="10" y2="17"></line><line x1="14" y1="11" x2="14" y2="17"></line></svg>
-                        </button>
+                    <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 10px;">
+                        <h3 style="margin: 0; padding-right: 10px; word-break: break-all;">${proj.name}</h3>
+                        <div style="display: flex; gap: 8px; flex-shrink: 0;">
+                            <button class="icon-btn edit-proj-btn" style="padding: 6px; background: rgba(255,255,255,0.05); border-radius: 4px; border: 1px solid var(--border);" title="Edit Project" data-id="${proj.id}" data-name="${proj.name}" data-desc="${proj.description || ''}">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
+                            </button>
+                            <button class="icon-btn delete-proj-btn" style="padding: 6px; background: rgba(255,255,255,0.05); border-radius: 4px; border: 1px solid var(--border);" title="Delete Project" data-id="${proj.id}">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color: var(--danger)"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path><line x1="10" y1="11" x2="10" y2="17"></line><line x1="14" y1="11" x2="14" y2="17"></line></svg>
+                            </button>
+                        </div>
                     </div>
-                    <h3 style="margin-right: 60px;">${proj.name}</h3>
                     <p>${proj.description || 'No description provided'}</p>
-                    <div style="font-size: 0.8rem; color: var(--text-muted);">Nodes: ${proj.nodesCount}</div>
+                    <div style="font-size: 0.8rem; color: var(--text-muted); margin-top: 15px;">Nodes: ${proj.nodesCount}</div>
                 `;
                 card.addEventListener('click', async (e) => {
                     // Ignore clicks on action buttons
@@ -497,6 +499,12 @@ document.addEventListener('DOMContentLoaded', () => {
                 modalEditProj.style.display = 'none';
                 formEditProj.reset();
                 fetchProjects();
+                
+                // Update detail view if it's currently showing the edited project
+                if (currentProjectId == id && detailView && detailView.style.display !== 'none') {
+                    document.getElementById('detail-proj-name').innerText = name;
+                    document.getElementById('detail-proj-desc').innerText = desc || 'No description';
+                }
             } else {
                 alert(res.message || "Failed to update project.");
             }
@@ -588,6 +596,26 @@ document.addEventListener('DOMContentLoaded', () => {
             btnSyncReplication.disabled = false;
         }
     });
+
+    // Button: Edit Project (Detail View)
+    if (btnEditProjectDetail) {
+        btnEditProjectDetail.addEventListener('click', async () => {
+            if (!currentProjectId) return;
+            // Get current project details directly from backend to ensure data is fresh
+            try {
+                const res = await fetch(`/api/projects/${currentProjectId}`);
+                if (res.ok) {
+                    const proj = await res.json();
+                    document.getElementById('edit-proj-id').value = proj.id;
+                    document.getElementById('edit-proj-name').value = proj.name;
+                    document.getElementById('edit-proj-desc').value = proj.description || '';
+                    modalEditProj.style.display = 'flex';
+                }
+            } catch (err) {
+                console.error("Could not fetch project details for edit.");
+            }
+        });
+    }
 
     // Button: Refresh Logs
     const btnRefreshLogs = document.getElementById('btn-refresh-logs');
