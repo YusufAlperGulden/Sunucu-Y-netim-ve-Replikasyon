@@ -1,0 +1,356 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sunucu Yönetim ve Replikasyon</title>
+    <link rel="stylesheet" href="/static/style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+</head>
+<body>
+    <!-- Login Screen Overlay -->
+    <div id="login-screen" class="login-overlay">
+        <div class="login-box glass-panel">
+            <h2 style="text-align: center; margin-bottom: 24px;">Güvenli Giriş</h2>
+            
+            <div class="input-group">
+                <label>Kullanıcı Adı</label>
+                <input type="text" id="login-username" autocomplete="off" spellcheck="false" style="background: rgba(0,0,0,0.2); border-color: rgba(255,255,255,0.05);" />
+            </div>
+            
+            <div class="input-group" style="margin-bottom: 8px;">
+                <label>Uygulama Şifresi</label>
+                <div class="input-wrapper">
+                    <input type="password" id="login-password" style="background: rgba(0,0,0,0.2); border-color: rgba(255,255,255,0.05);" />
+                    <button class="icon-btn toggle-vis-btn" id="login-toggle-vis" title="Göster/Gizle">
+                        <!-- Default: Eye crossed out because password is hidden initially -->
+                        <svg class="eye-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="18" height="18"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"></path><line x1="1" y1="1" x2="23" y2="23"></line></svg>
+                    </button>
+                </div>
+            </div>
+            
+            <div id="caps-warning" style="display: none; color: var(--warning); font-size: 0.85rem; font-weight: 700; margin-bottom: 16px; margin-top: 12px; display: flex; align-items: center; gap: 6px;">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="var(--warning)"><path d="M12 2L1 21h22M12 6l7.53 13H4.47M11 10v4h2v-4m-2 6v2h2v-2"></path></svg> CAPSLOCK: AÇIK
+            </div>
+            
+            <div id="login-error" style="display: none; color: var(--danger); font-size: 0.85rem; font-weight: 600; margin-bottom: 16px; text-align: center;">
+                Kullanıcı adı veya şifre hatalı!
+            </div>
+            
+            <button id="btn-login" class="btn-primary w-100" style="margin-top: 8px; margin-bottom: 16px; background: #3b82f6;">Giriş Yap</button>
+            
+            <p style="text-align: center; font-size: 0.85rem; color: var(--text-main); font-weight: 500;">Hesabınız yok mu? Yeni kayıt oluşturun.</p>
+        </div>
+    </div>
+
+    <!-- Electron Draggable Region -->
+    <div class="app-container">
+        <!-- Sidebar -->
+        <aside class="sidebar glass-panel">
+            <div class="sidebar-header">
+                <h2>Sunucu Yönetim ve Replikasyon</h2>
+                <div style="font-size: 0.8rem; color: var(--text-muted); margin-top: -30px; margin-bottom: 30px;">FastAPI Web Sürümü</div>
+            </div>
+            <nav class="sidebar-nav">
+                <a href="#" data-view="projects-view" class="active">Projects</a>
+                <a href="#" data-view="dashboard-view">Dashboard</a>
+                <a href="#" data-view="audit-logs-view">Audit Logs</a>
+                <a href="#" data-view="settings-view">Settings</a>
+            </nav>
+        </aside>
+
+        <!-- Main Content -->
+        <main class="main-content">
+            
+            <!-- PROJECTS VIEW -->
+            <div id="projects-view" class="view-section">
+                <header class="top-header">
+                    <h1>Projects</h1>
+                    <button class="btn-primary" id="btn-add-project">+ Add Project</button>
+                </header>
+
+                <div class="projects-grid" id="projects-container">
+                    <div class="loading-state">Loading projects...</div>
+                </div>
+
+            <!-- Project Detail View (Hidden by default) -->
+            <div id="project-detail-view" style="display: none;">
+                <button class="btn-close" id="btn-back-projects" style="margin-bottom: 20px;">← Back to Projects</button>
+                <div class="top-header">
+                    <h1 id="detail-proj-name">Project Name</h1>
+                    <div>
+                        <button class="btn-primary" id="btn-open-node-modal">+ Add Node</button>
+                        <button class="btn-primary" id="btn-sync-replication" style="background: linear-gradient(45deg, var(--success), #166534); margin-left: 10px;">Sync Replication</button>
+                    </div>
+                </div>
+                <p id="detail-proj-desc" style="color: var(--text-muted); margin-top:-30px; margin-bottom: 30px;"></p>
+                
+                <h2>Topology</h2>
+                <div class="projects-grid" id="nodes-container" style="margin-top: 20px;">
+                    <!-- Nodes will be populated here -->
+                </div>
+            </div> <!-- End of project-detail-view -->
+            </div> <!-- End of projects-view -->
+
+            <!-- DASHBOARD VIEW -->
+            <div id="dashboard-view" class="view-section" style="display: none;">
+                <header class="top-header" style="display: flex; justify-content: space-between; align-items: center;">
+                    <div>
+                        <h1 style="margin-bottom: 5px;">Sunucu Yönetim Dashboard</h1>
+                        <div style="color: var(--text-muted); font-size: 0.9rem;">Aktif ve Yedek veritabanı sunucularınızın canlı metrikleri aşağıda gösterilmektedir.</div>
+                    </div>
+                    <button class="btn-primary" id="btn-sync-replication-dashboard" style="background: var(--success); color: #fff;">
+                        Senkronizasyon Animasyonu
+                    </button>
+                </header>
+                
+                <div id="dashboard-metrics-container" class="dashboard-grid">
+                    <div class="loading-state">Dashboard yükleniyor...</div>
+                </div>
+            </div>
+
+            <!-- AUDIT LOGS VIEW -->
+            <div id="audit-logs-view" class="view-section" style="display: none;">
+                <header class="top-header">
+                    <h1>Audit Logs</h1>
+                    <button class="btn-primary" id="btn-refresh-logs" style="background: transparent; border: 1px solid var(--border);">Refresh</button>
+                </header>
+                <div style="background: rgba(255,255,255,0.02); border-radius: 8px; border: 1px solid var(--border); overflow: hidden;">
+                    <table style="width: 100%; border-collapse: collapse; text-align: left;">
+                        <thead>
+                            <tr style="border-bottom: 1px solid var(--border); background: rgba(255,255,255,0.05);">
+                                <th style="padding: 12px 16px;">Time</th>
+                                <th style="padding: 12px 16px;">Action</th>
+                                <th style="padding: 12px 16px;">Details</th>
+                            </tr>
+                        </thead>
+                        <tbody id="logs-table-body">
+                            <tr><td colspan="3" style="padding: 16px; text-align: center; color: var(--text-muted);">Loading logs...</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- SETTINGS VIEW -->
+            <div id="settings-view" class="view-section" style="display: none;">
+                <header class="top-header">
+                    <h1>Settings</h1>
+                </header>
+                
+                <div class="glass-panel" style="padding: 24px; max-width: 600px;">
+                    <h3>Global Configuration</h3>
+                    <p style="color: var(--text-muted); font-size: 0.9rem; margin-bottom: 24px;">Buradan sistemin WAL şişmesini (Bloat) algılama limitlerini değiştirebilirsiniz.</p>
+                    
+                    <div class="input-group">
+                        <label>Max WAL Lag Threshold (MB)</label>
+                        <input type="number" id="setting-wal-lag" value="500" min="100" max="10000">
+                        <small style="color: var(--text-muted); display: block; margin-top: 8px;">Eğer ana sunucu bu MB değerinden fazla WAL dosyası biriktirirse, yedek ile arasındaki bağ acil olarak koparılır.</small>
+                    </div>
+                    
+                    <div class="input-group" style="margin-top: 20px;">
+                        <label>Dashboard Update Interval (Seconds)</label>
+                        <input type="number" id="setting-update-interval" value="1" min="1" max="60">
+                        <small style="color: var(--text-muted); display: block; margin-top: 8px;">Dashboard üzerindeki canlı metriklerin kaç saniyede bir güncelleneceğini belirler (Varsayılan: 1).</small>
+                    </div>
+                    
+                    <button class="btn-primary" id="btn-save-settings" style="margin-top: 24px;">Save Settings</button>
+                </div>
+            </div>
+
+        </main>
+    </div>
+
+    <!-- Add Project Modal -->
+    <div class="modal-overlay" id="modal-add-project" style="display: none;">
+        <div class="modal glass-panel">
+            <div class="modal-header">
+                <h3>Add New Project (Cluster)</h3>
+                <button class="btn-close" id="btn-close-modal">×</button>
+            </div>
+            <div class="modal-body">
+                <form id="form-add-project">
+                    <div class="input-group">
+                        <label>Project Name</label>
+                        <input type="text" id="proj-name" required placeholder="e.g. Finance DB Cluster">
+                    </div>
+                    <div class="input-group">
+                        <label>Description</label>
+                        <input type="text" id="proj-desc" placeholder="Brief description of the cluster">
+                    </div>
+                    <button type="submit" class="btn-primary w-100">Create Project</button>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Add Node Modal -->
+    <div class="modal-overlay" id="modal-add-node" style="display: none;">
+        <div class="modal glass-panel">
+            <div class="modal-header">
+                <h3>Add Database Node</h3>
+                <button class="btn-close" id="btn-close-node-modal">×</button>
+            </div>
+            <div class="modal-body">
+                <form id="form-add-node">
+                    <div class="input-group">
+                        <label>Node Name (Alias)</label>
+                        <input type="text" id="node-name" required placeholder="e.g. Frankfurt Server">
+                    </div>
+                    <div class="input-group">
+                        <label>Role</label>
+                        <select id="node-role" style="width: 100%; padding: 12px; background: rgba(255, 255, 255, 0.05); border: 1px solid var(--glass-border); border-radius: 8px; color: white;">
+                            <option value="Primary" style="color: black;">Primary (Master)</option>
+                            <option value="Standby" style="color: black;">Standby (Replica)</option>
+                        </select>
+                    </div>
+                    <div class="input-group">
+                        <label>PostgreSQL Connection URL</label>
+                        <div class="input-wrapper">
+                            <input type="password" id="node-url" required placeholder="postgres://user:pass@host:5432/db">
+                            <button type="button" class="icon-btn copy-btn" id="copy-url-btn" title="Copy URL">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
+                            </button>
+                            <button type="button" class="icon-btn toggle-vis-btn" id="toggle-url-btn" title="Show/Hide URL">
+                                <svg id="eye-icon" xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle><line id="eye-slash" x1="1" y1="1" x2="23" y2="23"></line></svg>
+                            </button>
+                        </div>
+                        <small style="color: var(--warning); display:block; margin-top:5px;">This URL will be Pinged. If successful, it will be encrypted (AES-256) before saving.</small>
+                    </div>
+                    <button type="submit" class="btn-primary w-100" id="btn-submit-node">Verify & Save Node</button>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Edit Node Modal (Detailed) -->
+    <div class="modal-overlay" id="modal-edit-node" style="display: none;">
+        <div class="modal glass-panel" style="max-width: 950px; width: 95%; padding: 40px;">
+            <div class="modal-header">
+                <div style="display: flex; align-items: center; gap: 10px;">
+                    <h3 id="edit-node-title" style="margin: 0;">Sunucu Sağlık ve Düzenleme</h3>
+                    <span class="status-badge status-offline" id="modal-metric-status">Offline</span>
+                </div>
+                <button class="btn-close" id="btn-close-edit-node-modal">×</button>
+            </div>
+            
+            <div class="modal-body">
+                
+                <!-- Metrics Grid -->
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 24px;">
+                    <div class="metric-card" style="background: rgba(0,0,0,0.3); border: 1px solid var(--border);">
+                        <div class="metric-label">Ağ Gecikmesi (Ping)</div>
+                        <div class="metric-val" id="modal-metric-ping"><svg class="spinner" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 1 1-6.219-8.56"></path></svg> Yükleniyor...</div>
+                    </div>
+                    <div class="metric-card" style="background: rgba(0,0,0,0.3); border: 1px solid var(--border);">
+                        <div class="metric-label">Senkronizasyon (Lag)</div>
+                        <div class="metric-val" id="modal-metric-lag"><svg class="spinner" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 1 1-6.219-8.56"></path></svg> Yükleniyor...</div>
+                    </div>
+                    <div class="metric-card" style="background: rgba(0,0,0,0.3); border: 1px solid var(--border);">
+                        <div class="metric-label">Depolama (Storage)</div>
+                        <div class="metric-val" id="modal-metric-storage"><svg class="spinner" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 1 1-6.219-8.56"></path></svg> Yükleniyor...</div>
+                    </div>
+                    <div class="metric-card" style="background: rgba(0,0,0,0.3); border: 1px solid var(--border);">
+                        <div class="metric-label">Bağlantılar (Aktif/Top.)</div>
+                        <div class="metric-val" id="modal-metric-conn"><svg class="spinner" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 1 1-6.219-8.56"></path></svg> Yükleniyor...</div>
+                    </div>
+                    <div class="metric-card" style="background: rgba(0,0,0,0.3); border: 1px solid var(--border);">
+                        <div class="metric-label">İşlem Yükü (Başarılı / İptal)</div>
+                        <div class="metric-val" id="modal-metric-xact"><svg class="spinner" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 1 1-6.219-8.56"></path></svg> Yükleniyor...</div>
+                    </div>
+                    <div class="metric-card" style="background: rgba(0,0,0,0.3); border: 1px solid var(--border);">
+                        <div class="metric-label">Kayıtlı Araç Sayısı</div>
+                        <div class="metric-val" id="modal-metric-plates"><svg class="spinner" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 1 1-6.219-8.56"></path></svg> Yükleniyor...</div>
+                    </div>
+                    <div class="metric-card" style="background: rgba(0,0,0,0.3); border: 1px solid var(--border);">
+                        <div class="metric-label">Önbellek Başarısı</div>
+                        <div class="metric-val" id="modal-metric-cache"><svg class="spinner" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 1 1-6.219-8.56"></path></svg> Yükleniyor...</div>
+                    </div>
+                    <div class="metric-card" style="background: rgba(0,0,0,0.3); border: 1px solid var(--border);">
+                        <div class="metric-label">Çalışma Süresi</div>
+                        <div class="metric-val" id="modal-metric-uptime">Yükleniyor...</div>
+                    </div>
+                </div>
+                
+                <div style="font-size: 0.8rem; color: var(--text-muted); text-align: right; margin-bottom: 24px;">
+                    Motor Sürümü: <span id="modal-metric-version">-</span>
+                </div>
+
+                <hr style="border: 0; border-top: 1px solid var(--border); margin-bottom: 24px;">
+
+                <!-- Edit URL Form -->
+                <form id="form-edit-node">
+                    <input type="hidden" id="edit-node-id">
+                    <div class="input-group">
+                        <label>Bağlantı Adresi (URL)</label>
+                        <div class="input-wrapper">
+                            <input type="password" id="edit-node-url" required>
+                            <button type="button" class="icon-btn copy-btn" id="copy-edit-url-btn" title="Copy URL">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
+                            </button>
+                            <button type="button" class="icon-btn toggle-vis-btn" id="toggle-edit-url-btn" title="Show/Hide URL">
+                                <svg id="eye-icon-edit" xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle><line id="eye-slash-edit" x1="1" y1="1" x2="23" y2="23"></line></svg>
+                            </button>
+                        </div>
+                    </div>
+                    <button type="submit" class="btn-primary w-100" id="btn-submit-edit-node">Kaydet ve Yeniden Başlat</button>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Sync Status Modal (Animation) -->
+    <div class="modal-overlay" id="modal-sync-status" style="display: none;">
+        <div class="modal glass-panel" style="max-width: 500px; width: 95%; padding: 40px;">
+            <div class="modal-header">
+                <h3 style="margin: 0;">Veritabanı Senkronizasyon Durumu</h3>
+                <button class="btn-close" id="btn-close-sync-modal">×</button>
+            </div>
+            
+            <p style="font-size: 0.9rem; color: var(--text-muted); margin-bottom: 25px; text-align: center;">
+                Aşağıdaki şema, sistemdeki Master (Yazılabilir) ve Standby (Salt-Okunur) veritabanları arasındaki veri akış yönünü göstermektedir.
+            </p>
+
+            <div style="display: flex; align-items: center; justify-content: space-between; position: relative; margin: 40px 0;">
+                
+                <!-- Primary Server -->
+                <div id="sync-primary" style="display: flex; flex-direction: column; align-items: center; z-index: 2;">
+                    <div style="width: 70px; height: 70px; display: flex; align-items: center; justify-content: center; margin-bottom: 10px; transition: all 0.3s;">
+                        <img id="sync-primary-icon" src="/static/img/server-icon.png" style="width: 100%; height: 100%; object-fit: contain; filter: drop-shadow(0 0 10px #10b981);" alt="Primary Server">
+                    </div>
+                    <span style="font-weight: bold; color: var(--text-main);">Ana Sunucu</span>
+                    <span id="sync-primary-role" style="font-size: 0.8rem; color: #10b981; font-weight: 600;">Master (Aktif)</span>
+                </div>
+
+                <!-- Sync Line & Animation -->
+                <div style="flex-grow: 1; height: 4px; background: rgba(255, 255, 255, 0.1); margin: 0 15px; position: relative; border-radius: 2px; overflow: hidden; transform: translateY(-15px);">
+                    <div id="sync-data-flow" style="position: absolute; top: 0; left: 0; height: 100%; width: 20%; background: #10b981; box-shadow: 0 0 10px #10b981; border-radius: 2px; opacity: 0;"></div>
+                </div>
+
+                <!-- Standby Server -->
+                <div id="sync-standby" style="display: flex; flex-direction: column; align-items: center; z-index: 2;">
+                    <div style="width: 70px; height: 70px; display: flex; align-items: center; justify-content: center; margin-bottom: 10px; transition: all 0.3s;">
+                        <img id="sync-standby-icon" src="/static/img/server-icon.png" style="width: 100%; height: 100%; object-fit: contain; filter: grayscale(100%) opacity(0.5);" alt="Standby Server">
+                    </div>
+                    <span style="font-weight: bold; color: var(--text-main);">Yedek Sunucu</span>
+                    <span id="sync-standby-role" style="font-size: 0.8rem; color: var(--text-muted);">Standby (Yedek)</span>
+                </div>
+            </div>
+            
+            <p style="font-size: 0.8rem; color: var(--text-muted); text-align: center; margin-top: 20px;">
+                * Logical Replication devre dışı olduğu için Master/Standby geçişi (Switchover) bu ekrandan yapılamaz.
+            </p>
+            
+            <style>
+                @keyframes dataFlowRight {
+                    0% { left: -20%; opacity: 0; }
+                    10% { opacity: 1; }
+                    90% { opacity: 1; }
+                    100% { left: 100%; opacity: 0; }
+                }
+            </style>
+        </div>
+    </div>
+
+    <script src="/static/main.js"></script>
+</body>
+</html>

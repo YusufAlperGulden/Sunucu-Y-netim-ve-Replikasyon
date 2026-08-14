@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Universal Server Management</title>
+    <link rel="stylesheet" href="style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+</head>
+<body>
+    <!-- Top Drag Region for Electron Borderless Window -->
+    <div class="titlebar-drag-region"></div>
+    
+    <div class="app-container">
+        <!-- Sidebar -->
+        <aside class="sidebar glass-panel">
+            <div class="sidebar-header">
+                <h2>Universal Server Manager</h2>
+            </div>
+            <nav class="sidebar-nav">
+                <a href="#" class="active">Dashboard</a>
+                <a href="#">Projects</a>
+                <a href="#">Audit Logs</a>
+                <a href="#">Settings</a>
+            </nav>
+        </aside>
+
+        <!-- Main Content -->
+        <main class="main-content">
+            <header class="top-header">
+                <h1>Overview</h1>
+                <button class="btn-primary" id="btn-add-project">+ Add Project</button>
+            </header>
+
+            <div class="projects-grid" id="projects-container">
+                <div class="loading-state">Loading projects...</div>
+            </div>
+        </main>
+    </div>
+
+    <!-- Add Project Modal -->
+    <div class="modal-overlay" id="modal-add-project" style="display: none;">
+        <div class="modal glass-panel">
+            <div class="modal-header">
+                <h3>Add New Project (Cluster)</h3>
+                <button class="btn-close" id="btn-close-modal">×</button>
+            </div>
+            <div class="modal-body">
+                <form id="form-add-project">
+                    <div class="input-group">
+                        <label>Project Name</label>
+                        <input type="text" id="proj-name" required placeholder="e.g. Finance DB Cluster">
+                    </div>
+                    <div class="input-group">
+                        <label>Description</label>
+                        <input type="text" id="proj-desc" placeholder="Brief description of the cluster">
+                    </div>
+                    <button type="submit" class="btn-primary w-100">Create Project</button>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <script src="renderer.js"></script>
+</body>
+</html>
