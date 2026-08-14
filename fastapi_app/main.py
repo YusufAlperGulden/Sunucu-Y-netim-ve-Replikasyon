@@ -79,6 +79,25 @@ def add_project(project: ProjectCreate, db: Session = Depends(get_db)):
     db.refresh(db_proj)
     return {"success": True, "id": db_proj.id}
 
+@app.put("/api/projects/{project_id}")
+def update_project(project_id: int, project: ProjectCreate, db: Session = Depends(get_db)):
+    proj = db.query(Project).filter(Project.id == project_id).first()
+    if not proj:
+        return JSONResponse(status_code=404, content={"message": "Project not found"})
+    proj.name = project.name
+    proj.description = project.description
+    db.commit()
+    return {"success": True}
+
+@app.delete("/api/projects/{project_id}")
+def delete_project(project_id: int, db: Session = Depends(get_db)):
+    proj = db.query(Project).filter(Project.id == project_id).first()
+    if not proj:
+        return JSONResponse(status_code=404, content={"message": "Project not found"})
+    db.delete(proj)
+    db.commit()
+    return {"success": True}
+
 @app.get("/api/projects/{project_id}")
 def get_project_detail(project_id: int, db: Session = Depends(get_db)):
     proj = db.query(Project).filter(Project.id == project_id).first()

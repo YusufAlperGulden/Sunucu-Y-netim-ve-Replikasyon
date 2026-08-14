@@ -8,6 +8,11 @@ document.addEventListener('DOMContentLoaded', () => {
     const formAddProj = document.getElementById('form-add-project');
     const formAddNode = document.getElementById('form-add-node');
     
+    const modalEditProj = document.getElementById('modal-edit-project');
+    const btnCloseEditProjModal = document.getElementById('btn-close-edit-modal');
+    const formEditProj = document.getElementById('form-edit-project');
+
+    
     const projectsContainer = document.getElementById('projects-container');
     const detailView = document.getElementById('project-detail-view');
     const btnBackProjects = document.getElementById('btn-back-projects');
@@ -123,17 +128,54 @@ document.addEventListener('DOMContentLoaded', () => {
             data.forEach(proj => {
                 const card = document.createElement('div');
                 card.className = 'project-card glass-panel';
+                card.style.position = 'relative'; // For absolute positioning of buttons
                 card.innerHTML = `
-                    <h3>${proj.name}</h3>
+                    <div style="position: absolute; top: 15px; right: 15px; display: flex; gap: 8px; z-index: 2;">
+                        <button class="icon-btn edit-proj-btn" title="Edit Project" data-id="${proj.id}" data-name="${proj.name}" data-desc="${proj.description || ''}">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
+                        </button>
+                        <button class="icon-btn delete-proj-btn" title="Delete Project" data-id="${proj.id}">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color: var(--danger)"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path><line x1="10" y1="11" x2="10" y2="17"></line><line x1="14" y1="11" x2="14" y2="17"></line></svg>
+                        </button>
+                    </div>
+                    <h3 style="margin-right: 60px;">${proj.name}</h3>
                     <p>${proj.description || 'No description provided'}</p>
                     <div style="font-size: 0.8rem; color: var(--text-muted);">Nodes: ${proj.nodesCount}</div>
                 `;
-                card.addEventListener('click', async () => {
+                card.addEventListener('click', async (e) => {
+                    // Ignore clicks on action buttons
+                    if(e.target.closest('button')) return;
+                    
                     // Fetch full detail when clicked
                     const res = await fetch(`/api/projects/${proj.id}`);
                     const detailData = await res.json();
                     showDetailView(detailData);
                 });
+                
+                // Add button listeners
+                const editBtn = card.querySelector('.edit-proj-btn');
+                editBtn.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    document.getElementById('edit-proj-id').value = proj.id;
+                    document.getElementById('edit-proj-name').value = proj.name;
+                    document.getElementById('edit-proj-desc').value = proj.description || '';
+                    modalEditProj.style.display = 'flex';
+                });
+                
+                const delBtn = card.querySelector('.delete-proj-btn');
+                delBtn.addEventListener('click', async (e) => {
+                    e.stopPropagation();
+                    if(confirm("Are you sure you want to delete this project? All associated nodes will be deleted permanently.")) {
+                        try {
+                            const res = await fetch(`/api/projects/${proj.id}`, { method: 'DELETE' });
+                            if(res.ok) fetchProjects();
+                            else alert("Failed to delete project");
+                        } catch(err) {
+                            alert("Error deleting project");
+                        }
+                    }
+                });
+                
                 projectsContainer.appendChild(card);
             });
         } catch (error) {
@@ -433,6 +475,35 @@ document.addEventListener('DOMContentLoaded', () => {
     
     // Navigation
     btnBackProjects.addEventListener('click', showProjectsView);
+
+    // Form: Edit Project
+    btnCloseEditProjModal.addEventListener('click', () => modalEditProj.style.display = 'none');
+    
+    formEditProj.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const id = document.getElementById('edit-proj-id').value;
+        const name = document.getElementById('edit-proj-name').value;
+        const desc = document.getElementById('edit-proj-desc').value;
+
+        try {
+            const response = await fetch(`/api/projects/${id}`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ name, description: desc })
+            });
+            const res = await response.json();
+            
+            if (response.ok && res.success) {
+                modalEditProj.style.display = 'none';
+                formEditProj.reset();
+                fetchProjects();
+            } else {
+                alert(res.message || "Failed to update project.");
+            }
+        } catch (err) {
+            alert('Server error while updating project.');
+        }
+    });
 
     // Form: Add Project
     formAddProj.addEventListener('submit', async (e) => {
