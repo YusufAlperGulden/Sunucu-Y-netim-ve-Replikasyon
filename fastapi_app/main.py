@@ -183,9 +183,17 @@ def get_project_detail(project_id: int, db: Session = Depends(get_db)):
 
 @app.post("/api/projects/{project_id}/nodes", dependencies=[Depends(verify_credentials)])
 async def add_node(project_id: int, node: NodeCreate, db: Session = Depends(get_db)):
+    if node.role.lower() not in ['primary', 'standby']:
+        return JSONResponse(status_code=400, content={"success": False, "message": "Geçersiz rol. Sadece Primary veya Standby eklenebilir."})
+
     proj = db.query(Project).filter(Project.id == project_id).first()
     if not proj:
         return JSONResponse(status_code=404, content={"message": "Project not found"})
+        
+    if node.role.lower() == 'primary':
+        existing_primary = next((n for n in proj.nodes if n.role.lower() == 'primary'), None)
+        if existing_primary:
+            return JSONResponse(status_code=400, content={"success": False, "message": "Bir projede sadece 1 adet Primary (Ana) sunucu bulunabilir."})
     
     from vault import decrypt
     for n in db.query(DatabaseNode).all():
@@ -247,6 +255,9 @@ class SettingsUpdate(BaseModel):
 
 @app.post('/api/settings/{project_id}', dependencies=[Depends(verify_credentials)])
 def update_settings(project_id: int, settings: SettingsUpdate, db: Session = Depends(get_db)):
+    if settings.max_wal_lag_mb < 50:
+        return JSONResponse(status_code=400, content={'message': 'WAL limit must be at least 50 MB to prevent premature slot dropping'})
+        
     proj = db.query(Project).filter(Project.id == project_id).first()
     if not proj:
         return JSONResponse(status_code=404, content={'message': 'Project not found'})

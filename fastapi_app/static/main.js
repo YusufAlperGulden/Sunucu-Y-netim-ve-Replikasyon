@@ -343,7 +343,10 @@ document.addEventListener('DOMContentLoaded', () => {
     }
     
     const btnSyncRepDashboard = document.getElementById('btn-sync-replication-dashboard');
-    if (btnSyncRepDashboard) {
+    const modalSyncStatus = document.getElementById('modal-sync-status');
+    const btnCloseSyncModal = document.getElementById('btn-close-sync-modal');
+    
+    if (btnSyncRepDashboard && modalSyncStatus) {
         btnSyncRepDashboard.addEventListener('click', () => {
             modalSyncStatus.style.display = 'flex';
             const dataFlow = document.getElementById('sync-data-flow');
@@ -353,7 +356,7 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    if (btnCloseSyncModal) {
+    if (btnCloseSyncModal && modalSyncStatus) {
         btnCloseSyncModal.addEventListener('click', () => {
             modalSyncStatus.style.display = 'none';
         });
