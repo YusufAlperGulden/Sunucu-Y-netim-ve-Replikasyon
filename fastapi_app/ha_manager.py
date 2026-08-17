@@ -91,6 +91,21 @@ async def setup_replication(project_id: int, primary_encrypted_url: str, standby
                     await r_conn.close()
                 except Exception as rollback_err:
                     print(f"Failed to rollback sub {roll_sub}: {rollback_err}")
+                    
+            try:
+                p_conn = await asyncpg.connect(primary_url, timeout=5.0)
+                for _, roll_sub in created_subs:
+                    try:
+                        active_pid = await p_conn.fetchval(f"SELECT active_pid FROM pg_replication_slots WHERE slot_name = '{roll_sub}';")
+                        if active_pid:
+                            await p_conn.execute(f"SELECT pg_terminate_backend({active_pid});")
+                        await p_conn.execute(f"SELECT pg_drop_replication_slot('{roll_sub}');")
+                    except Exception as primary_roll_err:
+                        pass
+                await p_conn.close()
+            except Exception:
+                pass
+                
             raise Exception(f"Replication atomicity failure: {setup_err}. Rolled back successfully created subscriptions.")
 
         return {"success": True, "message": f"Logical replication (1 Master to {len(valid_standbys)} Standbys) established successfully."}
@@ -219,9 +234,12 @@ async def get_server_metrics(encrypted_url: str, project_id: int = None, role: s
                 
             plates_count = 'N/A'
             try:
-                plate_row = await conn.fetchrow("SELECT relname, n_live_tup as count FROM pg_stat_user_tables ORDER BY n_live_tup DESC LIMIT 1;")
+                plate_row = await conn.fetchrow("SELECT relname FROM pg_stat_user_tables ORDER BY n_live_tup DESC LIMIT 1;")
                 if plate_row and plate_row['relname']:
-                    plates_count = f"{plate_row['count']} Kayıt ({plate_row['relname']})"
+                    t_name = plate_row['relname']
+                    count_row = await conn.fetchrow(f'SELECT count(*) as count FROM "{t_name}"')
+                    if count_row:
+                        plates_count = f"{count_row['count']} Kayıt ({t_name})"
             except Exception:
                 pass
             
