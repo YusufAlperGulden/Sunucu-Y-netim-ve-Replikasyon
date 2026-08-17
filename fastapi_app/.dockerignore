@@ -1,4 +1,4 @@
-__pycache__
+﻿__pycache__
 *.pyc
 *.pyo
 *.pyd
@@ -7,6 +7,7 @@ env/
 venv/
 .env
 .venv
+*.db
 *.sqlite3
 .git
 .github
