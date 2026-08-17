@@ -57,6 +57,7 @@ class SyncJob(Base):
     status = Column(String(50), default="QUEUED", nullable=False) # QUEUED, VALIDATING, BOOTSTRAPPING, CATCHING_UP, SUCCESS, FAILED, RECOVERING
     error_message = Column(String(1000), nullable=True)
     lease_owner = Column(String(255), nullable=True)
+    lease_token = Column(String(36), nullable=True)
     lease_expires_at = Column(DateTime, nullable=True)
     created_at = Column(DateTime, default=datetime.datetime.utcnow, nullable=False)
     updated_at = Column(DateTime, default=datetime.datetime.utcnow, onupdate=datetime.datetime.utcnow)

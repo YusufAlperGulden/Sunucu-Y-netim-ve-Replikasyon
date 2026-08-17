@@ -37,17 +37,7 @@ def verify_credentials(credentials: HTTPBasicCredentials = Depends(security)):
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     # Startup
-    try:
-        from alembic.config import Config
-        from alembic import command
-        alembic_cfg = Config(os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "alembic.ini"))
-        # Run migrations on startup to prevent 500 errors if user forgets to run them
-        command.upgrade(alembic_cfg, "head")
-        print("Alembic migrations ran successfully.")
-    except Exception as e:
-        print(f"Migration error: {e}")
-        # Uygulamanın başlatılmasını durdurmak (fail-closed)
-        raise RuntimeError(f"Database migration check failed: {e}")
+    print("Application startup complete.")
         
     yield
     # Shutdown
