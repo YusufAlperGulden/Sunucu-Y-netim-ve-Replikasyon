@@ -102,11 +102,16 @@ async def setup_replication(project_id: int, primary_encrypted_url: str, standby
                         await p_conn.execute(f"SELECT pg_drop_replication_slot('{roll_sub}');")
                     except Exception as primary_roll_err:
                         pass
+                        
+                try:
+                    await p_conn.execute(f"DROP PUBLICATION IF EXISTS univ_pub_{project_id};")
+                except Exception:
+                    pass
                 await p_conn.close()
             except Exception:
                 pass
                 
-            raise Exception(f"Replication atomicity failure: {setup_err}. Rolled back successfully created subscriptions.")
+            raise Exception(f"Replication atomicity failure: {setup_err}. Rolled back new subscriptions and publication, but old topology cannot be restored automatically.")
 
         return {"success": True, "message": f"Logical replication (1 Master to {len(valid_standbys)} Standbys) established successfully."}
 
@@ -186,7 +191,7 @@ async def check_and_protect_wal_bloat(project_id: int, primary_encrypted_url: st
 
 import time
 
-async def get_server_metrics(encrypted_url: str, project_id: int = None, role: str = None) -> dict:
+async def get_server_metrics(encrypted_url: str, project_id: int = None, role: str = None, metric_table: str = None) -> dict:
     try:
         url = decrypt(encrypted_url)
         if not url:
@@ -232,20 +237,18 @@ async def get_server_metrics(encrypted_url: str, project_id: int = None, role: s
             else:
                 lag_val = 'N/A' 
                 
-            plates_count = 'N/A'
-            try:
-                plate_row = await conn.fetchrow("SELECT relname FROM pg_stat_user_tables ORDER BY n_live_tup DESC LIMIT 1;")
-                if plate_row and plate_row['relname']:
-                    t_name = plate_row['relname']
-                    count_row = await conn.fetchrow(f'SELECT count(*) as count FROM "{t_name}"')
+            plates_count = 'Metrik Ayarlanmadı'
+            if metric_table:
+                try:
+                    count_row = await conn.fetchrow(f'SELECT count(*) as count FROM "{metric_table}"')
                     if count_row:
-                        plates_count = f"{count_row['count']} Kayıt ({t_name})"
-            except Exception:
-                pass
+                        plates_count = f"{count_row['count']} Kayıt ({metric_table})"
+                except Exception:
+                    plates_count = f"Tablo Bulunamadı ({metric_table})"
             
             return {
                 'status': 'online',
-                'ping': f'{ping_ms}ms',
+                'ping': f"{int(ping_ms)}ms",
                 'storage': f'{int(db_size_kb)} kB',
                 'connections': f'{active_conn} / {max_conn}',
                 'cache_hit': f'{cache_hit:.1f}%',

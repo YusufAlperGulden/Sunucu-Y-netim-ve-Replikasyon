@@ -54,6 +54,12 @@ async def wal_bloat_monitor():
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     # Startup
+    try:
+        from migration import run_migration
+        run_migration()
+    except Exception as e:
+        print(f"Migration error: {e}")
+        
     monitor_task = asyncio.create_task(wal_bloat_monitor())
     yield
     # Shutdown
@@ -252,6 +258,7 @@ def get_audit_logs(db: Session = Depends(get_db)):
 
 class SettingsUpdate(BaseModel):
     max_wal_lag_mb: int
+    metric_table: str = None
 
 @app.post('/api/settings/{project_id}', dependencies=[Depends(verify_credentials)])
 def update_settings(project_id: int, settings: SettingsUpdate, db: Session = Depends(get_db)):
@@ -262,6 +269,7 @@ def update_settings(project_id: int, settings: SettingsUpdate, db: Session = Dep
     if not proj:
         return JSONResponse(status_code=404, content={'message': 'Project not found'})
     proj.max_wal_lag_mb = settings.max_wal_lag_mb
+    proj.metric_table = settings.metric_table
     db.commit()
     return {'success': True}
 
@@ -276,7 +284,7 @@ async def get_project_metrics(project_id: int, db: Session = Depends(get_db)):
     # Concurrently fetch metrics from all servers
     tasks = []
     for node in proj.nodes:
-        tasks.append(get_server_metrics(node.encrypted_url, project_id=proj.id, role=node.role))
+        tasks.append(get_server_metrics(node.encrypted_url, project_id=proj.id, role=node.role, metric_table=proj.metric_table))
         
     results = await asyncio.gather(*tasks)
     
@@ -312,6 +320,11 @@ async def update_node_url(node_id: int, update: NodeUpdate, db: Session = Depend
     node = db.query(DatabaseNode).filter(DatabaseNode.id == node_id).first()
     if not node:
         return JSONResponse(status_code=404, content={'message': 'Node not found'})
+        
+    from vault import decrypt
+    for n in db.query(DatabaseNode).all():
+        if n.id != node_id and decrypt(n.encrypted_url) == update.url:
+            return JSONResponse(status_code=400, content={"success": False, "message": "Bu veritabanı URL'si sistemde zaten kayıtlı."})
     
     is_alive = await test_connection(update.url)
     if not is_alive:

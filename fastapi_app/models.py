@@ -24,6 +24,7 @@ class Project(Base):
     id = Column(Integer, primary_key=True, index=True)
     name = Column(String(100), unique=True, index=True)
     description = Column(String(255))
+    metric_table = Column(String(100), nullable=True) # E.g., 'vehicles', 'email_records'
     max_wal_lag_mb = Column(Integer, default=500) # Esnek limit ayarı
     nodes = relationship("DatabaseNode", back_populates="project", cascade="all, delete-orphan")
 

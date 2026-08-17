@@ -144,8 +144,14 @@
                     
                     <div class="input-group">
                         <label>Max WAL Lag Threshold (MB)</label>
-                        <input type="number" id="setting-wal-lag" value="500" min="100" max="10000">
+                        <input type="number" id="setting-wal-lag" value="500" min="50" max="10000">
                         <small style="color: var(--text-muted); display: block; margin-top: 8px;">Eğer ana sunucu bu MB değerinden fazla WAL dosyası biriktirirse, yedek ile arasındaki bağ acil olarak koparılır.</small>
+                    </div>
+                    
+                    <div class="input-group" style="margin-top: 20px;">
+                        <label>Target Metric Table (Optional)</label>
+                        <input type="text" id="setting-metric-table" placeholder="e.g. vehicles, email_records">
+                        <small style="color: var(--text-muted); display: block; margin-top: 8px;">Eğer belirtilirse Dashboard sadece bu tablodaki net (exact) veri sayısını okur. Boş bırakırsanız metrik sayılmaz.</small>
                     </div>
                     
                     <div class="input-group" style="margin-top: 20px;">

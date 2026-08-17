@@ -685,6 +685,7 @@ document.addEventListener('DOMContentLoaded', () => {
     if(btnSaveSettings) {
         btnSaveSettings.addEventListener('click', async () => {
             const lagVal = document.getElementById('setting-wal-lag').value;
+            const metricTableVal = document.getElementById('setting-metric-table') ? document.getElementById('setting-metric-table').value : '';
             const updateIntervalVal = updateIntervalInput ? updateIntervalInput.value : 1;
             localStorage.setItem('dashboard_update_interval_sec', updateIntervalVal);
             
@@ -698,10 +699,14 @@ document.addEventListener('DOMContentLoaded', () => {
             const pid = currentProjectId || 1; 
             btnSaveSettings.innerText = "Saving...";
             try {
+                const payload = { max_wal_lag_mb: parseInt(lagVal) };
+                if (metricTableVal && metricTableVal.trim() !== '') {
+                    payload.metric_table = metricTableVal.trim();
+                }
                 const res = await apiFetch(`/api/settings/${pid}`, {
                     method: 'POST',
                     headers: {'Content-Type': 'application/json'},
-                    body: JSON.stringify({max_wal_lag_mb: parseInt(lagVal)})
+                    body: JSON.stringify(payload)
                 });
                 if(res.ok) {
                     alert("Settings saved successfully!");
