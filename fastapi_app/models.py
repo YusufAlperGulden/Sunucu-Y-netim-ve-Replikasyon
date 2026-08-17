@@ -1,6 +1,6 @@
 import os
 import datetime
-from sqlalchemy import create_engine, Column, Integer, String, ForeignKey, DateTime
+from sqlalchemy import create_engine, Column, Integer, String, ForeignKey, DateTime, text, Index
 from sqlalchemy.orm import declarative_base, relationship, sessionmaker
 from vault import encrypt
 
@@ -46,23 +46,28 @@ class DatabaseNode(Base):
     encrypted_url = Column(String(500))
     
     project = relationship("Project", back_populates="nodes")
+    
+    def set_url(self, raw_url: str):
+        self.encrypted_url = encrypt(raw_url)
 
 class SyncJob(Base):
     __tablename__ = "sync_jobs"
     id = Column(Integer, primary_key=True, index=True)
-    project_id = Column(Integer, ForeignKey("projects.id", ondelete="CASCADE"), index=True)
-    status = Column(String(50), default="QUEUED") # QUEUED, VALIDATING, BOOTSTRAPPING, CATCHING_UP, SUCCESS, FAILED, RECOVERING
+    project_id = Column(Integer, ForeignKey("projects.id", ondelete="CASCADE"), index=True, nullable=False)
+    status = Column(String(50), default="QUEUED", nullable=False) # QUEUED, VALIDATING, BOOTSTRAPPING, CATCHING_UP, SUCCESS, FAILED, RECOVERING
     error_message = Column(String(1000), nullable=True)
     lease_owner = Column(String(255), nullable=True)
     lease_expires_at = Column(DateTime, nullable=True)
-    created_at = Column(DateTime, default=datetime.datetime.utcnow)
+    created_at = Column(DateTime, default=datetime.datetime.utcnow, nullable=False)
     updated_at = Column(DateTime, default=datetime.datetime.utcnow, onupdate=datetime.datetime.utcnow)
     completed_at = Column(DateTime, nullable=True)
     
     project = relationship("Project")
     
-    def set_url(self, raw_url: str):
-        self.encrypted_url = encrypt(raw_url)
+    __table_args__ = (
+        Index("ix_sync_jobs_claim", "status", "lease_expires_at", "created_at"),
+        Index("ix_sync_jobs_active", "project_id", unique=True, postgresql_where=text("status NOT IN ('SUCCESS', 'FAILED')")),
+    )
 
 class AuditLog(Base):
     __tablename__ = "audit_logs"

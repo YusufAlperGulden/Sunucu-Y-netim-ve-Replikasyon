@@ -245,10 +245,21 @@ async def sync_replication(project_id: int, db: Session = Depends(get_db)):
     # 2. Enqueue the job
     new_job = SyncJob(project_id=proj.id, status="QUEUED")
     db.add(new_job)
-    db.commit()
+    
+    from sqlalchemy.exc import IntegrityError
+    try:
+        db.commit()
+    except IntegrityError:
+        db.rollback()
+        return JSONResponse(status_code=409, content={"success": False, "message": "A sync process is already running for this project."})
     
     # Return 202 Accepted immediately
-    return {"success": True, "message": "Sync job has been queued and is processing in the background."}
+    return {
+        "success": True, 
+        "message": "Sync job has been queued and is processing in the background.",
+        "job_id": new_job.id,
+        "status_url": f"/api/projects/{proj.id}"
+    }
 
 @app.get('/api/audit-logs', dependencies=[Depends(verify_credentials)])
 def get_audit_logs(db: Session = Depends(get_db)):

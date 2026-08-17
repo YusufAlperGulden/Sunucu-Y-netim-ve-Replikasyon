@@ -229,7 +229,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const syncBtn = document.getElementById('btn-sync-replication');
         
         if (badge) {
-            if (detailData.sync_status !== 'IDLE' && detailData.sync_status !== 'HEALTHY' && detailData.sync_status !== 'FAILED' && detailData.sync_status !== 'ROLLBACK_FAILED') {
+            if (detailData.sync_status !== 'IDLE' && detailData.sync_status !== 'HEALTHY' && detailData.sync_status !== 'SUCCESS' && detailData.sync_status !== 'FAILED' && detailData.sync_status !== 'ROLLBACK_FAILED') {
                 badge.style.display = 'inline-block';
                 badge.innerText = `Sync: ${detailData.sync_status}`;
                 badge.style.color = '#fbbf24'; // yellow-ish
@@ -241,9 +241,9 @@ document.addEventListener('DOMContentLoaded', () => {
                     syncPollInterval = setInterval(refreshCurrentProject, 3000);
                 }
             } else {
-                if (detailData.sync_status === 'HEALTHY') {
+                if (detailData.sync_status === 'HEALTHY' || detailData.sync_status === 'SUCCESS') {
                     badge.style.display = 'inline-block';
-                    badge.innerText = `Sync: HEALTHY`;
+                    badge.innerText = `Sync: ${detailData.sync_status}`;
                     badge.style.color = 'var(--success)';
                 } else if (detailData.sync_status === 'FAILED' || detailData.sync_status === 'ROLLBACK_FAILED') {
                     badge.style.display = 'inline-block';

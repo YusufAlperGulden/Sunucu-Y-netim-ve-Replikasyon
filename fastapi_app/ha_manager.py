@@ -55,12 +55,27 @@ async def setup_replication(project_id: int, primary_encrypted_url: str, standby
                 await p_conn.close()
                 return {"success": False, "message": f"Primary server wal_level is '{wal_level}', but must be 'logical'."}
             
-            # Check table existence
+            # Check table existence and Replica Identity
             for t in tables_list:
-                exists = await p_conn.fetchval("SELECT to_regclass();", t)
+                exists = await p_conn.fetchval("SELECT to_regclass($1);", t)
                 if not exists:
                     await p_conn.close()
                     return {"success": False, "message": f"Table '{t}' does not exist on primary server."}
+                    
+                repl_check = await p_conn.fetchrow("""
+                    SELECT c.relreplident, 
+                           (SELECT count(*) FROM pg_index i WHERE i.indrelid = c.oid AND i.indisprimary) as pk_count
+                    FROM pg_class c
+                    WHERE c.oid = $1::regclass;
+                """, t)
+                
+                if repl_check:
+                    if repl_check['relreplident'] == 'n':
+                        await p_conn.close()
+                        return {"success": False, "message": f"Table '{t}' has REPLICA IDENTITY NOTHING. Logical replication will crash on UPDATE/DELETE."}
+                    if repl_check['relreplident'] == 'd' and repl_check['pk_count'] == 0:
+                        await p_conn.close()
+                        return {"success": False, "message": f"Table '{t}' has no Primary Key and default REPLICA IDENTITY. Logical replication will crash on UPDATE/DELETE."}
                     
             await p_conn.close()
         except Exception as preflight_err:
@@ -119,7 +134,10 @@ async def setup_replication(project_id: int, primary_encrypted_url: str, standby
                     sub_query = f"CREATE SUBSCRIPTION {sub_name} CONNECTION '{safe_primary_url}' PUBLICATION univ_pub_{project_id} WITH (copy_data = true);"
                     await s_conn.execute(sub_query)
                 else:
-                    # Refresh publication if it exists
+                    # Force the connection, publication, and enable state
+                    await s_conn.execute(f"ALTER SUBSCRIPTION {sub_name} CONNECTION '{safe_primary_url}';")
+                    await s_conn.execute(f"ALTER SUBSCRIPTION {sub_name} SET PUBLICATION univ_pub_{project_id};")
+                    await s_conn.execute(f"ALTER SUBSCRIPTION {sub_name} ENABLE;")
                     await s_conn.execute(f"ALTER SUBSCRIPTION {sub_name} REFRESH PUBLICATION;")
                     
                 await s_conn.close()
