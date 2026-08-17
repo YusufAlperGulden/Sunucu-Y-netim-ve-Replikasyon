@@ -1,4 +1,4 @@
-﻿import asyncpg
+import asyncpg
 import asyncio
 import re
 from vault import decrypt
@@ -273,8 +273,14 @@ async def get_server_metrics(encrypted_url: str, project_id: int = None, role: s
             lag_val = 'Bağlantı Bekleniyor'
             # Check replication lag
             if role and role.lower() == 'primary' and project_id:
-                query = """
-                    SELECT slot_name, active, wal_status, invalidation_reason,
+                try:
+                    ver_num = await conn.fetchval("SELECT current_setting('server_version_num')::int")
+                    invalidation_col = "invalidation_reason" if ver_num >= 170000 else "NULL as invalidation_reason"
+                except:
+                    invalidation_col = "NULL as invalidation_reason"
+
+                query = f"""
+                    SELECT slot_name, active, wal_status, {invalidation_col},
                            pg_wal_lsn_diff(pg_current_wal_lsn(), confirmed_flush_lsn) AS consumer_gap_bytes,
                            pg_wal_lsn_diff(pg_current_wal_lsn(), restart_lsn) AS retained_wal_bytes
                     FROM pg_replication_slots

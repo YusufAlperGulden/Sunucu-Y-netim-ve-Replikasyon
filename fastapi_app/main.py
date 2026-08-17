@@ -1,4 +1,4 @@
-from fastapi import FastAPI, Request, Depends, HTTPException, status, Form
+from fastapi import FastAPI, Request, Depends, HTTPException, status, Form, BackgroundTasks
 from fastapi.responses import HTMLResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
@@ -172,7 +172,14 @@ def get_project_detail(project_id: int, db: Session = Depends(get_db)):
         return JSONResponse(status_code=404, content={"message": "Project not found"})
     
     nodes = [{"id": n.id, "role": n.role, "name": n.name} for n in proj.nodes]
-    return {"id": proj.id, "name": proj.name, "description": proj.description, "nodes": nodes}
+    return {
+        "id": proj.id, 
+        "name": proj.name, 
+        "description": proj.description, 
+        "sync_status": proj.sync_status,
+        "sync_error": proj.sync_error,
+        "nodes": nodes
+    }
 
 @app.post("/api/projects/{project_id}/nodes", dependencies=[Depends(verify_credentials)])
 async def add_node(project_id: int, node: NodeCreate, db: Session = Depends(get_db)):
@@ -210,7 +217,7 @@ async def add_node(project_id: int, node: NodeCreate, db: Session = Depends(get_
     
     return {"success": True, "message": "Node added securely."}
 
-@app.post("/api/projects/{project_id}/sync", dependencies=[Depends(verify_credentials)])
+@app.post("/api/projects/{project_id}/sync", status_code=202, dependencies=[Depends(verify_credentials)])
 async def sync_replication(project_id: int, background_tasks: BackgroundTasks, db: Session = Depends(get_db)):
     import datetime
     from ha_manager import run_sync_state_machine_bg
@@ -219,8 +226,8 @@ async def sync_replication(project_id: int, background_tasks: BackgroundTasks, d
     if not proj:
         return JSONResponse(status_code=404, content={"message": "Project not found"})
         
-    # 1. Distributed Lock Control
-    if proj.sync_status not in ["IDLE", "HEALTHY", "FAILED", "ROLLBACK_FAILED"]:
+    # 1. Distributed Lock Control (allow None for legacy compatibility)
+    if proj.sync_status not in [None, "IDLE", "HEALTHY", "FAILED", "ROLLBACK_FAILED"]:
         return JSONResponse(status_code=409, content={"success": False, "message": "A sync process is already running for this project."})
     
     primary = next((n for n in proj.nodes if n.role.lower() == 'primary'), None)
