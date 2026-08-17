@@ -72,16 +72,7 @@ def upgrade() -> None:
 def downgrade() -> None:
     """Downgrade schema."""
     # Protect downgrade for legacy databases
-    # We only drop the newly added columns
-    conn = op.get_bind()
-    inspector = sa.inspect(conn)
-    tables = inspector.get_table_names()
-    
-    if 'projects' in tables:
-        columns = [c['name'] for c in inspector.get_columns('projects')]
-        if 'max_wal_lag_mb' in columns:
-            op.drop_column('projects', 'max_wal_lag_mb')
-        if 'replication_tables' in columns:
-            op.drop_column('projects', 'replication_tables')
-        if 'metric_table' in columns:
-            op.drop_column('projects', 'metric_table')
+    # As this is the base schema migration for V2, and legacy databases 
+    # might already contain max_wal_lag_mb and other columns, dropping columns 
+    # here will lead to data loss. Base migration downgrade is a no-op.
+    pass
