@@ -245,120 +245,98 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     async function fetchDashboardMetrics() {
-        let pid = currentProjectId;
-        if (!pid) {
-            try {
-                const projRes = await apiFetch('/api/projects');
-                if (!projRes.ok) return;
-                const projs = await projRes.json();
-                if (projs.length > 0) {
-                    pid = projs[0].id;
-                    currentProjectId = pid;
-                } else {
-                    return;
-                }
-            } catch (e) {
-                return;
-            }
-        }
-        
         try {
-            const res = await apiFetch(`/api/projects/${pid}/metrics`);
-            if(!res.ok) return;
-            const dataList = await res.json();
+            const projRes = await apiFetch('/api/projects');
+            if (!projRes.ok) return;
+            const projs = await projRes.json();
             
             const container = document.getElementById('dashboard-metrics-container');
             if(!container) return;
+
+            if (projs.length === 0) {
+                container.innerHTML = '<div class="loading-state">No projects found. Add a project to view metrics.</div>';
+                return;
+            }
             
-            // clear loading state if it exists
             if (container.querySelector('.loading-state')) {
                 container.innerHTML = '';
             }
             
-            dataList.forEach(node => {
-                let col = document.getElementById(`dash-node-${node.id}`);
-                if(!col) {
-                    // Create column dynamically
-                    col = document.createElement('div');
-                    col.className = 'metrics-column';
-                    col.id = `dash-node-${node.id}`;
-                    
-                    const headerHtml = `
-                        <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border); padding-bottom: 12px; margin-bottom: 20px;">
-                            <h2 style="margin: 0; font-size: 1.2rem;">${escapeHTML(node.name)} <span style="font-size: 0.9rem; font-weight: normal; color: var(--text-muted);">(${escapeHTML(node.role)})</span></h2>
-                            <span class="status-badge status-offline" id="metric-${node.id}-status">Offline</span>
-                        </div>
-                    `;
-                    
-                    const metricsHtml = `
-                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px;">
-                            <div class="metric-card glass-panel"><div class="metric-label">Ağ Gecikmesi (Ping)</div><div class="metric-val" id="metric-${node.id}-ping">-</div></div>
-                            <div class="metric-card glass-panel"><div class="metric-label">Senkronizasyon (Lag)</div><div class="metric-val" id="metric-${node.id}-lag">-</div></div>
-                            <div class="metric-card glass-panel"><div class="metric-label">Depolama (Storage)</div><div class="metric-val" id="metric-${node.id}-storage">-</div></div>
-                            <div class="metric-card glass-panel"><div class="metric-label">Bağlantılar (Aktif/Top.)</div><div class="metric-val" id="metric-${node.id}-conn">-</div></div>
-                            <div class="metric-card glass-panel"><div class="metric-label">İşlem Yükü (Başarılı / İptal)</div><div class="metric-val" id="metric-${node.id}-xact">-</div></div>
-                            <div class="metric-card glass-panel"><div class="metric-label">Kayıtlı Araç Sayısı</div><div class="metric-val" id="metric-${node.id}-plates">-</div></div>
-                            <div class="metric-card glass-panel"><div class="metric-label">Önbellek Başarısı</div><div class="metric-val" id="metric-${node.id}-cache">-</div></div>
-                            <div class="metric-card glass-panel"><div class="metric-label">Çalışma Süresi</div><div class="metric-val" id="metric-${node.id}-uptime">-</div></div>
-                        </div>
-                        <div style="margin-top: 16px; font-size: 0.8rem; color: var(--text-muted); text-align: right;">
-                            Motor Sürümü: <span id="metric-${node.id}-version">-</span>
-                        </div>
-                    `;
-                    
-                    col.innerHTML = headerHtml + metricsHtml;
-                    container.appendChild(col);
-                }
-                
-                // Update metrics
-                const d = node.metrics;
-                const prefix = node.id;
-                
-                if(!d || d.status !== 'online') {
-                    document.getElementById(`metric-${prefix}-status`).className = 'status-badge status-offline';
-                    document.getElementById(`metric-${prefix}-status`).innerText = 'Offline';
-                } else {
-                    document.getElementById(`metric-${prefix}-status`).className = 'status-badge status-online';
-                    document.getElementById(`metric-${prefix}-status`).innerText = 'Aktif';
-                    
-                    document.getElementById(`metric-${prefix}-ping`).innerText = d.ping || '-';
-                    document.getElementById(`metric-${prefix}-lag`).innerText = d.lag || '0ms';
-                    document.getElementById(`metric-${prefix}-storage`).innerText = d.storage || '-';
-                    document.getElementById(`metric-${prefix}-conn`).innerText = d.connections || '-';
-                    document.getElementById(`metric-${prefix}-xact`).innerText = d.xact || '-';
-                    document.getElementById(`metric-${prefix}-cache`).innerText = d.cache_hit || '-';
-                    document.getElementById(`metric-${prefix}-uptime`).innerText = d.uptime || '-';
-                    document.getElementById(`metric-${prefix}-version`).innerText = d.version || '-';
-                    document.getElementById(`metric-${prefix}-plates`).innerText = d.plates || 'N/A';
+            // Remove columns for nodes that no longer exist
+            const allNodeIds = projs.flatMap(p => p.nodes.map(n => "dash-node-" + n.id));
+            Array.from(container.children).forEach(child => {
+                if (!allNodeIds.includes(child.id)) {
+                    child.remove();
                 }
             });
             
+            // Fetch metrics for all projects concurrently
+            const metricPromises = projs.map(p => apiFetch("/api/projects/" + p.id + "/metrics").then(r => r.ok ? r.json() : []));
+            const metricsResults = await Promise.all(metricPromises);
+            
+            projs.forEach((proj, i) => {
+                const dataList = metricsResults[i];
+                if (!dataList || dataList.length === 0) return;
+                
+                dataList.forEach(node => {
+                    let col = document.getElementById("dash-node-" + node.id);
+                    if(!col) {
+                        col = document.createElement('div');
+                        col.className = 'metrics-column';
+                        col.id = "dash-node-" + node.id;
+                        
+                        const headerHtml = `
+                            <div style="display: flex; justify-content: space-between; align-items: flex-start; border-bottom: 1px solid var(--border); padding-bottom: 12px; margin-bottom: 20px;">
+                                <div>
+                                    <div style="font-size: 0.8rem; color: var(--primary); text-transform: uppercase; font-weight: bold; margin-bottom: 4px;">${escapeHTML(proj.name)}</div>
+                                    <h2 style="margin: 0; font-size: 1.2rem;">${escapeHTML(node.name)} <span style="font-size: 0.9rem; font-weight: normal; color: var(--text-muted);">(${escapeHTML(node.role)})</span></h2>
+                                </div>
+                                <span class="status-badge status-offline" id="metric-${node.id}-status">Offline</span>
+                            </div>
+                        `;
+                        
+                        const metricsHtml = `
+                            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px;">
+                                <div class="metric-card glass-panel"><div class="metric-label">Ağ Gecikmesi (Ping)</div><div class="metric-val" id="metric-${node.id}-ping">-</div></div>
+                                <div class="metric-card glass-panel"><div class="metric-label">Senkronizasyon (Lag)</div><div class="metric-val" id="metric-${node.id}-lag">-</div></div>
+                                <div class="metric-card glass-panel"><div class="metric-label">Depolama (Storage)</div><div class="metric-val" id="metric-${node.id}-storage">-</div></div>
+                                <div class="metric-card glass-panel"><div class="metric-label">Bağlantılar (Aktif/Top.)</div><div class="metric-val" id="metric-${node.id}-conn">-</div></div>
+                                <div class="metric-card glass-panel"><div class="metric-label">İşlem Yükü (Başarılı / İptal)</div><div class="metric-val" id="metric-${node.id}-xact">-</div></div>
+                                <div class="metric-card glass-panel"><div class="metric-label">Kayıtlı Araç Sayısı</div><div class="metric-val" id="metric-${node.id}-plates">-</div></div>
+                                <div class="metric-card glass-panel"><div class="metric-label">Önbellek Başarısı</div><div class="metric-val" id="metric-${node.id}-cache">-</div></div>
+                                <div class="metric-card glass-panel"><div class="metric-label">Çalışma Süresi</div><div class="metric-val" id="metric-${node.id}-uptime">-</div></div>
+                            </div>
+                            <div style="margin-top: 16px; font-size: 0.8rem; color: var(--text-muted); text-align: right;">
+                                Motor Sürümü: <span id="metric-${node.id}-version">-</span>
+                            </div>
+                        `;
+                        col.innerHTML = headerHtml + metricsHtml;
+                        container.appendChild(col);
+                    }
+                    
+                    const m = node.metrics;
+                    if(m && m.ping !== undefined) {
+                        document.getElementById("metric-" + node.id + "-status").className = 'status-badge status-online';
+                        document.getElementById("metric-" + node.id + "-status").innerText = 'Aktif';
+                        
+                        document.getElementById("metric-" + node.id + "-ping").innerText = m.ping + 'ms';
+                        document.getElementById("metric-" + node.id + "-lag").innerText = m.lag !== 'N/A' ? (m.lag + 'ms') : 'N/A';
+                        document.getElementById("metric-" + node.id + "-storage").innerText = m.storage + ' kB';
+                        document.getElementById("metric-" + node.id + "-conn").innerText = m.conn_active + ' / ' + m.conn_max;
+                        document.getElementById("metric-" + node.id + "-xact").innerText = m.xact_commit + ' ✔ / ' + m.xact_rollback + ' ✖';
+                        document.getElementById("metric-" + node.id + "-cache").innerText = m.blks_hit_percent + '%';
+                        document.getElementById("metric-" + node.id + "-version").innerText = m.version;
+                        document.getElementById("metric-" + node.id + "-uptime").innerText = m.uptime;
+                        document.getElementById("metric-" + node.id + "-plates").innerText = m.plates;
+                    } else {
+                        document.getElementById("metric-" + node.id + "-status").className = 'status-badge status-offline';
+                        document.getElementById("metric-" + node.id + "-status").innerText = 'Çevrimdışı';
+                    }
+                });
+            });
         } catch (e) {
-            console.error("Metrics error:", e);
+            console.error("Dashboard error:", e);
         }
-    }
-
-    // --- EVENT LISTENERS ---
-    
-    // Modals
-    btnAddProj.addEventListener('click', () => modalAddProj.style.display = 'flex');
-    btnCloseProjModal.addEventListener('click', () => modalAddProj.style.display = 'none');
-    btnOpenNodeModal.addEventListener('click', () => modalAddNode.style.display = 'flex');
-    btnCloseNodeModal.addEventListener('click', () => modalAddNode.style.display = 'none');
-    
-    // Sync Modal specific
-    const btnSyncRep = document.getElementById('btn-sync-replication');
-    const modalSyncStatus = document.getElementById('modal-sync-status');
-    const btnCloseSyncModal = document.getElementById('btn-close-sync-modal');
-    
-    if (btnSyncRep) {
-        btnSyncRep.addEventListener('click', () => {
-            modalSyncStatus.style.display = 'flex';
-            const dataFlow = document.getElementById('sync-data-flow');
-            if(dataFlow) {
-                dataFlow.style.animation = 'dataFlowRight 1.5s infinite linear';
-            }
-        });
     }
     
     const btnSyncRepDashboard = document.getElementById('btn-sync-replication-dashboard');
