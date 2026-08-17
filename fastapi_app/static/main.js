@@ -151,6 +151,7 @@ document.addEventListener('DOMContentLoaded', () => {
             data.forEach(proj => {
                 const card = document.createElement('div');
                 card.className = 'project-card glass-panel';
+                card.style.cursor = 'pointer';
                 card.innerHTML = `
                     <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 10px;">
                         <h3 style="margin: 0; padding-right: 10px; word-break: break-all;">${escapeHTML(proj.name)}</h3>
@@ -170,10 +171,19 @@ document.addEventListener('DOMContentLoaded', () => {
                     // Ignore clicks on action buttons
                     if(e.target.closest('button')) return;
                     
-                    // Fetch full detail when clicked
-                    const res = await apiFetch(`/api/projects/${proj.id}`);
-                    const detailData = await res.json();
-                    showDetailView(detailData);
+                    try {
+                        const res = await apiFetch(`/api/projects/${proj.id}`);
+                        if (!res.ok) {
+                            const errTxt = await res.text();
+                            alert("Failed to load project details: " + errTxt);
+                            return;
+                        }
+                        const detailData = await res.json();
+                        showDetailView(detailData);
+                        refreshCurrentProject();
+                    } catch (err) {
+                        alert("Error loading project: " + err);
+                    }
                 });
                 
                 // Add button listeners

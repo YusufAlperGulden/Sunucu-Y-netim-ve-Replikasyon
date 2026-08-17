@@ -149,40 +149,41 @@ async def main_loop():
                 process_task = asyncio.create_task(process_job_wrapper())
 
                 async def heartbeat():
-                    fails = 0
+                    import time
+                    lease_deadline = time.monotonic() + LEASE_TIMEOUT_SECONDS
+                    safe_margin = 10.0 # seconds
+                    
                     while True:
-                        await asyncio.sleep(LEASE_TIMEOUT_SECONDS / 3)
+                        await asyncio.sleep(5)
                         if process_task.done():
                             break
-                        hb_db = SessionLocal()
+                            
+                        if time.monotonic() > (lease_deadline - safe_margin):
+                            print(f"Worker [{WORKER_ID}] lease about to expire locally. Cancelling task for safety.")
+                            lease_lost_event.set()
+                            process_task.cancel()
+                            break
+
                         try:
-                            # Run synchronous SQLAlchemy execute in a separate thread to prevent event loop blocking
                             def update_heartbeat():
-                                res = hb_db.execute(
-                                    text("UPDATE sync_jobs SET lease_expires_at = :expires WHERE id = :job_id AND lease_owner = :worker_id AND lease_token = :token AND status NOT IN ('SUCCESS', 'FAILED')"),
-                                    {"expires": datetime.datetime.utcnow() + datetime.timedelta(seconds=LEASE_TIMEOUT_SECONDS), "job_id": job.id, "worker_id": WORKER_ID, "token": job.lease_token}
-                                )
-                                hb_db.commit()
-                                return res.rowcount
+                                with SessionLocal() as hb_db:
+                                    res = hb_db.execute(
+                                        text("UPDATE sync_jobs SET lease_expires_at = :expires WHERE id = :job_id AND lease_owner = :worker_id AND lease_token = :token AND status NOT IN ('SUCCESS', 'FAILED')"),
+                                        {"expires": datetime.datetime.utcnow() + datetime.timedelta(seconds=LEASE_TIMEOUT_SECONDS), "job_id": job.id, "worker_id": WORKER_ID, "token": job.lease_token}
+                                    )
+                                    hb_db.commit()
+                                    return res.rowcount
                             
                             rowcount = await asyncio.to_thread(update_heartbeat)
-                            fails = 0
-                            # If rowcount is 0, we lost the lease or job finished
                             if rowcount == 0:
                                 print(f"Worker [{WORKER_ID}] lost lease for Job ID: {job.id}")
                                 lease_lost_event.set()
                                 process_task.cancel()
                                 break
+                            else:
+                                lease_deadline = time.monotonic() + LEASE_TIMEOUT_SECONDS
                         except Exception as hb_err:
                             print(f"Heartbeat error: {hb_err}")
-                            fails += 1
-                            if fails >= 2:
-                                print(f"Worker [{WORKER_ID}] heartbeat failed {fails} times. Cancelling task.")
-                                lease_lost_event.set()
-                                process_task.cancel()
-                                break
-                        finally:
-                            hb_db.close()
                             
                 heartbeat_task = asyncio.create_task(heartbeat())
                 

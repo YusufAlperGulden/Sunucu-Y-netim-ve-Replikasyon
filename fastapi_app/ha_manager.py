@@ -105,10 +105,12 @@ async def setup_replication(project_id: int, primary_encrypted_url: str, standby
         # 2. Setup Primary (Idempotent)
         if check_lease_cb: check_lease_cb()
         p_conn = await asyncpg.connect(primary_url, timeout=10.0, command_timeout=30.0, server_settings={'statement_timeout': '30000', 'lock_timeout': '10000'})
+        lock_acquired_p = False
         try:
             has_lock = await p_conn.fetchval("SELECT pg_try_advisory_lock($1)", project_id)
             if not has_lock:
                 return {"success": False, "message": "Could not acquire advisory lock on primary for publication."}
+            lock_acquired_p = True
                 
             # Check if publication exists
             pub_exists = await p_conn.fetchval(f"SELECT pubname FROM pg_publication WHERE pubname = 'univ_pub_{project_id}';")
@@ -119,11 +121,15 @@ async def setup_replication(project_id: int, primary_encrypted_url: str, standby
                 if check_lease_cb: check_lease_cb()
                 await p_conn.execute(f"CREATE PUBLICATION univ_pub_{project_id} FOR TABLE {safe_tables_str};")
         except Exception as pub_err:
-            await p_conn.close()
             return {"success": False, "message": f"Failed to configure primary publication: {pub_err}"}
         finally:
-            await p_conn.execute("SELECT pg_advisory_unlock($1)", project_id)
-            await p_conn.close()
+            if not p_conn.is_closed():
+                if lock_acquired_p:
+                    try:
+                        await p_conn.execute("SELECT pg_advisory_unlock($1)", project_id)
+                    except:
+                        pass
+                await p_conn.close()
 
         # 3. Setup Standbys (Idempotent)
         if state_callback:
@@ -135,10 +141,12 @@ async def setup_replication(project_id: int, primary_encrypted_url: str, standby
             if check_lease_cb: check_lease_cb()
             try:
                 s_conn = await asyncpg.connect(s['url'], timeout=10.0, command_timeout=30.0, server_settings={'statement_timeout': '30000', 'lock_timeout': '10000'})
+                lock_acquired_s = False
                 try:
                     has_lock = await s_conn.fetchval("SELECT pg_try_advisory_lock($1)", project_id)
                     if not has_lock:
                         return {"success": False, "message": f"Could not acquire advisory lock on standby {s['id']}"}
+                    lock_acquired_s = True
                         
                     sub_name = f"univ_sub_{project_id}_{s['id']}"
                     
@@ -159,8 +167,13 @@ async def setup_replication(project_id: int, primary_encrypted_url: str, standby
                         if check_lease_cb: check_lease_cb()
                         await s_conn.execute(f"ALTER SUBSCRIPTION {sub_name} REFRESH PUBLICATION;")
                 finally:
-                    await s_conn.execute("SELECT pg_advisory_unlock($1)", project_id)
-                    await s_conn.close()
+                    if not s_conn.is_closed():
+                        if lock_acquired_s:
+                            try:
+                                await s_conn.execute("SELECT pg_advisory_unlock($1)", project_id)
+                            except:
+                                pass
+                        await s_conn.close()
             except Exception as sub_err:
                 return {"success": False, "message": f"Failed to configure standby subscription {s['id']}: {sub_err}"}
 
@@ -195,13 +208,13 @@ def sync_schema_between_dbs(project_id: int, primary_url: str, standby_url: str,
 
     with engine_primary.connect() as conn_p, engine_standby.connect() as conn_s:
         # Advisory locks via sync driver
-        has_lock_p = conn_p.execute(text("SELECT pg_try_advisory_lock(:id)")).params(id=project_id).scalar()
+        has_lock_p = conn_p.execute(text("SELECT pg_try_advisory_lock(:id)"), {"id": project_id}).scalar()
         if not has_lock_p:
             raise RuntimeError(f"Could not acquire advisory lock on primary for project {project_id}")
             
-        has_lock_s = conn_s.execute(text("SELECT pg_try_advisory_lock(:id)")).params(id=project_id).scalar()
+        has_lock_s = conn_s.execute(text("SELECT pg_try_advisory_lock(:id)"), {"id": project_id}).scalar()
         if not has_lock_s:
-            conn_p.execute(text("SELECT pg_advisory_unlock(:id)")).params(id=project_id)
+            conn_p.execute(text("SELECT pg_advisory_unlock(:id)"), {"id": project_id})
             raise RuntimeError(f"Could not acquire advisory lock on standby for project {project_id}")
             
         try:
@@ -215,8 +228,14 @@ def sync_schema_between_dbs(project_id: int, primary_url: str, standby_url: str,
             metadata.create_all(bind=conn_s)
             print(f"Schema sync completed. Processed {len(metadata.tables)} tables.")
         finally:
-            conn_p.execute(text("SELECT pg_advisory_unlock(:id)")).params(id=project_id)
-            conn_s.execute(text("SELECT pg_advisory_unlock(:id)")).params(id=project_id)
+            try:
+                conn_p.execute(text("SELECT pg_advisory_unlock(:id)"), {"id": project_id})
+            except:
+                pass
+            try:
+                conn_s.execute(text("SELECT pg_advisory_unlock(:id)"), {"id": project_id})
+            except:
+                pass
 
 async def check_and_protect_wal_bloat(project_id: int, primary_encrypted_url: str, max_wal_lag_mb: int) -> dict:
     """Primary sunucuya bağlanarak WAL lag'i ölçer. Kritik seviyeyi aşarsa slot'u koparır."""
