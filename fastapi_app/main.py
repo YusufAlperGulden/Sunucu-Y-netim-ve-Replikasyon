@@ -12,16 +12,20 @@ import asyncio
 import secrets
 from contextlib import asynccontextmanager
 
-security = HTTPBasic()
+security = HTTPBasic(auto_error=False)
 
 def verify_credentials(credentials: HTTPBasicCredentials = Depends(security)):
+    if not credentials:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Not authenticated"
+        )
     correct_username = secrets.compare_digest(credentials.username, "admin")
     correct_password = secrets.compare_digest(credentials.password, "admin123")
     if not (correct_username and correct_password):
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Incorrect email or password",
-            headers={"WWW-Authenticate": "Basic"},
+            detail="Incorrect email or password"
         )
     return credentials
 
