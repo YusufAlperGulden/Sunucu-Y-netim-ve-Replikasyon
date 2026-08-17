@@ -288,10 +288,13 @@ document.addEventListener('DOMContentLoaded', () => {
                         col.className = 'metrics-column';
                         col.id = "dash-node-" + node.id;
                         
+                        const colors = ['#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#ec4899', '#06b6d4'];
+                        const projColor = colors[proj.id % colors.length] || 'var(--primary)';
+                        
                         const headerHtml = `
                             <div style="display: flex; justify-content: space-between; align-items: flex-start; border-bottom: 1px solid var(--border); padding-bottom: 12px; margin-bottom: 20px;">
                                 <div>
-                                    <div style="font-size: 0.8rem; color: var(--primary); text-transform: uppercase; font-weight: bold; margin-bottom: 4px;">${escapeHTML(proj.name)}</div>
+                                    <div style="font-size: 0.8rem; color: ${projColor}; text-transform: uppercase; font-weight: bold; margin-bottom: 4px;">${escapeHTML(proj.name)}</div>
                                     <h2 style="margin: 0; font-size: 1.2rem;">${escapeHTML(node.name)} <span style="font-size: 0.9rem; font-weight: normal; color: var(--text-muted);">(${escapeHTML(node.role)})</span></h2>
                                 </div>
                                 <span class="status-badge status-offline" id="metric-${node.id}-status">Offline</span>
