@@ -341,7 +341,12 @@ async def get_single_node_metrics(node_id: int, db: Session = Depends(get_db)):
     if not node:
         return JSONResponse(status_code=404, content={'message': 'Node not found'})
     
-    metrics = await get_server_metrics(node.encrypted_url)
+    metrics = await get_server_metrics(
+        node.encrypted_url,
+        project_id=node.project_id,
+        role=node.role,
+        metric_table=node.project.metric_table if node.project else None
+    )
     return metrics
 
 
