@@ -1,0 +1,99 @@
+name: Multi-Cloud Deploy (AWS + GCP)
+
+on:
+  push:
+    branches:
+      - main
+
+env:
+  AWS_REGION: eu-central-1
+  GCP_REGION: europe-west3
+  GCP_PROJECT_ID: ${{ secrets.GCP_PROJECT_ID }}
+  AWS_ECR_REPO: universal-server-manager
+  GCP_ARTIFACT_REPO: usm-repo
+
+jobs:
+  build-and-push:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v2
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Login to Amazon ECR
+        id: login-ecr
+        uses: aws-actions/amazon-ecr-login@v1
+
+      - name: Authenticate to Google Cloud
+        uses: google-github-actions/auth@v1
+        with:
+          credentials_json: ${{ secrets.GCP_SA_KEY }}
+
+      - name: Set up Cloud SDK
+        uses: google-github-actions/setup-gcloud@v1
+
+      - name: Configure Docker for GCP
+        run: gcloud auth configure-docker ${{ env.GCP_REGION }}-docker.pkg.dev
+
+      - name: Build Docker Image
+        run: |
+          docker build -t usm-app ./fastapi_app
+
+      - name: Push to AWS ECR
+        env:
+          ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
+          IMAGE_TAG: ${{ github.sha }}
+        run: |
+          docker tag usm-app $ECR_REGISTRY/$AWS_ECR_REPO:$IMAGE_TAG
+          docker tag usm-app $ECR_REGISTRY/$AWS_ECR_REPO:latest
+          docker push $ECR_REGISTRY/$AWS_ECR_REPO:$IMAGE_TAG
+          docker push $ECR_REGISTRY/$AWS_ECR_REPO:latest
+
+      - name: Push to GCP Artifact Registry
+        env:
+          IMAGE_TAG: ${{ github.sha }}
+        run: |
+          GCP_IMAGE_PATH="${{ env.GCP_REGION }}-docker.pkg.dev/${{ env.GCP_PROJECT_ID }}/${{ env.GCP_ARTIFACT_REPO }}/usm-app"
+          docker tag usm-app $GCP_IMAGE_PATH:$IMAGE_TAG
+          docker tag usm-app $GCP_IMAGE_PATH:latest
+          docker push $GCP_IMAGE_PATH:$IMAGE_TAG
+          docker push $GCP_IMAGE_PATH:latest
+
+  deploy-infrastructure:
+    needs: build-and-push
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v2
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v2
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Authenticate to Google Cloud
+        uses: google-github-actions/auth@v1
+        with:
+          credentials_json: ${{ secrets.GCP_SA_KEY }}
+
+      - name: Terraform Init & Apply
+        run: |
+          cd terraform
+          terraform init
+          terraform apply -auto-approve \
+            -var="gcp_project_id=${{ env.GCP_PROJECT_ID }}" \
+            -var="aws_ecr_image_url=${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.${{ env.AWS_REGION }}.amazonaws.com/${{ env.AWS_ECR_REPO }}:latest" \
+            -var="gcp_artifact_image_url=${{ env.GCP_REGION }}-docker.pkg.dev/${{ env.GCP_PROJECT_ID }}/${{ env.GCP_ARTIFACT_REPO }}/usm-app:latest" \
+            -var="domain_name=${{ secrets.DOMAIN_NAME }}" \
+            -var="subdomain_name=${{ secrets.SUBDOMAIN_NAME }}"
