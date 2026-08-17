@@ -23,4 +23,4 @@ def decrypt(token: str) -> str:
     try:
         return f.decrypt(token.encode()).decode()
     except Exception as e:
-        return "Decryption Error"
+        return None

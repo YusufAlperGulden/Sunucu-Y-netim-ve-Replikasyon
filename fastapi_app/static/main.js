@@ -787,7 +787,7 @@ document.getElementById('copy-url-btn').addEventListener('click', function() { c
         if (!confirm('Bu sunucuyu silmek istediğinize emin misiniz?')) return;
         
         try {
-            const res = await apiFetch(/api/nodes/, { method: 'DELETE' });
+            const res = await apiFetch('/api/nodes/' + nodeId, { method: 'DELETE' });
             if (res.ok) {
                 modalEditNode.style.display = 'none';
                 fetchProjects();
