@@ -263,10 +263,10 @@ async def get_server_metrics(encrypted_url: str, project_id: int = None, role: s
             uptime_row = await conn.fetchrow("SELECT date_trunc('second', current_timestamp - pg_postmaster_start_time()) as uptime")
             uptime = str(uptime_row['uptime']) if uptime_row else 'Unknown'
             
-            lag_val = '0ms'
+            lag_val = 'Bağlantı Bekleniyor'
             # Check replication lag
             if role and role.lower() == 'primary' and project_id:
-                subs = await conn.fetch(f"SELECT pg_wal_lsn_diff(pg_current_wal_lsn(), replay_lsn) AS lag_bytes FROM pg_stat_replication WHERE application_name LIKE 'univ_sub_{project_id}_%' ORDER BY lag_bytes DESC LIMIT 1;")
+                subs = await conn.fetch(f"SELECT pg_wal_lsn_diff(pg_current_wal_lsn(), restart_lsn) AS lag_bytes FROM pg_replication_slots WHERE slot_name LIKE 'univ_sub_{project_id}_%' ORDER BY lag_bytes DESC LIMIT 1;")
                 if subs and len(subs) > 0 and subs[0]['lag_bytes'] is not None:
                     lag_mb = subs[0]['lag_bytes'] / (1024 * 1024)
                     lag_val = f"{lag_mb:.2f} MB"
