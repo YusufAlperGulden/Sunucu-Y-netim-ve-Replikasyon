@@ -638,6 +638,33 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
+    const btnCleanupSlots = document.getElementById('btn-cleanup-slots');
+    if (btnCleanupSlots) {
+        btnCleanupSlots.addEventListener('click', async () => {
+            if (!currentProjectId) return;
+            if (!confirm('Primary sunucudaki eski/kayıt dışı replikasyon slotları (orphan slots) temizlenecek. Onaylıyor musunuz?')) return;
+            
+            btnCleanupSlots.innerText = "Temizleniyor...";
+            btnCleanupSlots.disabled = true;
+            try {
+                const res = await apiFetch(/api/projects//cleanup-slots, { method: 'POST' });
+                const data = await res.json();
+                if (res.ok && data.success) {
+                    alert(data.message);
+                    fetchAuditLogs();
+                } else {
+                    alert(data.message || "Temizleme işlemi başarısız.");
+                }
+            } catch (e) {
+                alert("Sunucu hatası.");
+            } finally {
+                btnCleanupSlots.innerText = "Slot Temizle";
+                btnCleanupSlots.disabled = false;
+            }
+        });
+    }
+
+
     // Button: Edit Project (Detail View)
     if (btnEditProjectDetail) {
         btnEditProjectDetail.addEventListener('click', async () => {

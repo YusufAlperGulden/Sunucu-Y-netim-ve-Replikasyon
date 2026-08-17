@@ -308,3 +308,49 @@ async def get_single_node_metrics(node_id: int, db: Session = Depends(get_db)):
     
     metrics = await get_server_metrics(node.encrypted_url)
     return metrics
+
+
+@app.post("/api/projects/{project_id}/cleanup-slots", dependencies=[Depends(verify_credentials)])
+async def cleanup_orphaned_slots(project_id: int, db: Session = Depends(get_db)):
+    from vault import decrypt
+    import asyncpg
+    proj = db.query(Project).filter(Project.id == project_id).first()
+    if not proj:
+        return JSONResponse(status_code=404, content={"message": "Project not found"})
+        
+    primary = next((n for n in proj.nodes if n.role.lower() == 'primary'), None)
+    if not primary:
+        return JSONResponse(status_code=400, content={"message": "No primary node found in this project."})
+        
+    p_url = decrypt(primary.encrypted_url)
+    if not p_url:
+        return JSONResponse(status_code=500, content={"message": "Failed to decrypt primary URL"})
+        
+    valid_sub_names = [f"univ_sub_{project_id}_{n.id}" for n in proj.nodes if n.role.lower() == 'standby']
+    
+    dropped = []
+    try:
+        p_conn = await asyncpg.connect(p_url, timeout=10.0)
+        # Fetch all our slots
+        slots = await p_conn.fetch("SELECT slot_name, active_pid FROM pg_replication_slots WHERE slot_name LIKE 'univ_sub_%';")
+        for slot in slots:
+            slot_name = slot['slot_name']
+            if slot_name not in valid_sub_names:
+                # Orphaned slot! Drop it.
+                active_pid = slot['active_pid']
+                if active_pid:
+                    await p_conn.execute(f"SELECT pg_terminate_backend({active_pid});")
+                await p_conn.execute(f"SELECT pg_drop_replication_slot('{slot_name}');")
+                dropped.append(slot_name)
+        await p_conn.close()
+        
+        # Log it
+        if dropped:
+            from models import AuditLog
+            audit = AuditLog(project_id=project_id, action="Orphaned Slots Cleaned", details=f"Dropped: {', '.join(dropped)}")
+            db.add(audit)
+            db.commit()
+            
+        return {"success": True, "message": f"Successfully dropped {len(dropped)} orphaned slots.", "dropped": dropped}
+    except Exception as e:
+        return JSONResponse(status_code=500, content={"message": f"Cleanup failed: {e}"})
