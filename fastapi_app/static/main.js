@@ -647,7 +647,7 @@ document.addEventListener('DOMContentLoaded', () => {
             btnCleanupSlots.innerText = "Temizleniyor...";
             btnCleanupSlots.disabled = true;
             try {
-                const res = await apiFetch(/api/projects//cleanup-slots, { method: 'POST' });
+                const res = await apiFetch(`/api/projects/${currentProjectId}/cleanup-slots`, { method: 'POST' });
                 const data = await res.json();
                 if (res.ok && data.success) {
                     alert(data.message);
