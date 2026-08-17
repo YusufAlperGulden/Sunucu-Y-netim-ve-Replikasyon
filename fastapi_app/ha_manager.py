@@ -190,9 +190,13 @@ async def get_server_metrics(encrypted_url: str) -> dict:
             uptime = str(uptime_row['uptime']) if uptime_row else 'Unknown'
             
             lag_val = '0ms'
-            rep_stat = await conn.fetchrow("SELECT COALESCE(extract(epoch FROM (now() - pg_last_xact_replay_timestamp())) * 1000, 0) as lag_ms")
-            if rep_stat and rep_stat['lag_ms'] > 0:
-                lag_val = f"{int(rep_stat['lag_ms'])}ms"
+            # Check logical replication subscriptions
+            subs = await conn.fetch("SELECT extract(epoch from (now() - last_msg_receipt_time))*1000 as lag_ms FROM pg_stat_subscription WHERE last_msg_receipt_time IS NOT NULL LIMIT 1;")
+            if subs and len(subs) > 0 and subs[0]['lag_ms'] is not None:
+                lag_val = f"{int(subs[0]['lag_ms'])}ms"
+            else:
+                # Eger Master ise N/A dondurebilir veya eger Standby ama mesaj gelmediyse 0 kabul edebilir
+                pass
                 
             plates_count = 'N/A'
             try:

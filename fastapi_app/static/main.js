@@ -1,3 +1,20 @@
+let globalAuthToken = '';
+function escapeHTML(str) {
+    if (!str) return '';
+    return str.toString()
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(///g, '&quot;')
+        .replace(/'/g, '&#039;');
+}
+async function apiFetch(url, options = {}) {
+    options.headers = options.headers || {};
+    if (globalAuthToken) {
+        options.headers['Authorization'] = 'Basic ' + globalAuthToken;
+    }
+    return fetch(url, options);
+}
 document.addEventListener('DOMContentLoaded', () => {
     // DOM Elements
     const modalAddProj = document.getElementById('modal-add-project');
@@ -107,7 +124,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     <h3>${node.name}</h3>
                     <span style="color: ${color}; font-weight:bold; font-size:0.8rem;">${node.role.toUpperCase()}</span>
                 </div>
-                <p style="color: var(--success); font-size:0.8rem; margin-top:10px;">🟢 Secured & Encrypted</p>
+                <p style="color: var(--success); font-size:0.8rem; margin-top:10px;">ğŸŸ¢ Secured & Encrypted</p>
             `;
             card.addEventListener('click', () => openEditNodeModal(node.id, node.name));
             nodesContainer.appendChild(card);
@@ -117,7 +134,7 @@ document.addEventListener('DOMContentLoaded', () => {
     // --- API CALLS ---
     async function fetchProjects() {
         try {
-            const response = await fetch('/api/projects');
+            const response = await apiFetch('/api/projects');
             const data = await response.json();
             
             if (data.length === 0) {
@@ -131,25 +148,32 @@ document.addEventListener('DOMContentLoaded', () => {
                 card.className = 'project-card glass-panel';
                 card.innerHTML = `
                     <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 10px;">
-                        <h3 style="margin: 0; padding-right: 10px; word-break: break-all;">${proj.name}</h3>
-                        <div style="display: flex; gap: 8px; flex-shrink: 0;">
-                            <button class="icon-btn edit-proj-btn" style="position: static; padding: 6px; background: rgba(255,255,255,0.05); border-radius: 4px; border: 1px solid var(--border);" title="Edit Project" data-id="${proj.id}" data-name="${proj.name}" data-desc="${proj.description || ''}">
+                        <div>
+                            <div class="project-title">${escapeHTML(proj.name)}</div>
+                            <div class="project-desc">${escapeHTML(proj.description || 'No description provided')}</div>
+                        </div>
+                        <div style="display: flex; gap: 8px;">
+                            <button class="icon-btn edit-proj-btn" title="Edit Project">
                                 <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
                             </button>
-                            <button class="icon-btn delete-proj-btn" style="position: static; padding: 6px; background: rgba(255,255,255,0.05); border-radius: 4px; border: 1px solid var(--border);" title="Delete Project" data-id="${proj.id}">
-                                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color: var(--danger)"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path><line x1="10" y1="11" x2="10" y2="17"></line><line x1="14" y1="11" x2="14" y2="17"></line></svg>
+                            <button class="icon-btn delete-proj-btn" title="Delete Project">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
                             </button>
                         </div>
                     </div>
-                    <p>${proj.description || 'No description provided'}</p>
-                    <div style="font-size: 0.8rem; color: var(--text-muted); margin-top: 15px;">Nodes: ${proj.nodesCount}</div>
+                    <div class="node-stats">
+                        <div class="stat-box">
+                            <div class="stat-value">${proj.nodesCount || 0}</div>
+                            <div class="stat-label">Nodes</div>
+                        </div>
+                    </div>
                 `;
                 card.addEventListener('click', async (e) => {
                     // Ignore clicks on action buttons
                     if(e.target.closest('button')) return;
                     
                     // Fetch full detail when clicked
-                    const res = await fetch(`/api/projects/${proj.id}`);
+                    const res = await apiFetch(`/api/projects/${proj.id}`);
                     const detailData = await res.json();
                     showDetailView(detailData);
                 });
@@ -169,7 +193,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     e.stopPropagation();
                     if(confirm("Are you sure you want to delete this project? All associated nodes will be deleted permanently.")) {
                         try {
-                            const res = await fetch(`/api/projects/${proj.id}`, { method: 'DELETE' });
+                            const res = await apiFetch(`/api/projects/${proj.id}`, { method: 'DELETE' });
                             if(res.ok) fetchProjects();
                             else alert("Failed to delete project");
                         } catch(err) {
@@ -187,7 +211,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     async function refreshCurrentProject() {
         if (!currentProjectId) return;
-        const res = await fetch(`/api/projects/${currentProjectId}`);
+        const res = await apiFetch(`/api/projects/${currentProjectId}`);
         const detailData = await res.json();
         renderNodes(detailData.nodes);
     }
@@ -196,7 +220,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const tbody = document.getElementById('logs-table-body');
         tbody.innerHTML = '<tr><td colspan="3" style="padding: 16px; text-align: center; color: var(--text-muted);">Loading logs...</td></tr>';
         try {
-            const res = await fetch('/api/audit-logs');
+            const res = await apiFetch('/api/audit-logs');
             const data = await res.json();
             if (data.length === 0) {
                 tbody.innerHTML = '<tr><td colspan="3" style="padding: 16px; text-align: center; color: var(--text-muted);">No audit logs found.</td></tr>';
@@ -204,15 +228,13 @@ document.addEventListener('DOMContentLoaded', () => {
             }
             tbody.innerHTML = '';
             data.forEach(log => {
-                const tr = document.createElement('tr');
-                tr.style.borderBottom = '1px solid var(--border)';
-                const date = new Date(log.timestamp).toLocaleString();
-                tr.innerHTML = `
-                    <td style="padding: 12px 16px; font-size: 0.85rem; color: var(--text-muted);">${date}</td>
-                    <td style="padding: 12px 16px; font-weight: bold; color: var(--warning);">${log.action}</td>
-                    <td style="padding: 12px 16px; font-size: 0.9rem;">${log.details}</td>
+                const row = document.createElement('tr');
+                row.innerHTML = `
+                    <td>${escapeHTML(log.action)}</td>
+                    <td style="color: var(--text-secondary);">${new Date(log.timestamp).toLocaleString()}</td>
+                    <td style="color: var(--text-secondary);">${escapeHTML(log.details || '-')}</td>
                 `;
-                tbody.appendChild(tr);
+                tbody.appendChild(row);
             });
         } catch (e) {
             tbody.innerHTML = '<tr><td colspan="3" style="padding: 16px; text-align: center; color: var(--danger);">Failed to load logs.</td></tr>';
@@ -220,9 +242,25 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     async function fetchDashboardMetrics() {
-        const pid = currentProjectId || 1; // Default to first project if not selected
+        let pid = currentProjectId;
+        if (!pid) {
+            try {
+                const projRes = await apiFetch('/api/projects');
+                if (!projRes.ok) return;
+                const projs = await projRes.json();
+                if (projs.length > 0) {
+                    pid = projs[0].id;
+                    currentProjectId = pid;
+                } else {
+                    return;
+                }
+            } catch (e) {
+                return;
+            }
+        }
+        
         try {
-            const res = await fetch(`/api/projects/${pid}/metrics`);
+            const res = await apiFetch(`/api/projects/${pid}/metrics`);
             if(!res.ok) return;
             const dataList = await res.json();
             
@@ -251,17 +289,17 @@ document.addEventListener('DOMContentLoaded', () => {
                     
                     const metricsHtml = `
                         <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px;">
-                            <div class="metric-card glass-panel"><div class="metric-label">Ağ Gecikmesi (Ping)</div><div class="metric-val" id="metric-${node.id}-ping">-</div></div>
+                            <div class="metric-card glass-panel"><div class="metric-label">AÄŸ Gecikmesi (Ping)</div><div class="metric-val" id="metric-${node.id}-ping">-</div></div>
                             <div class="metric-card glass-panel"><div class="metric-label">Senkronizasyon (Lag)</div><div class="metric-val" id="metric-${node.id}-lag">-</div></div>
                             <div class="metric-card glass-panel"><div class="metric-label">Depolama (Storage)</div><div class="metric-val" id="metric-${node.id}-storage">-</div></div>
-                            <div class="metric-card glass-panel"><div class="metric-label">Bağlantılar (Aktif/Top.)</div><div class="metric-val" id="metric-${node.id}-conn">-</div></div>
-                            <div class="metric-card glass-panel"><div class="metric-label">İşlem Yükü (Başarılı / İptal)</div><div class="metric-val" id="metric-${node.id}-xact">-</div></div>
-                            <div class="metric-card glass-panel"><div class="metric-label">Kayıtlı Araç Sayısı</div><div class="metric-val" id="metric-${node.id}-plates">-</div></div>
-                            <div class="metric-card glass-panel"><div class="metric-label">Önbellek Başarısı</div><div class="metric-val" id="metric-${node.id}-cache">-</div></div>
-                            <div class="metric-card glass-panel"><div class="metric-label">Çalışma Süresi</div><div class="metric-val" id="metric-${node.id}-uptime">-</div></div>
+                            <div class="metric-card glass-panel"><div class="metric-label">BaÄŸlantÄ±lar (Aktif/Top.)</div><div class="metric-val" id="metric-${node.id}-conn">-</div></div>
+                            <div class="metric-card glass-panel"><div class="metric-label">Ä°ÅŸlem YÃ¼kÃ¼ (BaÅŸarÄ±lÄ± / Ä°ptal)</div><div class="metric-val" id="metric-${node.id}-xact">-</div></div>
+                            <div class="metric-card glass-panel"><div class="metric-label">KayÄ±tlÄ± AraÃ§ SayÄ±sÄ±</div><div class="metric-val" id="metric-${node.id}-plates">-</div></div>
+                            <div class="metric-card glass-panel"><div class="metric-label">Ã–nbellek BaÅŸarÄ±sÄ±</div><div class="metric-val" id="metric-${node.id}-cache">-</div></div>
+                            <div class="metric-card glass-panel"><div class="metric-label">Ã‡alÄ±ÅŸma SÃ¼resi</div><div class="metric-val" id="metric-${node.id}-uptime">-</div></div>
                         </div>
                         <div style="margin-top: 16px; font-size: 0.8rem; color: var(--text-muted); text-align: right;">
-                            Motor Sürümü: <span id="metric-${node.id}-version">-</span>
+                            Motor SÃ¼rÃ¼mÃ¼: <span id="metric-${node.id}-version">-</span>
                         </div>
                     `;
                     
@@ -380,7 +418,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     async function fetchModalMetrics(nodeId) {
         try {
-            const res = await fetch(`/api/nodes/${nodeId}/metrics`);
+            const res = await apiFetch(`/api/nodes/${nodeId}/metrics`);
             if(!res.ok) return;
             const data = await res.json();
             
@@ -417,7 +455,7 @@ document.addEventListener('DOMContentLoaded', () => {
         // Reset metrics UI
         document.getElementById('modal-metric-status').className = 'status-badge status-offline';
         document.getElementById('modal-metric-status').innerText = 'Loading...';
-        const spinnerHtml = '<svg class="spinner" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 1 1-6.219-8.56"></path></svg> Yükleniyor...';
+        const spinnerHtml = '<svg class="spinner" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 1 1-6.219-8.56"></path></svg> YÃ¼kleniyor...';
         ['ping', 'lag', 'storage', 'conn', 'xact', 'cache', 'uptime', 'version', 'plates'].forEach(m => {
             document.getElementById(`modal-metric-${m}`).innerHTML = spinnerHtml;
         });
@@ -431,7 +469,7 @@ document.addEventListener('DOMContentLoaded', () => {
         
         // Fetch the URL
         try {
-            const res = await fetch(`/api/nodes/${nodeId}/url`);
+            const res = await apiFetch(`/api/nodes/${nodeId}/url`);
             const data = await res.json();
             if(data.success) {
                 editNodeUrlInput.value = data.url;
@@ -454,7 +492,7 @@ document.addEventListener('DOMContentLoaded', () => {
         btnSubmitEditNode.disabled = true;
         
         try {
-            const res = await fetch(`/api/nodes/${nodeId}`, {
+            const res = await apiFetch(`/api/nodes/${nodeId}`, {
                 method: 'PUT',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ url: newUrl })
@@ -470,7 +508,7 @@ document.addEventListener('DOMContentLoaded', () => {
         } catch(err) {
             alert("Error connecting to server");
         } finally {
-            btnSubmitEditNode.innerText = "Kaydet ve Yeniden Başlat";
+            btnSubmitEditNode.innerText = "Kaydet ve Yeniden BaÅŸlat";
             btnSubmitEditNode.disabled = false;
         }
     });
@@ -488,7 +526,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const desc = document.getElementById('edit-proj-desc').value;
 
         try {
-            const response = await fetch(`/api/projects/${id}`, {
+            const response = await apiFetch(`/api/projects/${id}`, {
                 method: 'PUT',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ name, description: desc })
@@ -520,7 +558,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const desc = document.getElementById('proj-desc').value;
 
         try {
-            const response = await fetch('/api/projects', {
+            const response = await apiFetch('/api/projects', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ name, description: desc })
@@ -549,7 +587,7 @@ document.addEventListener('DOMContentLoaded', () => {
         btnSubmitNode.disabled = true;
 
         try {
-            const response = await fetch(`/api/projects/${currentProjectId}/nodes`, {
+            const response = await apiFetch(`/api/projects/${currentProjectId}/nodes`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ role, name, url })
@@ -579,7 +617,7 @@ document.addEventListener('DOMContentLoaded', () => {
         btnSyncReplication.disabled = true;
 
         try {
-            const response = await fetch(`/api/projects/${currentProjectId}/sync`, {
+            const response = await apiFetch(`/api/projects/${currentProjectId}/sync`, {
                 method: 'POST'
             });
             const res = await response.json();
@@ -603,7 +641,7 @@ document.addEventListener('DOMContentLoaded', () => {
             if (!currentProjectId) return;
             // Get current project details directly from backend to ensure data is fresh
             try {
-                const res = await fetch(`/api/projects/${currentProjectId}`);
+                const res = await apiFetch(`/api/projects/${currentProjectId}`);
                 if (res.ok) {
                     const proj = await res.json();
                     document.getElementById('edit-proj-id').value = proj.id;
@@ -646,7 +684,7 @@ document.addEventListener('DOMContentLoaded', () => {
             const pid = currentProjectId || 1; 
             btnSaveSettings.innerText = "Saving...";
             try {
-                const res = await fetch(`/api/settings/${pid}`, {
+                const res = await apiFetch(`/api/settings/${pid}`, {
                     method: 'POST',
                     headers: {'Content-Type': 'application/json'},
                     body: JSON.stringify({max_wal_lag_mb: parseInt(lagVal)})
@@ -700,6 +738,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const u = loginUsername.value.trim();
         const p = loginPassword.value.trim();
         if (u === 'admin' && p === 'admin123') {
+            globalAuthToken = btoa(u + ':' + p);
             loginScreen.style.transition = 'opacity 0.3s ease';
             loginScreen.style.opacity = '0';
             setTimeout(() => {
@@ -726,3 +765,5 @@ document.addEventListener('DOMContentLoaded', () => {
 document.getElementById('toggle-url-btn').addEventListener('click', function() { const input = document.getElementById('node-url'); const icon = this.querySelector('svg'); if (input.type === 'password') { input.type = 'text'; icon.innerHTML = '<path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle>'; } else { input.type = 'password'; icon.innerHTML = '<path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle><line x1="1" y1="1" x2="23" y2="23"></line>'; } });
 
 document.getElementById('copy-url-btn').addEventListener('click', function() { const input = document.getElementById('node-url'); navigator.clipboard.writeText(input.value).then(() => { const originalHTML = this.innerHTML; this.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#00ff00" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>'; setTimeout(() => { this.innerHTML = originalHTML; }, 2000); }); });
+
+

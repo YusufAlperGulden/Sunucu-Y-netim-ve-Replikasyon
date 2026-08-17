@@ -1,8 +1,15 @@
 import os
 from cryptography.fernet import Fernet
 
-# Yüksek güvenlikli master key. Gerçek üretim ortamında çevre değişkeni (ENV) olarak alınmalı.
-MASTER_KEY = b'G48B_U8D5t-9y4T3S1L0O2x-9w6a1-J9dK_8l2f6u1w='
+# Yüksek güvenlikli master key çevresel değişkenden alınır.
+_env_key = os.environ.get('VAULT_KEY')
+if _env_key:
+    MASTER_KEY = _env_key.encode()
+else:
+    # Güvenli değil ama fallback olarak rastgele key. Restart'ta veriler gider, uyarıdır.
+    print("WARNING: VAULT_KEY not found in environment, using random key.")
+    MASTER_KEY = Fernet.generate_key()
+
 f = Fernet(MASTER_KEY)
 
 def encrypt(data: str) -> str:

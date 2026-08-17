@@ -1,16 +1,31 @@
-from fastapi import FastAPI, Depends, Request, Form
+from fastapi import FastAPI, Request, Depends, HTTPException, status, Form
 from fastapi.responses import HTMLResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
+from fastapi.security import HTTPBasic, HTTPBasicCredentials
 from sqlalchemy.orm import Session
 from models import SessionLocal, Project, DatabaseNode
 from pydantic import BaseModel
 from ha_manager import test_connection, setup_replication, check_and_protect_wal_bloat
 import traceback
 import asyncio
+import secrets
 from contextlib import asynccontextmanager
 
-# Arka plan gÃ¶revi: Her 30 saniyede bir WAL Lag'i kontrol eder
+security = HTTPBasic()
+
+def verify_credentials(credentials: HTTPBasicCredentials = Depends(security)):
+    correct_username = secrets.compare_digest(credentials.username, "admin")
+    correct_password = secrets.compare_digest(credentials.password, "admin123")
+    if not (correct_username and correct_password):
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Incorrect email or password",
+            headers={"WWW-Authenticate": "Basic"},
+        )
+    return credentials
+
+# Arka plan görevi: Her 30 saniyede bir WAL Lag'i kontrol eder
 async def wal_bloat_monitor():
     while True:
         await asyncio.sleep(30)
@@ -38,7 +53,7 @@ async def lifespan(app: FastAPI):
     # Shutdown
     monitor_task.cancel()
 
-app = FastAPI(title="Sunucu YÃ¶netim ve Replikasyon", lifespan=lifespan)
+app = FastAPI(title="Sunucu Yönetim ve Replikasyon", lifespan=lifespan)
 
 # Mount static files and templates
 app.mount("/static", StaticFiles(directory="static"), name="static")
@@ -66,12 +81,12 @@ class NodeCreate(BaseModel):
 async def read_root(request: Request):
     return templates.TemplateResponse(request=request, name="index.html")
 
-@app.get("/api/projects")
+@app.get("/api/projects", dependencies=[Depends(verify_credentials)])
 def get_projects(db: Session = Depends(get_db)):
     projects = db.query(Project).all()
     return [{"id": p.id, "name": p.name, "description": p.description, "nodesCount": len(p.nodes)} for p in projects]
 
-@app.post("/api/projects")
+@app.post("/api/projects", dependencies=[Depends(verify_credentials)])
 def add_project(project: ProjectCreate, db: Session = Depends(get_db)):
     db_proj = Project(name=project.name, description=project.description)
     db.add(db_proj)
@@ -79,7 +94,7 @@ def add_project(project: ProjectCreate, db: Session = Depends(get_db)):
     db.refresh(db_proj)
     return {"success": True, "id": db_proj.id}
 
-@app.put("/api/projects/{project_id}")
+@app.put("/api/projects/{project_id}", dependencies=[Depends(verify_credentials)])
 def update_project(project_id: int, project: ProjectCreate, db: Session = Depends(get_db)):
     proj = db.query(Project).filter(Project.id == project_id).first()
     if not proj:
@@ -89,7 +104,7 @@ def update_project(project_id: int, project: ProjectCreate, db: Session = Depend
     db.commit()
     return {"success": True}
 
-@app.delete("/api/projects/{project_id}")
+@app.delete("/api/projects/{project_id}", dependencies=[Depends(verify_credentials)])
 def delete_project(project_id: int, db: Session = Depends(get_db)):
     proj = db.query(Project).filter(Project.id == project_id).first()
     if not proj:
@@ -98,7 +113,7 @@ def delete_project(project_id: int, db: Session = Depends(get_db)):
     db.commit()
     return {"success": True}
 
-@app.get("/api/projects/{project_id}")
+@app.get("/api/projects/{project_id}", dependencies=[Depends(verify_credentials)])
 def get_project_detail(project_id: int, db: Session = Depends(get_db)):
     proj = db.query(Project).filter(Project.id == project_id).first()
     if not proj:
@@ -107,7 +122,7 @@ def get_project_detail(project_id: int, db: Session = Depends(get_db)):
     nodes = [{"id": n.id, "role": n.role, "name": n.name} for n in proj.nodes]
     return {"id": proj.id, "name": proj.name, "description": proj.description, "nodes": nodes}
 
-@app.post("/api/projects/{project_id}/nodes")
+@app.post("/api/projects/{project_id}/nodes", dependencies=[Depends(verify_credentials)])
 async def add_node(project_id: int, node: NodeCreate, db: Session = Depends(get_db)):
     proj = db.query(Project).filter(Project.id == project_id).first()
     if not proj:
@@ -126,7 +141,7 @@ async def add_node(project_id: int, node: NodeCreate, db: Session = Depends(get_
     
     return {"success": True, "message": "Node added securely."}
 
-@app.post("/api/projects/{project_id}/sync")
+@app.post("/api/projects/{project_id}/sync", dependencies=[Depends(verify_credentials)])
 async def sync_replication(project_id: int, db: Session = Depends(get_db)):
     proj = db.query(Project).filter(Project.id == project_id).first()
     if not proj:
@@ -146,7 +161,7 @@ async def sync_replication(project_id: int, db: Session = Depends(get_db)):
         
     return result
 
-@app.get('/api/audit-logs')
+@app.get('/api/audit-logs', dependencies=[Depends(verify_credentials)])
 def get_audit_logs(db: Session = Depends(get_db)):
     from models import AuditLog
     logs = db.query(AuditLog).order_by(AuditLog.timestamp.desc()).limit(50).all()
@@ -155,7 +170,7 @@ def get_audit_logs(db: Session = Depends(get_db)):
 class SettingsUpdate(BaseModel):
     max_wal_lag_mb: int
 
-@app.post('/api/settings/{project_id}')
+@app.post('/api/settings/{project_id}', dependencies=[Depends(verify_credentials)])
 def update_settings(project_id: int, settings: SettingsUpdate, db: Session = Depends(get_db)):
     proj = db.query(Project).filter(Project.id == project_id).first()
     if not proj:
@@ -164,7 +179,7 @@ def update_settings(project_id: int, settings: SettingsUpdate, db: Session = Dep
     db.commit()
     return {'success': True}
 
-@app.get('/api/projects/{project_id}/metrics')
+@app.get('/api/projects/{project_id}/metrics', dependencies=[Depends(verify_credentials)])
 async def get_project_metrics(project_id: int, db: Session = Depends(get_db)):
     from ha_manager import get_server_metrics
     import asyncio
@@ -194,7 +209,7 @@ async def get_project_metrics(project_id: int, db: Session = Depends(get_db)):
 class NodeUpdate(BaseModel):
     url: str
 
-@app.get('/api/nodes/{node_id}/url')
+@app.get('/api/nodes/{node_id}/url', dependencies=[Depends(verify_credentials)])
 def get_node_url(node_id: int, db: Session = Depends(get_db)):
     from vault import decrypt
     node = db.query(DatabaseNode).filter(DatabaseNode.id == node_id).first()
@@ -206,7 +221,7 @@ def get_node_url(node_id: int, db: Session = Depends(get_db)):
     except:
         return JSONResponse(status_code=500, content={'message': 'Failed to decrypt URL'})
 
-@app.put('/api/nodes/{node_id}')
+@app.put('/api/nodes/{node_id}', dependencies=[Depends(verify_credentials)])
 async def update_node_url(node_id: int, update: NodeUpdate, db: Session = Depends(get_db)):
     node = db.query(DatabaseNode).filter(DatabaseNode.id == node_id).first()
     if not node:
@@ -220,7 +235,7 @@ async def update_node_url(node_id: int, update: NodeUpdate, db: Session = Depend
     db.commit()
     return {'success': True, 'message': 'Node updated securely.'}
 
-@app.get('/api/nodes/{node_id}/metrics')
+@app.get('/api/nodes/{node_id}/metrics', dependencies=[Depends(verify_credentials)])
 async def get_single_node_metrics(node_id: int, db: Session = Depends(get_db)):
     from ha_manager import get_server_metrics
     node = db.query(DatabaseNode).filter(DatabaseNode.id == node_id).first()
