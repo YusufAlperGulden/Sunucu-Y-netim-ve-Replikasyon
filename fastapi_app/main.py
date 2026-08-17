@@ -15,18 +15,23 @@ from contextlib import asynccontextmanager
 security = HTTPBasic(auto_error=False)
 
 import os
+import secrets
+
+ADMIN_USER = os.environ.get("ADMIN_USER")
+ADMIN_PASS = os.environ.get("ADMIN_PASS")
+
+if not ADMIN_USER or not ADMIN_PASS:
+    raise RuntimeError("CRITICAL: ADMIN_USER or ADMIN_PASS environment variables are missing.")
+
+if ADMIN_PASS == "admin123":
+    raise RuntimeError("CRITICAL: 'admin123' is no longer allowed. Please change ADMIN_PASS in Render Environment Variables for security.")
 
 def verify_credentials(credentials: HTTPBasicCredentials = Depends(security)):
     if not credentials:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Not authenticated")
     
-    admin_user = os.environ.get("ADMIN_USER")
-    admin_pass = os.environ.get("ADMIN_PASS")
-    if not admin_user or not admin_pass:
-        raise ValueError("CRITICAL: ADMIN_USER or ADMIN_PASS environment variables are missing.")
-
-    correct_username = secrets.compare_digest(credentials.username, admin_user)
-    correct_password = secrets.compare_digest(credentials.password, admin_pass)
+    correct_username = secrets.compare_digest(credentials.username, ADMIN_USER)
+    correct_password = secrets.compare_digest(credentials.password, ADMIN_PASS)
     if not (correct_username and correct_password):
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Incorrect credentials")
     return credentials

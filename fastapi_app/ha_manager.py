@@ -1,5 +1,6 @@
 import asyncpg
 import asyncio
+import re
 from vault import decrypt
 from urllib.parse import urlparse
 from sqlalchemy import create_engine, MetaData
@@ -32,7 +33,7 @@ async def setup_replication(project_id: int, primary_encrypted_url: str, standby
 
         for s in valid_standbys:
             try:
-                await asyncio.to_thread(sync_schema_between_dbs, primary_url, s['url'])
+                await asyncio.to_thread(sync_schema_between_dbs, primary_url, s['url'], replication_tables)
             except Exception as schema_err:
                 print(f"Schema sync error: {schema_err}")
                 return {"success": False, "message": f"Schema sync failed: {str(schema_err)}"}
@@ -50,12 +51,21 @@ async def setup_replication(project_id: int, primary_encrypted_url: str, standby
         p_conn = await asyncpg.connect(primary_url, timeout=10.0)
         try:
             await p_conn.execute(f"DROP PUBLICATION IF EXISTS univ_pub_{project_id};")
-            if replication_tables:
-                # Sanitize the input somewhat, assuming comma separated
-                tables_list = ",".join([t.strip() for t in replication_tables.split(",")])
-                await p_conn.execute(f"CREATE PUBLICATION univ_pub_{project_id} FOR TABLE {tables_list};")
-            else:
-                await p_conn.execute(f"CREATE PUBLICATION univ_pub_{project_id} FOR ALL TABLES;")
+            if not replication_tables:
+                raise ValueError("CRITICAL: replication_tables must be provided. Syncing all tables is disabled for safety.")
+            
+            tables_list = [t.strip() for t in replication_tables.split(",") if t.strip()]
+            if not tables_list:
+                raise ValueError("CRITICAL: replication_tables must be provided. Syncing all tables is disabled for safety.")
+                
+            safe_tables = []
+            for t in tables_list:
+                if not re.match(r'^[a-zA-Z0-9_]+$', t):
+                    raise ValueError(f"Invalid table name detected: {t}")
+                safe_tables.append(f'"{t}"')
+                
+            safe_tables_str = ", ".join(safe_tables)
+            await p_conn.execute(f"CREATE PUBLICATION univ_pub_{project_id} FOR TABLE {safe_tables_str};")
             
             # Primary'deki tüm 'universal_sub' ile başlayan slotları bul ve zorla sil
             slots = await p_conn.fetch(f"SELECT slot_name, active_pid FROM pg_replication_slots WHERE slot_name LIKE 'univ_sub_{project_id}_%';")
@@ -136,8 +146,19 @@ async def setup_replication(project_id: int, primary_encrypted_url: str, standby
         print(f"Replication setup error: {e}")
         return {"success": False, "message": f"Setup failed: {str(e)}"}
 
-def sync_schema_between_dbs(primary_url: str, standby_url: str):
+def sync_schema_between_dbs(primary_url: str, standby_url: str, replication_tables: str = None):
     """SQLAlchemy MetaData Reflection kullanarak şemaları kopyalar (Sadece iskelet)."""
+    if not replication_tables:
+        raise ValueError("CRITICAL: replication_tables must be provided. Syncing all tables is disabled for safety.")
+        
+    tables_to_sync = [t.strip() for t in replication_tables.split(",") if t.strip()]
+    if not tables_to_sync:
+        raise ValueError("CRITICAL: replication_tables must be provided. Syncing all tables is disabled for safety.")
+        
+    for t in tables_to_sync:
+        if not re.match(r'^[a-zA-Z0-9_]+$', t):
+            raise ValueError(f"Invalid table name detected: {t}")
+            
     # asyncpg url (postgres://) ile sqlalchemy url (postgresql://) uyumu
     p_url = primary_url.replace("postgres://", "postgresql://")
     s_url = standby_url.replace("postgres://", "postgresql://")
@@ -146,8 +167,8 @@ def sync_schema_between_dbs(primary_url: str, standby_url: str):
     engine_standby = create_engine(s_url)
 
     metadata = MetaData()
-    # Primary'den tablo yapılarını oku
-    metadata.reflect(bind=engine_primary)
+    # Primary'den sadece belirtilen tablo yapılarını oku
+    metadata.reflect(bind=engine_primary, only=tables_to_sync)
     
     # Standby'da aynı tabloları yarat (Var olanları atlar - checkfirst=True varsayılandır)
     metadata.create_all(bind=engine_standby)
