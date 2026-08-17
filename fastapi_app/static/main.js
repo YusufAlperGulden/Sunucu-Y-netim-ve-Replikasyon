@@ -135,6 +135,11 @@ document.addEventListener('DOMContentLoaded', () => {
     async function fetchProjects() {
         try {
             const response = await apiFetch('/api/projects');
+            if (!response.ok) {
+                const errText = await response.text();
+                projectsContainer.innerHTML = `<div class="loading-state" style="color: var(--danger)">Error loading projects. Server returned ${response.status}: ${escapeHTML(errText)}</div>`;
+                return;
+            }
             const data = await response.json();
             
             if (data.length === 0) {
@@ -205,7 +210,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 projectsContainer.appendChild(card);
             });
         } catch (error) {
-            projectsContainer.innerHTML = '<div class="loading-state" style="color: var(--danger)">Error loading projects.</div>';
+            projectsContainer.innerHTML = `<div class="loading-state" style="color: var(--danger)">Error loading projects. Exception: ${escapeHTML(error.toString())}</div>`;
         }
     }
 
