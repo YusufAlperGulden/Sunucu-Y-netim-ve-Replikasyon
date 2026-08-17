@@ -66,7 +66,7 @@ class SyncJob(Base):
     
     __table_args__ = (
         Index("ix_sync_jobs_claim", "status", "lease_expires_at", "created_at"),
-        Index("ix_sync_jobs_active", "project_id", unique=True, postgresql_where=text("status NOT IN ('SUCCESS', 'FAILED')")),
+        Index("ix_sync_jobs_active", "project_id", unique=True, postgresql_where=text("status NOT IN ('SUCCESS', 'FAILED')"), sqlite_where=text("status NOT IN ('SUCCESS', 'FAILED')")),
     )
 
 class AuditLog(Base):
