@@ -23,8 +23,6 @@ ADMIN_PASS = os.environ.get("ADMIN_PASS")
 if not ADMIN_USER or not ADMIN_PASS:
     raise RuntimeError("CRITICAL: ADMIN_USER or ADMIN_PASS environment variables are missing.")
 
-if ADMIN_PASS == "admin123":
-    raise RuntimeError("CRITICAL: 'admin123' is no longer allowed. Please change ADMIN_PASS in Render Environment Variables for security.")
 
 def verify_credentials(credentials: HTTPBasicCredentials = Depends(security)):
     if not credentials:
