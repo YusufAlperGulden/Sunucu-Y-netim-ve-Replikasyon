@@ -221,6 +221,11 @@ document.addEventListener('DOMContentLoaded', () => {
         tbody.innerHTML = '<tr><td colspan="3" style="padding: 16px; text-align: center; color: var(--text-muted);">Loading logs...</td></tr>';
         try {
             const res = await apiFetch('/api/audit-logs');
+            if (!res.ok) {
+                const errText = await res.text();
+                tbody.innerHTML = `<tr><td colspan="3" style="padding: 16px; text-align: center; color: var(--danger);">Failed to load logs. Server returned ${res.status}: ${escapeHTML(errText)}</td></tr>`;
+                return;
+            }
             const data = await res.json();
             if (data.length === 0) {
                 tbody.innerHTML = '<tr><td colspan="3" style="padding: 16px; text-align: center; color: var(--text-muted);">No audit logs found.</td></tr>';
@@ -237,7 +242,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 tbody.appendChild(row);
             });
         } catch (e) {
-            tbody.innerHTML = '<tr><td colspan="3" style="padding: 16px; text-align: center; color: var(--danger);">Failed to load logs.</td></tr>';
+            tbody.innerHTML = `<tr><td colspan="3" style="padding: 16px; text-align: center; color: var(--danger);">Failed to load logs. Exception: ${escapeHTML(e.toString())}</td></tr>`;
         }
     }
 
