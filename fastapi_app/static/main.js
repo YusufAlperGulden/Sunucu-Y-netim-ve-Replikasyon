@@ -124,7 +124,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     <h3>${node.name}</h3>
                     <span style="color: ${color}; font-weight:bold; font-size:0.8rem;">${node.role.toUpperCase()}</span>
                 </div>
-                <p style="color: var(--success); font-size:0.8rem; margin-top:10px;">ğŸŸ¢ Secured & Encrypted</p>
+                <p style="color: var(--success); font-size:0.8rem; margin-top:10px;">🟢 Secured & Encrypted</p>
             `;
             card.addEventListener('click', () => openEditNodeModal(node.id, node.name));
             nodesContainer.appendChild(card);
@@ -292,17 +292,17 @@ document.addEventListener('DOMContentLoaded', () => {
                     
                     const metricsHtml = `
                         <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px;">
-                            <div class="metric-card glass-panel"><div class="metric-label">AÄŸ Gecikmesi (Ping)</div><div class="metric-val" id="metric-${node.id}-ping">-</div></div>
+                            <div class="metric-card glass-panel"><div class="metric-label">Ağ Gecikmesi (Ping)</div><div class="metric-val" id="metric-${node.id}-ping">-</div></div>
                             <div class="metric-card glass-panel"><div class="metric-label">Senkronizasyon (Lag)</div><div class="metric-val" id="metric-${node.id}-lag">-</div></div>
                             <div class="metric-card glass-panel"><div class="metric-label">Depolama (Storage)</div><div class="metric-val" id="metric-${node.id}-storage">-</div></div>
-                            <div class="metric-card glass-panel"><div class="metric-label">BaÄŸlantÄ±lar (Aktif/Top.)</div><div class="metric-val" id="metric-${node.id}-conn">-</div></div>
-                            <div class="metric-card glass-panel"><div class="metric-label">Ä°ÅŸlem YÃ¼kÃ¼ (BaÅŸarÄ±lÄ± / Ä°ptal)</div><div class="metric-val" id="metric-${node.id}-xact">-</div></div>
-                            <div class="metric-card glass-panel"><div class="metric-label">KayÄ±tlÄ± AraÃ§ SayÄ±sÄ±</div><div class="metric-val" id="metric-${node.id}-plates">-</div></div>
-                            <div class="metric-card glass-panel"><div class="metric-label">Ã–nbellek BaÅŸarÄ±sÄ±</div><div class="metric-val" id="metric-${node.id}-cache">-</div></div>
-                            <div class="metric-card glass-panel"><div class="metric-label">Ã‡alÄ±ÅŸma SÃ¼resi</div><div class="metric-val" id="metric-${node.id}-uptime">-</div></div>
+                            <div class="metric-card glass-panel"><div class="metric-label">Bağlantılar (Aktif/Top.)</div><div class="metric-val" id="metric-${node.id}-conn">-</div></div>
+                            <div class="metric-card glass-panel"><div class="metric-label">İşlem Yükü (Başarılı / İptal)</div><div class="metric-val" id="metric-${node.id}-xact">-</div></div>
+                            <div class="metric-card glass-panel"><div class="metric-label">Kayıtlı Araç Sayısı</div><div class="metric-val" id="metric-${node.id}-plates">-</div></div>
+                            <div class="metric-card glass-panel"><div class="metric-label">Önbellek Başarısı</div><div class="metric-val" id="metric-${node.id}-cache">-</div></div>
+                            <div class="metric-card glass-panel"><div class="metric-label">Çalışma Süresi</div><div class="metric-val" id="metric-${node.id}-uptime">-</div></div>
                         </div>
                         <div style="margin-top: 16px; font-size: 0.8rem; color: var(--text-muted); text-align: right;">
-                            Motor SÃ¼rÃ¼mÃ¼: <span id="metric-${node.id}-version">-</span>
+                            Motor Sürümü: <span id="metric-${node.id}-version">-</span>
                         </div>
                     `;
                     
@@ -458,7 +458,7 @@ document.addEventListener('DOMContentLoaded', () => {
         // Reset metrics UI
         document.getElementById('modal-metric-status').className = 'status-badge status-offline';
         document.getElementById('modal-metric-status').innerText = 'Loading...';
-        const spinnerHtml = '<svg class="spinner" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 1 1-6.219-8.56"></path></svg> YÃ¼kleniyor...';
+        const spinnerHtml = '<svg class="spinner" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 1 1-6.219-8.56"></path></svg> Yükleniyor...';
         ['ping', 'lag', 'storage', 'conn', 'xact', 'cache', 'uptime', 'version', 'plates'].forEach(m => {
             document.getElementById(`modal-metric-${m}`).innerHTML = spinnerHtml;
         });
@@ -511,7 +511,7 @@ document.addEventListener('DOMContentLoaded', () => {
         } catch(err) {
             alert("Error connecting to server");
         } finally {
-            btnSubmitEditNode.innerText = "Kaydet ve Yeniden BaÅŸlat";
+            btnSubmitEditNode.innerText = "Kaydet ve Yeniden Başlat";
             btnSubmitEditNode.disabled = false;
         }
     });
