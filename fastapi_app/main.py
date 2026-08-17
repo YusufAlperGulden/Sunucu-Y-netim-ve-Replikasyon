@@ -255,7 +255,7 @@ async def sync_replication(project_id: int, db: Session = Depends(get_db)):
 def get_audit_logs(db: Session = Depends(get_db)):
     from models import AuditLog
     logs = db.query(AuditLog).order_by(AuditLog.timestamp.desc()).limit(50).all()
-    return [{'id': l.id, 'project_id': l.project_id, 'timestamp': l.timestamp.isoformat(), 'action': l.action, 'details': l.details} for l in logs]
+    return [{'id': l.id, 'project_id': l.project_id, 'timestamp': l.timestamp.isoformat() if l.timestamp else None, 'action': l.action, 'details': l.details} for l in logs]
 
 class SettingsUpdate(BaseModel):
     max_wal_lag_mb: int
