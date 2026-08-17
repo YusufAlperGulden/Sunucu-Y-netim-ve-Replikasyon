@@ -232,10 +232,11 @@ document.addEventListener('DOMContentLoaded', () => {
             tbody.innerHTML = '';
             data.forEach(log => {
                 const row = document.createElement('tr');
+                row.style.borderBottom = '1px solid rgba(255,255,255,0.05)';
                 row.innerHTML = `
-                    <td>${escapeHTML(log.action)}</td>
-                    <td style="color: var(--text-secondary);">${new Date(log.timestamp).toLocaleString()}</td>
-                    <td style="color: var(--text-secondary);">${escapeHTML(log.details || '-')}</td>
+                    <td style="padding: 16px 16px;">${escapeHTML(log.action)}</td>
+                    <td style="padding: 16px 16px; color: var(--text-secondary);">${new Date(log.timestamp).toLocaleString()}</td>
+                    <td style="padding: 16px 16px; color: var(--text-secondary);">${escapeHTML(log.details || '-')}</td>
                 `;
                 tbody.appendChild(row);
             });
