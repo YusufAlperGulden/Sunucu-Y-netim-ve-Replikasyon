@@ -69,14 +69,29 @@ async def setup_replication(project_id: int, primary_encrypted_url: str, standby
 
         # 3. Tüm Standby Sunuculara tekrar Bağlan ve YENİ SUBSCRIPTION oluştur
         safe_primary_url = primary_url.replace("'", "''")
-        for s in valid_standbys:
-            s_conn = await asyncpg.connect(s['url'], timeout=10.0)
-            try:
-                sub_name = f"univ_sub_{project_id}_{s['id']}"
-                sub_query = f"CREATE SUBSCRIPTION {sub_name} CONNECTION '{safe_primary_url}' PUBLICATION univ_pub_{project_id} WITH (copy_data = true);"
-                await s_conn.execute(sub_query)
-            finally:
-                await s_conn.close()
+        created_subs = []
+        try:
+            for s in valid_standbys:
+                s_conn = await asyncpg.connect(s['url'], timeout=10.0)
+                try:
+                    sub_name = f"univ_sub_{project_id}_{s['id']}"
+                    sub_query = f"CREATE SUBSCRIPTION {sub_name} CONNECTION '{safe_primary_url}' PUBLICATION univ_pub_{project_id} WITH (copy_data = true);"
+                    await s_conn.execute(sub_query)
+                    created_subs.append((s['url'], sub_name))
+                finally:
+                    await s_conn.close()
+        except Exception as setup_err:
+            print(f"Standby setup failed, rolling back previously created subs. Error: {setup_err}")
+            for roll_url, roll_sub in created_subs:
+                try:
+                    r_conn = await asyncpg.connect(roll_url, timeout=5.0)
+                    await r_conn.execute(f"ALTER SUBSCRIPTION {roll_sub} DISABLE;")
+                    await r_conn.execute(f"ALTER SUBSCRIPTION {roll_sub} SET (slot_name = NONE);")
+                    await r_conn.execute(f"DROP SUBSCRIPTION IF EXISTS {roll_sub};")
+                    await r_conn.close()
+                except Exception as rollback_err:
+                    print(f"Failed to rollback sub {roll_sub}: {rollback_err}")
+            raise Exception(f"Replication atomicity failure: {setup_err}. Rolled back successfully created subscriptions.")
 
         return {"success": True, "message": f"Logical replication (1 Master to {len(valid_standbys)} Standbys) established successfully."}
 
@@ -204,9 +219,9 @@ async def get_server_metrics(encrypted_url: str, project_id: int = None, role: s
                 
             plates_count = 'N/A'
             try:
-                plate_row = await conn.fetchrow("SELECT count(*) as count FROM vehicles")
-                if plate_row:
-                    plates_count = f"{plate_row['count']} Araç"
+                plate_row = await conn.fetchrow("SELECT relname, n_live_tup as count FROM pg_stat_user_tables ORDER BY n_live_tup DESC LIMIT 1;")
+                if plate_row and plate_row['relname']:
+                    plates_count = f"{plate_row['count']} Kayıt ({plate_row['relname']})"
             except Exception:
                 pass
             
