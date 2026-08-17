@@ -3,12 +3,10 @@ from cryptography.fernet import Fernet
 
 # Yüksek güvenlikli master key çevresel değişkenden alınır.
 _env_key = os.environ.get('VAULT_KEY')
-if _env_key:
-    MASTER_KEY = _env_key.encode()
-else:
-    # Güvenli değil ama fallback olarak rastgele key. Restart'ta veriler gider, uyarıdır.
-    print("WARNING: VAULT_KEY not found in environment, using random key.")
-    MASTER_KEY = Fernet.generate_key()
+if not _env_key:
+    raise ValueError("CRITICAL: VAULT_KEY environment variable is missing. It is required to encrypt and decrypt database credentials safely. Please set it before starting the application.")
+
+MASTER_KEY = _env_key.encode()
 
 f = Fernet(MASTER_KEY)
 

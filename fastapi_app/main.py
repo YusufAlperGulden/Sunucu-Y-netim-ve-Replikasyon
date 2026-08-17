@@ -14,19 +14,21 @@ from contextlib import asynccontextmanager
 
 security = HTTPBasic(auto_error=False)
 
+import os
+
 def verify_credentials(credentials: HTTPBasicCredentials = Depends(security)):
     if not credentials:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Not authenticated"
-        )
-    correct_username = secrets.compare_digest(credentials.username, "admin")
-    correct_password = secrets.compare_digest(credentials.password, "admin123")
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Not authenticated")
+    
+    admin_user = os.environ.get("ADMIN_USER")
+    admin_pass = os.environ.get("ADMIN_PASS")
+    if not admin_user or not admin_pass:
+        raise ValueError("CRITICAL: ADMIN_USER or ADMIN_PASS environment variables are missing.")
+
+    correct_username = secrets.compare_digest(credentials.username, admin_user)
+    correct_password = secrets.compare_digest(credentials.password, admin_pass)
     if not (correct_username and correct_password):
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Incorrect email or password"
-        )
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Incorrect credentials")
     return credentials
 
 # Arka plan görevi: Her 30 saniyede bir WAL Lag'i kontrol eder
@@ -39,7 +41,7 @@ async def wal_bloat_monitor():
             for proj in projects:
                 primary = next((n for n in proj.nodes if n.role.lower() == 'primary'), None)
                 if primary:
-                    res = await check_and_protect_wal_bloat(primary.encrypted_url, proj.max_wal_lag_mb)
+                    res = await check_and_protect_wal_bloat(proj.id, primary.encrypted_url, proj.max_wal_lag_mb)
                     if res['dropped']:
                         print(f"[ALERT] Project {proj.name} - Slot DROPPED! {res['message']}")
                     elif res['lag_mb'] > 0:
@@ -72,6 +74,10 @@ def get_db():
         db.close()
 
 # Pydantic Schemas
+@app.get("/api/auth/verify", dependencies=[Depends(verify_credentials)])
+def verify_auth():
+    return {"status": "ok"}
+
 class ProjectCreate(BaseModel):
     name: str
     description: str
@@ -159,7 +165,7 @@ async def sync_replication(project_id: int, db: Session = Depends(get_db)):
     
     # 3. Setup Logical Replication (1-to-N)
     standby_urls = [s.encrypted_url for s in standbys]
-    result = await setup_replication(primary.encrypted_url, standby_urls)
+    result = await setup_replication(project_id, primary.encrypted_url, standby_urls)
     if not result['success']:
         return JSONResponse(status_code=500, content=result)
         

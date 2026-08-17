@@ -121,7 +121,7 @@ document.addEventListener('DOMContentLoaded', () => {
             const color = node.role.toLowerCase() === 'primary' ? 'var(--primary)' : 'var(--warning)';
             card.innerHTML = `
                 <div style="display:flex; justify-content:space-between;">
-                    <h3>${node.name}</h3>
+                    <h3>${escapeHTML(node.name)}</h3>
                     <span style="color: ${color}; font-weight:bold; font-size:0.8rem;">${node.role.toUpperCase()}</span>
                 </div>
                 <p style="color: var(--success); font-size:0.8rem; margin-top:10px;">🟢 Secured & Encrypted</p>
@@ -285,7 +285,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     
                     const headerHtml = `
                         <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border); padding-bottom: 12px; margin-bottom: 20px;">
-                            <h2 style="margin: 0; font-size: 1.2rem;">${node.name} <span style="font-size: 0.9rem; font-weight: normal; color: var(--text-muted);">(${node.role})</span></h2>
+                            <h2 style="margin: 0; font-size: 1.2rem;">${escapeHTML(node.name)} <span style="font-size: 0.9rem; font-weight: normal; color: var(--text-muted);">(${escapeHTML(node.role)})</span></h2>
                             <span class="status-badge status-offline" id="metric-${node.id}-status">Offline</span>
                         </div>
                     `;
@@ -737,21 +737,32 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     // Login Logic
-    const attemptLogin = () => {
+    const attemptLogin = async () => {
         const u = loginUsername.value.trim();
         const p = loginPassword.value.trim();
-        if (u === 'admin' && p === 'admin123') {
-            globalAuthToken = btoa(u + ':' + p);
-            loginScreen.style.transition = 'opacity 0.3s ease';
-            loginScreen.style.opacity = '0';
-            setTimeout(() => {
-                loginScreen.style.display = 'none';
-            }, 300);
-            
-            // Only fetch initial data after successful login
-            fetchProjects();
-        } else {
+        const token = btoa(u + ':' + p);
+        try {
+            const res = await fetch('/api/auth/verify', {
+                headers: { 'Authorization': 'Basic ' + token }
+            });
+            if (res.ok) {
+                globalAuthToken = token;
+                loginScreen.style.transition = 'opacity 0.3s ease';
+                loginScreen.style.opacity = '0';
+                setTimeout(() => {
+                    loginScreen.style.display = 'none';
+                }, 300);
+                
+                // Only fetch initial data after successful login
+                fetchProjects();
+            } else {
+                loginError.style.display = 'block';
+                loginError.innerText = 'Invalid username or password';
+                setTimeout(() => loginError.style.display = 'none', 3000);
+            }
+        } catch (err) {
             loginError.style.display = 'block';
+            loginError.innerText = 'Connection to server failed';
             setTimeout(() => loginError.style.display = 'none', 3000);
         }
     };

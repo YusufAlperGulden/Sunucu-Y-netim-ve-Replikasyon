@@ -16,7 +16,7 @@ async def test_connection(db_url: str) -> bool:
         print(f"Connection test failed: {e}")
         return False
 
-async def setup_replication(primary_encrypted_url: str, standby_encrypted_urls: list) -> dict:
+async def setup_replication(project_id: int, primary_encrypted_url: str, standby_encrypted_urls: list) -> dict:
     """İki veya daha fazla sunucu arasında PUBLICATION ve SUBSCRIPTION tünellerini (Logical Replication) kurar."""
     try:
         primary_url = decrypt(primary_encrypted_url)
@@ -42,8 +42,8 @@ async def setup_replication(primary_encrypted_url: str, standby_encrypted_urls: 
         for idx, s_url in enumerate(standby_urls):
             try:
                 s_conn = await asyncpg.connect(s_url, timeout=10.0)
-                sub_name = f"universal_sub_{idx}"
-                await s_conn.execute("DROP SUBSCRIPTION IF EXISTS universal_sub;")
+                sub_name = f"univ_sub_{project_id}_{idx}"
+                pass # old drop
                 await s_conn.execute(f"DROP SUBSCRIPTION IF EXISTS {sub_name};")
                 await s_conn.close()
             except Exception as e:
@@ -52,11 +52,11 @@ async def setup_replication(primary_encrypted_url: str, standby_encrypted_urls: 
         # 2. Primary Sunucuya Bağlan, PUBLICATION oluştur ve eski Slotları tamamen temizle
         p_conn = await asyncpg.connect(primary_url, timeout=10.0)
         try:
-            await p_conn.execute("DROP PUBLICATION IF EXISTS universal_pub;")
-            await p_conn.execute("CREATE PUBLICATION universal_pub FOR ALL TABLES;")
+            await p_conn.execute(f"DROP PUBLICATION IF EXISTS univ_pub_{project_id};")
+            await p_conn.execute(f"CREATE PUBLICATION univ_pub_{project_id} FOR ALL TABLES;")
             
             # Primary'deki tüm 'universal_sub' ile başlayan slotları bul ve zorla sil
-            slots = await p_conn.fetch("SELECT slot_name, active_pid FROM pg_replication_slots WHERE slot_name LIKE 'universal_sub%';")
+            slots = await p_conn.fetch(f"SELECT slot_name, active_pid FROM pg_replication_slots WHERE slot_name LIKE 'univ_sub_{project_id}_%';")
             for slot in slots:
                 slot_name = slot['slot_name']
                 active_pid = slot['active_pid']
@@ -75,8 +75,8 @@ async def setup_replication(primary_encrypted_url: str, standby_encrypted_urls: 
         for idx, s_url in enumerate(standby_urls):
             s_conn = await asyncpg.connect(s_url, timeout=10.0)
             try:
-                sub_name = f"universal_sub_{idx}"
-                sub_query = f"CREATE SUBSCRIPTION {sub_name} CONNECTION '{safe_primary_url}' PUBLICATION universal_pub;"
+                sub_name = f"univ_sub_{project_id}_{idx}"
+                sub_query = f"CREATE SUBSCRIPTION {sub_name} CONNECTION '{safe_primary_url}' PUBLICATION univ_pub_{project_id};"
                 await s_conn.execute(sub_query)
             finally:
                 await s_conn.close()
@@ -104,7 +104,7 @@ def sync_schema_between_dbs(primary_url: str, standby_url: str):
     metadata.create_all(bind=engine_standby)
     print(f"Schema sync completed. Processed {len(metadata.tables)} tables.")
 
-async def check_and_protect_wal_bloat(primary_encrypted_url: str, max_wal_lag_mb: int) -> dict:
+async def check_and_protect_wal_bloat(project_id: int, primary_encrypted_url: str, max_wal_lag_mb: int) -> dict:
     """Primary sunucuya bağlanarak WAL lag'i ölçer. Kritik seviyeyi aşarsa slot'u koparır."""
     try:
         primary_url = decrypt(primary_encrypted_url)
@@ -115,11 +115,11 @@ async def check_and_protect_wal_bloat(primary_encrypted_url: str, max_wal_lag_mb
         try:
             # Replikasyon gecikmesini byte cinsinden hesaplayan PostgreSQL sorgusu
             # universal_sub adlı subscription için universal_sub slotu oluşuyor
-            query = """
+            query = f"""
                 SELECT slot_name, 
                        pg_wal_lsn_diff(pg_current_wal_lsn(), restart_lsn) AS lag_bytes 
                 FROM pg_replication_slots 
-                WHERE slot_name LIKE 'universal_sub%';
+                WHERE slot_name LIKE 'univ_sub_{project_id}_%';
             """
             rows = await conn.fetch(query)
             
@@ -190,12 +190,12 @@ async def get_server_metrics(encrypted_url: str) -> dict:
             uptime = str(uptime_row['uptime']) if uptime_row else 'Unknown'
             
             lag_val = '0ms'
-            # Check logical replication subscriptions
-            subs = await conn.fetch("SELECT extract(epoch from (now() - last_msg_receipt_time))*1000 as lag_ms FROM pg_stat_subscription WHERE last_msg_receipt_time IS NOT NULL LIMIT 1;")
-            if subs and len(subs) > 0 and subs[0]['lag_ms'] is not None:
-                lag_val = f"{int(subs[0]['lag_ms'])}ms"
+            # Check replication lag correctly
+            subs = await conn.fetch("SELECT pg_wal_lsn_diff(pg_current_wal_lsn(), replay_lsn) AS lag_bytes FROM pg_stat_replication LIMIT 1;")
+            if subs and len(subs) > 0 and subs[0]['lag_bytes'] is not None:
+                lag_mb = subs[0]['lag_bytes'] / (1024 * 1024)
+                lag_val = f"{lag_mb:.2f} MB"
             else:
-                # Eger Master ise N/A dondurebilir veya eger Standby ama mesaj gelmediyse 0 kabul edebilir
                 pass
                 
             plates_count = 'N/A'
