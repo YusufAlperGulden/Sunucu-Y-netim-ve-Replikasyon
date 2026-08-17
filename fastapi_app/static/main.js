@@ -658,7 +658,7 @@ document.addEventListener('DOMContentLoaded', () => {
             } catch (e) {
                 alert("Sunucu hatası.");
             } finally {
-                btnCleanupSlots.innerText = "Slot Temizle";
+                btnCleanupSlots.innerText = "Replication Slot Silme";
                 btnCleanupSlots.disabled = false;
             }
         });
