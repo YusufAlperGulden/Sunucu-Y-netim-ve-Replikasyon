@@ -7,7 +7,10 @@ from vault import encrypt
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 DB_PATH = os.path.join(BASE_DIR, "fastapi_app.db")
 
-DATABASE_URL = os.environ.get("DATABASE_URL", f"sqlite:///{DB_PATH}")
+DATABASE_URL = os.environ.get("DATABASE_URL")
+if not DATABASE_URL:
+    raise ValueError("CRITICAL: DATABASE_URL environment variable is missing. Production systems must explicitly define a PostgreSQL connection string.")
+
 if DATABASE_URL.startswith("postgres://"):
     DATABASE_URL = DATABASE_URL.replace("postgres://", "postgresql://", 1)
 
@@ -25,6 +28,7 @@ class Project(Base):
     name = Column(String(100), unique=True, index=True)
     description = Column(String(255))
     metric_table = Column(String(100), nullable=True) # E.g., 'vehicles', 'email_records'
+    replication_tables = Column(String(500), nullable=True) # E.g. 'vehicles, metadata'
     max_wal_lag_mb = Column(Integer, default=500) # Esnek limit ayarı
     nodes = relationship("DatabaseNode", back_populates="project", cascade="all, delete-orphan")
 
@@ -52,5 +56,3 @@ class AuditLog(Base):
 
     project = relationship("Project")
 
-# Veritabanı tablolarını oluştur
-Base.metadata.create_all(bind=engine)

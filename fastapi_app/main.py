@@ -24,6 +24,8 @@ def verify_credentials(credentials: HTTPBasicCredentials = Depends(security)):
     admin_pass = os.environ.get("ADMIN_PASS")
     if not admin_user or not admin_pass:
         raise ValueError("CRITICAL: ADMIN_USER or ADMIN_PASS environment variables are missing.")
+    if admin_pass == "admin123":
+        raise ValueError("CRITICAL: 'admin123' is no longer allowed. Please change ADMIN_PASS in Render Environment Variables for security.")
 
     correct_username = secrets.compare_digest(credentials.username, admin_user)
     correct_password = secrets.compare_digest(credentials.password, admin_pass)
@@ -31,39 +33,23 @@ def verify_credentials(credentials: HTTPBasicCredentials = Depends(security)):
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Incorrect credentials")
     return credentials
 
-# Arka plan görevi: Her 30 saniyede bir WAL Lag'i kontrol eder
-async def wal_bloat_monitor():
-    while True:
-        await asyncio.sleep(30)
-        db = SessionLocal()
-        try:
-            projects = db.query(Project).all()
-            for proj in projects:
-                primary = next((n for n in proj.nodes if n.role.lower() == 'primary'), None)
-                if primary:
-                    res = await check_and_protect_wal_bloat(proj.id, primary.encrypted_url, proj.max_wal_lag_mb)
-                    if res['dropped']:
-                        print(f"[ALERT] Project {proj.name} - Slot DROPPED! {res['message']}")
-                    elif res['lag_mb'] > 0:
-                        print(f"[MONITOR] Project {proj.name} - {res['message']}")
-        except Exception as e:
-            print(f"Monitor error: {e}")
-        finally:
-            db.close()
-
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     # Startup
     try:
-        from migration import run_migration
-        run_migration()
+        from alembic.config import Config
+        from alembic import command
+        alembic_cfg = Config(os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "alembic.ini"))
+        # Run Alembic upgrade head
+        command.upgrade(alembic_cfg, "head")
+        print("Alembic migrations completed successfully.")
     except Exception as e:
         print(f"Migration error: {e}")
+        # Uygulamanın başlatılmasını durdurmak (fail-closed)
+        raise RuntimeError(f"Database migration failed. System cannot start. Error: {e}")
         
-    monitor_task = asyncio.create_task(wal_bloat_monitor())
     yield
     # Shutdown
-    monitor_task.cancel()
 
 app = FastAPI(title="Sunucu Yönetim ve Replikasyon", lifespan=lifespan)
 
@@ -237,7 +223,7 @@ async def sync_replication(project_id: int, db: Session = Depends(get_db)):
     
     # 3. Setup Logical Replication (1-to-N)
     standbys_info = [{"id": s.id, "url": s.encrypted_url} for s in standbys]
-    result = await setup_replication(project_id, primary.encrypted_url, standbys_info)
+    result = await setup_replication(project_id, primary.encrypted_url, standbys_info, proj.replication_tables)
     
     # Audit log
     if result['success']:
@@ -259,6 +245,18 @@ def get_audit_logs(db: Session = Depends(get_db)):
 class SettingsUpdate(BaseModel):
     max_wal_lag_mb: int
     metric_table: str = None
+    replication_tables: str = None
+
+@app.get('/api/settings/{project_id}', dependencies=[Depends(verify_credentials)])
+def get_settings(project_id: int, db: Session = Depends(get_db)):
+    proj = db.query(Project).filter(Project.id == project_id).first()
+    if not proj:
+        return JSONResponse(status_code=404, content={'message': 'Project not found'})
+    return {
+        'max_wal_lag_mb': proj.max_wal_lag_mb,
+        'metric_table': proj.metric_table or '',
+        'replication_tables': proj.replication_tables or ''
+    }
 
 @app.post('/api/settings/{project_id}', dependencies=[Depends(verify_credentials)])
 def update_settings(project_id: int, settings: SettingsUpdate, db: Session = Depends(get_db)):
@@ -270,6 +268,7 @@ def update_settings(project_id: int, settings: SettingsUpdate, db: Session = Dep
         return JSONResponse(status_code=404, content={'message': 'Project not found'})
     proj.max_wal_lag_mb = settings.max_wal_lag_mb
     proj.metric_table = settings.metric_table
+    proj.replication_tables = settings.replication_tables
     db.commit()
     return {'success': True}
 

@@ -16,7 +16,7 @@ async def test_connection(db_url: str) -> bool:
         print(f"Connection test failed: {e}")
         return False
 
-async def setup_replication(project_id: int, primary_encrypted_url: str, standbys_info: list) -> dict:
+async def setup_replication(project_id: int, primary_encrypted_url: str, standbys_info: list, replication_tables: str = None) -> dict:
     """İki veya daha fazla sunucu arasında PUBLICATION ve SUBSCRIPTION tünellerini (Logical Replication) kurar."""
     try:
         primary_url = decrypt(primary_encrypted_url)
@@ -50,7 +50,12 @@ async def setup_replication(project_id: int, primary_encrypted_url: str, standby
         p_conn = await asyncpg.connect(primary_url, timeout=10.0)
         try:
             await p_conn.execute(f"DROP PUBLICATION IF EXISTS univ_pub_{project_id};")
-            await p_conn.execute(f"CREATE PUBLICATION univ_pub_{project_id} FOR ALL TABLES;")
+            if replication_tables:
+                # Sanitize the input somewhat, assuming comma separated
+                tables_list = ",".join([t.strip() for t in replication_tables.split(",")])
+                await p_conn.execute(f"CREATE PUBLICATION univ_pub_{project_id} FOR TABLE {tables_list};")
+            else:
+                await p_conn.execute(f"CREATE PUBLICATION univ_pub_{project_id} FOR ALL TABLES;")
             
             # Primary'deki tüm 'universal_sub' ile başlayan slotları bul ve zorla sil
             slots = await p_conn.fetch(f"SELECT slot_name, active_pid FROM pg_replication_slots WHERE slot_name LIKE 'univ_sub_{project_id}_%';")
@@ -82,6 +87,9 @@ async def setup_replication(project_id: int, primary_encrypted_url: str, standby
                     await s_conn.close()
         except Exception as setup_err:
             print(f"Standby setup failed, rolling back previously created subs. Error: {setup_err}")
+            rollback_failed = False
+            rollback_errors = []
+            
             for roll_url, roll_sub in created_subs:
                 try:
                     r_conn = await asyncpg.connect(roll_url, timeout=5.0)
@@ -91,6 +99,8 @@ async def setup_replication(project_id: int, primary_encrypted_url: str, standby
                     await r_conn.close()
                 except Exception as rollback_err:
                     print(f"Failed to rollback sub {roll_sub}: {rollback_err}")
+                    rollback_failed = True
+                    rollback_errors.append(str(rollback_err))
                     
             try:
                 p_conn = await asyncpg.connect(primary_url, timeout=5.0)
@@ -101,17 +111,24 @@ async def setup_replication(project_id: int, primary_encrypted_url: str, standby
                             await p_conn.execute(f"SELECT pg_terminate_backend({active_pid});")
                         await p_conn.execute(f"SELECT pg_drop_replication_slot('{roll_sub}');")
                     except Exception as primary_roll_err:
-                        pass
+                        print(f"Failed to drop replication slot {roll_sub}: {primary_roll_err}")
+                        rollback_failed = True
+                        rollback_errors.append(str(primary_roll_err))
                         
                 try:
                     await p_conn.execute(f"DROP PUBLICATION IF EXISTS univ_pub_{project_id};")
-                except Exception:
-                    pass
+                except Exception as pub_roll_err:
+                    print(f"Failed to drop publication: {pub_roll_err}")
+                    rollback_failed = True
+                    rollback_errors.append(str(pub_roll_err))
                 await p_conn.close()
-            except Exception:
-                pass
+            except Exception as p_conn_err:
+                rollback_failed = True
+                rollback_errors.append(str(p_conn_err))
                 
-            raise Exception(f"Replication atomicity failure: {setup_err}. Rolled back new subscriptions and publication, but old topology cannot be restored automatically.")
+            if rollback_failed:
+                return {"success": False, "message": f"ROLLBACK_FAILED: Setup failed with '{setup_err}', AND rollback also failed: {', '.join(rollback_errors)}"}
+            return {"success": False, "message": f"Standby setup failed, but rolled back successfully. Error: {setup_err}"}
 
         return {"success": True, "message": f"Logical replication (1 Master to {len(valid_standbys)} Standbys) established successfully."}
 

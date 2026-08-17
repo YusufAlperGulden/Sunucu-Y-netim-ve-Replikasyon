@@ -139,28 +139,43 @@
                 </header>
                 
                 <div class="glass-panel" style="padding: 24px; max-width: 600px;">
-                    <h3>Global Configuration</h3>
-                    <p style="color: var(--text-muted); font-size: 0.9rem; margin-bottom: 24px;">Buradan sistemin WAL şişmesini (Bloat) algılama limitlerini değiştirebilirsiniz.</p>
+                    <h3>Project Configuration</h3>
+                    <p style="color: var(--text-muted); font-size: 0.9rem; margin-bottom: 24px;">Buradan projelere özel senkronizasyon ve metrik ayarlarını değiştirebilirsiniz.</p>
                     
                     <div class="input-group">
-                        <label>Max WAL Lag Threshold (MB)</label>
-                        <input type="number" id="setting-wal-lag" value="500" min="50" max="10000">
-                        <small style="color: var(--text-muted); display: block; margin-top: 8px;">Eğer ana sunucu bu MB değerinden fazla WAL dosyası biriktirirse, yedek ile arasındaki bağ acil olarak koparılır.</small>
+                        <label>Select Project</label>
+                        <select id="setting-project-select" style="background: rgba(0,0,0,0.5); border: 1px solid var(--border); color: var(--text); padding: 12px; border-radius: 8px; width: 100%;">
+                            <option value="">Proje seçin...</option>
+                        </select>
                     </div>
-                    
-                    <div class="input-group" style="margin-top: 20px;">
-                        <label>Target Metric Table (Optional)</label>
-                        <input type="text" id="setting-metric-table" placeholder="e.g. vehicles, email_records">
-                        <small style="color: var(--text-muted); display: block; margin-top: 8px;">Eğer belirtilirse Dashboard sadece bu tablodaki net (exact) veri sayısını okur. Boş bırakırsanız metrik sayılmaz.</small>
+
+                    <div id="project-settings-container" style="display: none; margin-top: 24px;">
+                        <div class="input-group">
+                            <label>Max WAL Lag Threshold (MB)</label>
+                            <input type="number" id="setting-wal-lag" value="500" min="50" max="10000">
+                            <small style="color: var(--text-muted); display: block; margin-top: 8px;">Eğer ana sunucu bu MB değerinden fazla WAL dosyası biriktirirse, yedek ile arasındaki bağ acil olarak koparılır.</small>
+                        </div>
+                        
+                        <div class="input-group" style="margin-top: 20px;">
+                            <label>Target Metric Table (Optional)</label>
+                            <input type="text" id="setting-metric-table" placeholder="e.g. vehicles, email_records">
+                            <small style="color: var(--text-muted); display: block; margin-top: 8px;">Eğer belirtilirse Dashboard sadece bu tablodaki net (exact) veri sayısını okur. Boş bırakırsanız metrik sayılmaz.</small>
+                        </div>
+                        
+                        <div class="input-group" style="margin-top: 20px;">
+                            <label>Replication Tables (Optional)</label>
+                            <input type="text" id="setting-replication-tables" placeholder="e.g. vehicles, users">
+                            <small style="color: var(--text-muted); display: block; margin-top: 8px;">Virgülle ayrılarak girilen tablolar yayınlanır (Publication). Boş bırakılırsa FOR ALL TABLES çalıştırılır (Superuser gerektirir).</small>
+                        </div>
+                        
+                        <div class="input-group" style="margin-top: 20px; border-top: 1px solid var(--border); padding-top: 20px;">
+                            <label>Global Dashboard Update Interval (Seconds)</label>
+                            <input type="number" id="setting-update-interval" value="1" min="1" max="60">
+                            <small style="color: var(--text-muted); display: block; margin-top: 8px;">Dashboard üzerindeki canlı metriklerin kaç saniyede bir güncelleneceğini belirler (Varsayılan: 1).</small>
+                        </div>
+                        
+                        <button class="btn-primary" id="btn-save-settings" style="margin-top: 24px;">Save Settings</button>
                     </div>
-                    
-                    <div class="input-group" style="margin-top: 20px;">
-                        <label>Dashboard Update Interval (Seconds)</label>
-                        <input type="number" id="setting-update-interval" value="1" min="1" max="60">
-                        <small style="color: var(--text-muted); display: block; margin-top: 8px;">Dashboard üzerindeki canlı metriklerin kaç saniyede bir güncelleneceğini belirler (Varsayılan: 1).</small>
-                    </div>
-                    
-                    <button class="btn-primary" id="btn-save-settings" style="margin-top: 24px;">Save Settings</button>
                 </div>
             </div>
 

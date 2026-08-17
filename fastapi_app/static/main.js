@@ -682,27 +682,84 @@ document.addEventListener('DOMContentLoaded', () => {
         updateIntervalInput.value = localStorage.getItem('dashboard_update_interval_sec') || 1;
     }
     
+    const settingsProjectSelect = document.getElementById('setting-project-select');
+    const projectSettingsContainer = document.getElementById('project-settings-container');
+    const settingWalLag = document.getElementById('setting-wal-lag');
+    const settingMetricTable = document.getElementById('setting-metric-table');
+    const settingReplicationTables = document.getElementById('setting-replication-tables');
+
+    // Populate projects select when settings view is opened
+    document.querySelectorAll('.sidebar-nav a').forEach(link => {
+        link.addEventListener('click', async (e) => {
+            const targetId = e.target.getAttribute('data-view');
+            if (targetId === 'settings-view') {
+                try {
+                    const response = await apiFetch('/api/projects');
+                    if (response.ok) {
+                        const projs = await response.json();
+                        settingsProjectSelect.innerHTML = '<option value="">Proje seçin...</option>';
+                        projs.forEach(p => {
+                            const opt = document.createElement('option');
+                            opt.value = p.id;
+                            opt.textContent = p.name;
+                            settingsProjectSelect.appendChild(opt);
+                        });
+                        projectSettingsContainer.style.display = 'none';
+                    }
+                } catch(err) {
+                    console.error("Failed to fetch projects for settings", err);
+                }
+            }
+        });
+    });
+
+    if (settingsProjectSelect) {
+        settingsProjectSelect.addEventListener('change', async (e) => {
+            const pid = e.target.value;
+            if (!pid) {
+                projectSettingsContainer.style.display = 'none';
+                return;
+            }
+            try {
+                const res = await apiFetch(`/api/settings/${pid}`);
+                if (res.ok) {
+                    const data = await res.json();
+                    settingWalLag.value = data.max_wal_lag_mb || 500;
+                    if (settingMetricTable) settingMetricTable.value = data.metric_table || '';
+                    if (settingReplicationTables) settingReplicationTables.value = data.replication_tables || '';
+                    projectSettingsContainer.style.display = 'block';
+                }
+            } catch (err) {
+                console.error("Error loading settings for project", err);
+            }
+        });
+    }
+
     if(btnSaveSettings) {
         btnSaveSettings.addEventListener('click', async () => {
-            const lagVal = document.getElementById('setting-wal-lag').value;
-            const metricTableVal = document.getElementById('setting-metric-table') ? document.getElementById('setting-metric-table').value : '';
-            const updateIntervalVal = updateIntervalInput ? updateIntervalInput.value : 1;
-            localStorage.setItem('dashboard_update_interval_sec', updateIntervalVal);
-            
-            // If on dashboard view, restart interval
-            if (document.getElementById('dashboard-view').style.display === 'block') {
-                stopDashboardInterval();
-                startDashboardInterval();
+            const pid = settingsProjectSelect ? settingsProjectSelect.value : null;
+            if (!pid) {
+                alert("Lütfen önce bir proje seçin.");
+                return;
             }
 
-            // Assuming saving to project ID 1 for demonstration if none selected
-            const pid = currentProjectId || 1; 
+            const lagVal = settingWalLag ? settingWalLag.value : 500;
+            const metricTableVal = settingMetricTable ? settingMetricTable.value : '';
+            const repTableVal = settingReplicationTables ? settingReplicationTables.value : '';
+            const updateIntervalVal = updateIntervalInput ? updateIntervalInput.value : 1;
+            
+            localStorage.setItem('dashboard_update_interval_sec', updateIntervalVal);
+            
             btnSaveSettings.innerText = "Saving...";
             try {
                 const payload = { max_wal_lag_mb: parseInt(lagVal) };
-                if (metricTableVal && metricTableVal.trim() !== '') {
+                if (metricTableVal.trim() !== '') {
                     payload.metric_table = metricTableVal.trim();
                 }
+                if (repTableVal.trim() !== '') {
+                    payload.replication_tables = repTableVal.trim();
+                }
+                
                 const res = await apiFetch(`/api/settings/${pid}`, {
                     method: 'POST',
                     headers: {'Content-Type': 'application/json'},
