@@ -29,12 +29,10 @@ class Project(Base):
     description = Column(String(255))
     metric_table = Column(String(100), nullable=True) # E.g., 'vehicles', 'email_records'
     replication_tables = Column(String(500), nullable=True) # E.g. 'vehicles, metadata'
-    max_wal_lag_mb = Column(Integer, default=500) # Esnek limit ayarı
+    max_wal_lag_mb = Column(Integer, default=500) # Esnek limit ayar
     
-    # State Machine / Background Worker Fields
-    sync_status = Column(String(50), default="IDLE") # IDLE, QUEUED, VALIDATING, BOOTSTRAPPING, CATCHING_UP, HEALTHY, FAILED, ROLLBACK_FAILED
-    sync_error = Column(String(1000), nullable=True)
-    sync_locked_at = Column(DateTime, nullable=True)
+    # Replication Health Status
+    replication_health = Column(String(50), default="UNKNOWN") # HEALTHY, FAILED, UNKNOWN
     
     nodes = relationship("DatabaseNode", back_populates="project", cascade="all, delete-orphan")
 
@@ -48,6 +46,20 @@ class DatabaseNode(Base):
     encrypted_url = Column(String(500))
     
     project = relationship("Project", back_populates="nodes")
+
+class SyncJob(Base):
+    __tablename__ = "sync_jobs"
+    id = Column(Integer, primary_key=True, index=True)
+    project_id = Column(Integer, ForeignKey("projects.id", ondelete="CASCADE"), index=True)
+    status = Column(String(50), default="QUEUED") # QUEUED, VALIDATING, BOOTSTRAPPING, CATCHING_UP, SUCCESS, FAILED, RECOVERING
+    error_message = Column(String(1000), nullable=True)
+    lease_owner = Column(String(255), nullable=True)
+    lease_expires_at = Column(DateTime, nullable=True)
+    created_at = Column(DateTime, default=datetime.datetime.utcnow)
+    updated_at = Column(DateTime, default=datetime.datetime.utcnow, onupdate=datetime.datetime.utcnow)
+    completed_at = Column(DateTime, nullable=True)
+    
+    project = relationship("Project")
     
     def set_url(self, raw_url: str):
         self.encrypted_url = encrypt(raw_url)

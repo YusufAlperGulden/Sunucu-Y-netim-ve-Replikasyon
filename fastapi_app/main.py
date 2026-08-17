@@ -167,17 +167,23 @@ async def delete_project(project_id: int, db: Session = Depends(get_db)):
 
 @app.get("/api/projects/{project_id}", dependencies=[Depends(verify_credentials)])
 def get_project_detail(project_id: int, db: Session = Depends(get_db)):
+    from models import SyncJob
     proj = db.query(Project).filter(Project.id == project_id).first()
     if not proj:
         return JSONResponse(status_code=404, content={"message": "Project not found"})
     
+    latest_job = db.query(SyncJob).filter(SyncJob.project_id == project_id).order_by(SyncJob.id.desc()).first()
+    sync_status = latest_job.status if latest_job else "IDLE"
+    sync_error = latest_job.error_message if latest_job else None
+
     nodes = [{"id": n.id, "role": n.role, "name": n.name} for n in proj.nodes]
     return {
         "id": proj.id, 
         "name": proj.name, 
         "description": proj.description, 
-        "sync_status": proj.sync_status,
-        "sync_error": proj.sync_error,
+        "sync_status": sync_status,
+        "sync_error": sync_error,
+        "replication_health": proj.replication_health,
         "nodes": nodes
     }
 
@@ -218,16 +224,16 @@ async def add_node(project_id: int, node: NodeCreate, db: Session = Depends(get_
     return {"success": True, "message": "Node added securely."}
 
 @app.post("/api/projects/{project_id}/sync", status_code=202, dependencies=[Depends(verify_credentials)])
-async def sync_replication(project_id: int, background_tasks: BackgroundTasks, db: Session = Depends(get_db)):
-    import datetime
-    from ha_manager import run_sync_state_machine_bg
+async def sync_replication(project_id: int, db: Session = Depends(get_db)):
+    from models import SyncJob
     
     proj = db.query(Project).filter(Project.id == project_id).first()
     if not proj:
         return JSONResponse(status_code=404, content={"message": "Project not found"})
         
-    # 1. Distributed Lock Control (allow None for legacy compatibility)
-    if proj.sync_status not in [None, "IDLE", "HEALTHY", "FAILED", "ROLLBACK_FAILED"]:
+    # 1. Distributed Lock Control
+    active_job = db.query(SyncJob).filter(SyncJob.project_id == project_id, SyncJob.status.notin_(["SUCCESS", "FAILED"])).first()
+    if active_job:
         return JSONResponse(status_code=409, content={"success": False, "message": "A sync process is already running for this project."})
     
     primary = next((n for n in proj.nodes if n.role.lower() == 'primary'), None)
@@ -236,14 +242,10 @@ async def sync_replication(project_id: int, background_tasks: BackgroundTasks, d
     if not primary or not standbys:
         return JSONResponse(status_code=400, content={"success": False, "message": "Projenizde senkronizasyon için en az 1 Primary ve 1 Standby node bulunmalıdır."})
     
-    # 2. Lock the state and enqueue the job
-    proj.sync_status = "QUEUED"
-    proj.sync_error = None
-    proj.sync_locked_at = datetime.datetime.utcnow()
+    # 2. Enqueue the job
+    new_job = SyncJob(project_id=proj.id, status="QUEUED")
+    db.add(new_job)
     db.commit()
-    
-    # 3. Offload to background worker
-    background_tasks.add_task(run_sync_state_machine_bg, project_id)
     
     # Return 202 Accepted immediately
     return {"success": True, "message": "Sync job has been queued and is processing in the background."}

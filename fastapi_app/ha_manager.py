@@ -18,7 +18,6 @@ async def test_connection(db_url: str) -> bool:
         return False
 
 async def setup_replication(project_id: int, primary_encrypted_url: str, standbys_info: list, replication_tables: str = None, state_callback=None) -> dict:
-    """İki veya daha fazla sunucu arasında PUBLICATION ve SUBSCRIPTION tünellerini (Logical Replication) kurar."""
     try:
         primary_url = decrypt(primary_encrypted_url)
         
@@ -31,9 +30,55 @@ async def setup_replication(project_id: int, primary_encrypted_url: str, standby
         if not primary_url or not valid_standbys:
             return {"success": False, "message": "Failed to decrypt URLs or no valid standbys"}
 
+        if not replication_tables:
+            return {"success": False, "message": "CRITICAL: replication_tables must be provided. Syncing all tables is disabled for safety."}
+            
+        tables_list = [t.strip() for t in replication_tables.split(",") if t.strip()]
+        if not tables_list:
+            return {"success": False, "message": "CRITICAL: replication_tables must be provided. Syncing all tables is disabled for safety."}
+
+        safe_tables = []
+        for t in tables_list:
+            if not re.match(r'^[a-zA-Z0-9_]+$', t):
+                return {"success": False, "message": f"Invalid table name detected: {t}"}
+            safe_tables.append(f'"{t}"')
+            
+        safe_tables_str = ", ".join(safe_tables)
+
+        # PREFLIGHT CHECKS
+        try:
+            p_conn = await asyncpg.connect(primary_url, timeout=10.0)
+            
+            # Check wal_level
+            wal_level = await p_conn.fetchval("SHOW wal_level;")
+            if wal_level != 'logical':
+                await p_conn.close()
+                return {"success": False, "message": f"Primary server wal_level is '{wal_level}', but must be 'logical'."}
+            
+            # Check table existence
+            for t in tables_list:
+                exists = await p_conn.fetchval("SELECT to_regclass();", t)
+                if not exists:
+                    await p_conn.close()
+                    return {"success": False, "message": f"Table '{t}' does not exist on primary server."}
+                    
+            await p_conn.close()
+        except Exception as preflight_err:
+            return {"success": False, "message": f"Preflight validation failed on primary: {preflight_err}"}
+
+        # Standby Connection Tests
+        for s in valid_standbys:
+            try:
+                s_conn = await asyncpg.connect(s['url'], timeout=10.0)
+                await s_conn.close()
+            except Exception as e:
+                return {"success": False, "message": f"Preflight validation failed on standby {s['id']}: {e}"}
+
+        # ACTUAL SETUP (Idempotent)
         if state_callback:
             await state_callback("BOOTSTRAPPING")
 
+        # 1. Sync Schemas
         for s in valid_standbys:
             try:
                 await asyncio.to_thread(sync_schema_between_dbs, primary_url, s['url'], replication_tables)
@@ -41,117 +86,52 @@ async def setup_replication(project_id: int, primary_encrypted_url: str, standby
                 print(f"Schema sync error: {schema_err}")
                 return {"success": False, "message": f"Schema sync failed: {str(schema_err)}"}
 
+        # 2. Setup Primary (Idempotent)
+        p_conn = await asyncpg.connect(primary_url, timeout=10.0)
+        try:
+            # Check if publication exists
+            pub_exists = await p_conn.fetchval(f"SELECT pubname FROM pg_publication WHERE pubname = 'univ_pub_{project_id}';")
+            if pub_exists:
+                # Alter publication to add/remove tables
+                await p_conn.execute(f"ALTER PUBLICATION univ_pub_{project_id} SET TABLE {safe_tables_str};")
+            else:
+                await p_conn.execute(f"CREATE PUBLICATION univ_pub_{project_id} FOR TABLE {safe_tables_str};")
+        except Exception as pub_err:
+            await p_conn.close()
+            return {"success": False, "message": f"Failed to configure primary publication: {pub_err}"}
+        
+        await p_conn.close()
+
+        # 3. Setup Standbys (Idempotent)
+        if state_callback:
+            await state_callback("CATCHING_UP")
+        
+        safe_primary_url = primary_url.replace("'", "''")
+        
         for s in valid_standbys:
             try:
                 s_conn = await asyncpg.connect(s['url'], timeout=10.0)
                 sub_name = f"univ_sub_{project_id}_{s['id']}"
-                await s_conn.execute(f"DROP SUBSCRIPTION IF EXISTS {sub_name};")
-                await s_conn.close()
-            except Exception as e:
-                print(f"Standby {s['id']} drop subscription error: {e}")
-
-        # 2. Primary Sunucuya Bağlan, PUBLICATION oluştur ve eski Slotları tamamen temizle
-        p_conn = await asyncpg.connect(primary_url, timeout=10.0)
-        try:
-            await p_conn.execute(f"DROP PUBLICATION IF EXISTS univ_pub_{project_id};")
-            if not replication_tables:
-                raise ValueError("CRITICAL: replication_tables must be provided. Syncing all tables is disabled for safety.")
-            
-            tables_list = [t.strip() for t in replication_tables.split(",") if t.strip()]
-            if not tables_list:
-                raise ValueError("CRITICAL: replication_tables must be provided. Syncing all tables is disabled for safety.")
                 
-            safe_tables = []
-            for t in tables_list:
-                if not re.match(r'^[a-zA-Z0-9_]+$', t):
-                    raise ValueError(f"Invalid table name detected: {t}")
-                safe_tables.append(f'"{t}"')
-                
-            safe_tables_str = ", ".join(safe_tables)
-            await p_conn.execute(f"CREATE PUBLICATION univ_pub_{project_id} FOR TABLE {safe_tables_str};")
-            
-            # Primary'deki tüm 'universal_sub' ile başlayan slotları bul ve zorla sil
-            slots = await p_conn.fetch(f"SELECT slot_name, active_pid FROM pg_replication_slots WHERE slot_name LIKE 'univ_sub_{project_id}_%';")
-            for slot in slots:
-                slot_name = slot['slot_name']
-                active_pid = slot['active_pid']
-                try:
-                    if active_pid:
-                        await p_conn.execute(f"SELECT pg_terminate_backend({active_pid});")
-                    await p_conn.execute(f"SELECT pg_drop_replication_slot('{slot_name}');")
-                    print(f"Dropped orphaned slot: {slot_name}")
-                except Exception as e:
-                    print(f"Could not drop slot {slot_name}: {e}")
-        finally:
-            await p_conn.close()
-
-        # 4. Standby Sunuculara Bağlan, SUBSCRIPTION oluştur
-        if state_callback:
-            await state_callback("CATCHING_UP")
-        
-        # 3. Tüm Standby Sunuculara tekrar Bağlan ve YENİ SUBSCRIPTION oluştur
-        safe_primary_url = primary_url.replace("'", "''")
-        created_subs = []
-        try:
-            for s in valid_standbys:
-                s_conn = await asyncpg.connect(s['url'], timeout=10.0)
-                try:
-                    sub_name = f"univ_sub_{project_id}_{s['id']}"
+                # Check if subscription exists
+                sub_exists = await s_conn.fetchval(f"SELECT subname FROM pg_subscription WHERE subname = '{sub_name}';")
+                if not sub_exists:
                     sub_query = f"CREATE SUBSCRIPTION {sub_name} CONNECTION '{safe_primary_url}' PUBLICATION univ_pub_{project_id} WITH (copy_data = true);"
                     await s_conn.execute(sub_query)
-                    created_subs.append((s['url'], sub_name))
-                finally:
-                    await s_conn.close()
-        except Exception as setup_err:
-            print(f"Standby setup failed, rolling back previously created subs. Error: {setup_err}")
-            rollback_failed = False
-            rollback_errors = []
-            
-            for roll_url, roll_sub in created_subs:
-                try:
-                    r_conn = await asyncpg.connect(roll_url, timeout=5.0)
-                    await r_conn.execute(f"ALTER SUBSCRIPTION {roll_sub} DISABLE;")
-                    await r_conn.execute(f"ALTER SUBSCRIPTION {roll_sub} SET (slot_name = NONE);")
-                    await r_conn.execute(f"DROP SUBSCRIPTION IF EXISTS {roll_sub};")
-                    await r_conn.close()
-                except Exception as rollback_err:
-                    print(f"Failed to rollback sub {roll_sub}: {rollback_err}")
-                    rollback_failed = True
-                    rollback_errors.append(str(rollback_err))
+                else:
+                    # Refresh publication if it exists
+                    await s_conn.execute(f"ALTER SUBSCRIPTION {sub_name} REFRESH PUBLICATION;")
                     
-            try:
-                p_conn = await asyncpg.connect(primary_url, timeout=5.0)
-                for _, roll_sub in created_subs:
-                    try:
-                        active_pid = await p_conn.fetchval(f"SELECT active_pid FROM pg_replication_slots WHERE slot_name = '{roll_sub}';")
-                        if active_pid:
-                            await p_conn.execute(f"SELECT pg_terminate_backend({active_pid});")
-                        await p_conn.execute(f"SELECT pg_drop_replication_slot('{roll_sub}');")
-                    except Exception as primary_roll_err:
-                        print(f"Failed to drop replication slot {roll_sub}: {primary_roll_err}")
-                        rollback_failed = True
-                        rollback_errors.append(str(primary_roll_err))
-                        
-                try:
-                    await p_conn.execute(f"DROP PUBLICATION IF EXISTS univ_pub_{project_id};")
-                except Exception as pub_roll_err:
-                    print(f"Failed to drop publication: {pub_roll_err}")
-                    rollback_failed = True
-                    rollback_errors.append(str(pub_roll_err))
-                await p_conn.close()
-            except Exception as p_conn_err:
-                rollback_failed = True
-                rollback_errors.append(str(p_conn_err))
-                
-            if rollback_failed:
-                return {"success": False, "message": f"ROLLBACK_FAILED: Setup failed with '{setup_err}', AND rollback also failed: {', '.join(rollback_errors)}"}
-            return {"success": False, "message": f"Standby setup failed, but rolled back successfully. Error: {setup_err}"}
+                await s_conn.close()
+            except Exception as sub_err:
+                return {"success": False, "message": f"Failed to configure standby subscription {sub_name}: {sub_err}"}
 
-        return {"success": True, "message": f"Logical replication (1 Master to {len(valid_standbys)} Standbys) established successfully."}
+        return {"success": True, "message": f"Logical replication (1 Master to {len(valid_standbys)} Standbys) established safely."}
 
     except Exception as e:
         print(f"Replication setup error: {e}")
         return {"success": False, "message": f"Setup failed: {str(e)}"}
+
 
 def sync_schema_between_dbs(primary_url: str, standby_url: str, replication_tables: str = None):
     """SQLAlchemy MetaData Reflection kullanarak şemaları kopyalar (Sadece iskelet)."""
@@ -400,62 +380,4 @@ async def cleanup_project_replication(project_id: int, primary_url: str, standby
     except Exception as e:
         print(f"Cleanup proj pub/slot err: {e}")
         raise Exception(f"Primary cleanup failed: {e}")
-async def run_sync_state_machine_bg(project_id: int):
-    from models import SessionLocal, Project, AuditLog
-    import asyncio
-    db = SessionLocal()
-    
-    try:
-        proj = db.query(Project).filter(Project.id == project_id).first()
-        if not proj:
-            return
-            
-        async def state_callback(state: str):
-            # Yeniden sorgulama yapmak iyi olabilir
-            p = db.query(Project).filter(Project.id == project_id).first()
-            if p:
-                p.sync_status = state
-                db.commit()
 
-        # VALIDATING
-        await state_callback("VALIDATING")
-        primary = next((n for n in proj.nodes if n.role.lower() == 'primary'), None)
-        standbys = [n for n in proj.nodes if n.role.lower() == 'standby']
-        
-        if not primary or not standbys:
-            proj.sync_status = "FAILED"
-            proj.sync_error = "Projenizde en az 1 Primary ve 1 Standby node bulunmalidir."
-            proj.sync_locked_at = None
-            db.commit()
-            return
-            
-        standbys_info = [{"id": s.id, "url": s.encrypted_url} for s in standbys]
-        result = await setup_replication(project_id, primary.encrypted_url, standbys_info, proj.replication_tables, state_callback)
-        
-        # Sonucu veritabanina yaz
-        proj = db.query(Project).filter(Project.id == project_id).first()
-        if result['success']:
-            proj.sync_status = "HEALTHY"
-            proj.sync_error = ""
-            audit = AuditLog(project_id=project_id, action="Replication Synced", details="Background Sync Job completed successfully.")
-            db.add(audit)
-        else:
-            if "ROLLBACK_FAILED" in result.get('message', ''):
-                proj.sync_status = "ROLLBACK_FAILED"
-            else:
-                proj.sync_status = "FAILED"
-            proj.sync_error = result.get('message', 'Unknown Error')
-            audit = AuditLog(project_id=project_id, action="Sync Failed", details=proj.sync_error)
-            db.add(audit)
-            
-        proj.sync_locked_at = None
-        db.commit()
-    except Exception as e:
-        proj = db.query(Project).filter(Project.id == project_id).first()
-        if proj:
-            proj.sync_status = "FAILED"
-            proj.sync_error = str(e)
-            proj.sync_locked_at = None
-            db.commit()
-    finally:
-        db.close()
