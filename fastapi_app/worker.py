@@ -156,15 +156,19 @@ async def main_loop():
                             break
                         hb_db = SessionLocal()
                         try:
-                            # Conditional update ensures we don't blindly renew if lease was lost
-                            res = hb_db.execute(
-                                text("UPDATE sync_jobs SET lease_expires_at = :expires WHERE id = :job_id AND lease_owner = :worker_id AND lease_token = :token AND status NOT IN ('SUCCESS', 'FAILED')"),
-                                {"expires": datetime.datetime.utcnow() + datetime.timedelta(seconds=LEASE_TIMEOUT_SECONDS), "job_id": job.id, "worker_id": WORKER_ID, "token": job.lease_token}
-                            )
-                            hb_db.commit()
+                            # Run synchronous SQLAlchemy execute in a separate thread to prevent event loop blocking
+                            def update_heartbeat():
+                                res = hb_db.execute(
+                                    text("UPDATE sync_jobs SET lease_expires_at = :expires WHERE id = :job_id AND lease_owner = :worker_id AND lease_token = :token AND status NOT IN ('SUCCESS', 'FAILED')"),
+                                    {"expires": datetime.datetime.utcnow() + datetime.timedelta(seconds=LEASE_TIMEOUT_SECONDS), "job_id": job.id, "worker_id": WORKER_ID, "token": job.lease_token}
+                                )
+                                hb_db.commit()
+                                return res.rowcount
+                            
+                            rowcount = await asyncio.to_thread(update_heartbeat)
                             fails = 0
                             # If rowcount is 0, we lost the lease or job finished
-                            if res.rowcount == 0:
+                            if rowcount == 0:
                                 print(f"Worker [{WORKER_ID}] lost lease for Job ID: {job.id}")
                                 lease_lost_event.set()
                                 process_task.cancel()
