@@ -114,6 +114,16 @@ def update_project(project_id: int, project: ProjectCreate, db: Session = Depend
     db.commit()
     return {"success": True}
 
+
+@app.delete("/api/nodes/{node_id}", dependencies=[Depends(verify_credentials)])
+def delete_node(node_id: int, db: Session = Depends(get_db)):
+    node = db.query(DatabaseNode).filter(DatabaseNode.id == node_id).first()
+    if not node:
+        return JSONResponse(status_code=404, content={"message": "Node not found"})
+    db.delete(node)
+    db.commit()
+    return {"success": True}
+
 @app.delete("/api/projects/{project_id}", dependencies=[Depends(verify_credentials)])
 def delete_project(project_id: int, db: Session = Depends(get_db)):
     proj = db.query(Project).filter(Project.id == project_id).first()

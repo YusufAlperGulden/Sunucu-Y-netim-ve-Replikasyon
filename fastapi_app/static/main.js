@@ -781,3 +781,20 @@ document.getElementById('toggle-url-btn').addEventListener('click', function() {
 document.getElementById('copy-url-btn').addEventListener('click', function() { const input = document.getElementById('node-url'); navigator.clipboard.writeText(input.value).then(() => { const originalHTML = this.innerHTML; this.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#00ff00" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>'; setTimeout(() => { this.innerHTML = originalHTML; }, 2000); }); });
 
 
+
+    document.getElementById('btn-delete-node').addEventListener('click', async () => {
+        const nodeId = document.getElementById('edit-node-id').value;
+        if (!confirm('Bu sunucuyu silmek istediğinize emin misiniz?')) return;
+        
+        try {
+            const res = await apiFetch(/api/nodes/, { method: 'DELETE' });
+            if (res.ok) {
+                modalEditNode.style.display = 'none';
+                fetchProjects();
+            } else {
+                alert('Sunucu silinemedi.');
+            }
+        } catch (e) {
+            alert('Sunucu silinemedi.');
+        }
+    });
