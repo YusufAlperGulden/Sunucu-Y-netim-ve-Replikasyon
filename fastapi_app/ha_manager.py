@@ -230,31 +230,51 @@ async def get_server_metrics(encrypted_url: str, project_id: int = None, role: s
 
 
 async def cleanup_node_replication(project_id: int, node_id: int, primary_url: str, standby_url: str = None):
-    # Drop slot on primary
-    try:
-        p_conn = await asyncpg.connect(primary_url, timeout=5.0)
-        slot_name = f"univ_sub_{project_id}_{node_id}"
-        active_pid_row = await p_conn.fetchrow(f"SELECT active_pid FROM pg_replication_slots WHERE slot_name='{slot_name}';")
-        if active_pid_row and active_pid_row['active_pid']:
-            await p_conn.execute(f"SELECT pg_terminate_backend({active_pid_row['active_pid']});")
-        await p_conn.execute(f"SELECT pg_drop_replication_slot('{slot_name}');")
-        await p_conn.close()
-    except Exception as e:
-        print(f"Cleanup node slot err: {e}")
-    
-    # Drop sub on standby
+    sub_name = f"univ_sub_{project_id}_{node_id}"
+    # 1. Drop sub on standby first
     if standby_url:
         try:
             s_conn = await asyncpg.connect(standby_url, timeout=5.0)
-            await s_conn.execute(f"DROP SUBSCRIPTION IF EXISTS univ_sub_{project_id}_{node_id};")
+            await s_conn.execute(f"ALTER SUBSCRIPTION {sub_name} DISABLE;")
+            await s_conn.execute(f"ALTER SUBSCRIPTION {sub_name} SET (slot_name = NONE);")
+            await s_conn.execute(f"DROP SUBSCRIPTION IF EXISTS {sub_name};")
             await s_conn.close()
         except Exception as e:
             print(f"Cleanup node sub err: {e}")
-
-async def cleanup_project_replication(project_id: int, primary_url: str, standby_urls: list):
+            raise Exception(f"Standby cleanup failed: {e}")
+            
+    # 2. Drop slot on primary
     try:
         p_conn = await asyncpg.connect(primary_url, timeout=5.0)
-        # Terminate and drop all slots for project
+        active_pid_row = await p_conn.fetchrow(f"SELECT active_pid FROM pg_replication_slots WHERE slot_name='{sub_name}';")
+        if active_pid_row and active_pid_row['active_pid']:
+            await p_conn.execute(f"SELECT pg_terminate_backend({active_pid_row['active_pid']});")
+        await p_conn.execute(f"SELECT pg_drop_replication_slot('{sub_name}');")
+        await p_conn.close()
+    except Exception as e:
+        print(f"Cleanup node slot err: {e}")
+        # Only raise if it's not a 'does not exist' error
+        if "does not exist" not in str(e):
+            raise Exception(f"Primary cleanup failed: {e}")
+
+async def cleanup_project_replication(project_id: int, primary_url: str, standby_urls: list):
+    # Drop subscriptions first
+    for s_url in standby_urls:
+        try:
+            s_conn = await asyncpg.connect(s_url, timeout=5.0)
+            subs = await s_conn.fetch("SELECT subname FROM pg_subscription WHERE subname LIKE ;", f"univ_sub_{project_id}_%")
+            for sub in subs:
+                await s_conn.execute(f"ALTER SUBSCRIPTION {sub['subname']} DISABLE;")
+                await s_conn.execute(f"ALTER SUBSCRIPTION {sub['subname']} SET (slot_name = NONE);")
+                await s_conn.execute(f"DROP SUBSCRIPTION IF EXISTS {sub['subname']};")
+            await s_conn.close()
+        except Exception as e:
+            print(f"Cleanup proj sub err: {e}")
+            raise Exception(f"Standby {s_url} cleanup failed: {e}")
+            
+    # Then primary
+    try:
+        p_conn = await asyncpg.connect(primary_url, timeout=5.0)
         slots = await p_conn.fetch(f"SELECT slot_name, active_pid FROM pg_replication_slots WHERE slot_name LIKE 'univ_sub_{project_id}_%';")
         for slot in slots:
             slot_name = slot['slot_name']
@@ -267,14 +287,4 @@ async def cleanup_project_replication(project_id: int, primary_url: str, standby
         await p_conn.close()
     except Exception as e:
         print(f"Cleanup proj pub/slot err: {e}")
-        
-    for s_url in standby_urls:
-        try:
-            s_conn = await asyncpg.connect(s_url, timeout=5.0)
-            # Find and drop subscriptions
-            subs = await s_conn.fetch("SELECT subname FROM pg_subscription WHERE subname LIKE ;", f"univ_sub_{project_id}_%")
-            for sub in subs:
-                await s_conn.execute(f"DROP SUBSCRIPTION IF EXISTS {sub['subname']};")
-            await s_conn.close()
-        except Exception as e:
-            print(f"Cleanup proj sub err: {e}")
+        raise Exception(f"Primary cleanup failed: {e}")

@@ -134,7 +134,10 @@ async def delete_node(node_id: int, db: Session = Depends(get_db)):
             p_url = decrypt(primary.encrypted_url)
             s_url = decrypt(node.encrypted_url)
             if p_url:
-                await cleanup_node_replication(proj.id, node_id, p_url, s_url)
+                try:
+                    await cleanup_node_replication(proj.id, node_id, p_url, s_url)
+                except Exception as e:
+                    return JSONResponse(status_code=500, content={"message": f"Failed to clean up PostgreSQL logical replication: {e}"})
                 
     db.delete(node)
     
@@ -160,7 +163,10 @@ async def delete_project(project_id: int, db: Session = Depends(get_db)):
                 if n.role.lower() == 'standby':
                     dec = decrypt(n.encrypted_url)
                     if dec: s_urls.append(dec)
-            await cleanup_project_replication(project_id, p_url, s_urls)
+            try:
+                await cleanup_project_replication(project_id, p_url, s_urls)
+            except Exception as e:
+                return JSONResponse(status_code=500, content={"message": f"Failed to clean up PostgreSQL logical replication: {e}"})
 
     db.delete(proj)
     db.commit()

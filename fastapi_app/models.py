@@ -30,7 +30,7 @@ class Project(Base):
 class DatabaseNode(Base):
     __tablename__ = "nodes"
     id = Column(Integer, primary_key=True, index=True)
-    project_id = Column(Integer, ForeignKey("projects.id"))
+    project_id = Column(Integer, ForeignKey("projects.id", ondelete="CASCADE"))
     role = Column(String(20)) # "primary" or "standby"
     name = Column(String(100))
     # Şifrelenmiş veritabanı bağlantı metni
@@ -44,7 +44,7 @@ class DatabaseNode(Base):
 class AuditLog(Base):
     __tablename__ = "audit_logs"
     id = Column(Integer, primary_key=True, index=True)
-    project_id = Column(Integer, ForeignKey("projects.id"))
+    project_id = Column(Integer, ForeignKey("projects.id", ondelete="CASCADE"))
     timestamp = Column(DateTime, default=datetime.datetime.utcnow)
     action = Column(String(255))
     details = Column(String(500))
