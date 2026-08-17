@@ -16,49 +16,52 @@ async def test_connection(db_url: str) -> bool:
         print(f"Connection test failed: {e}")
         return False
 
-async def setup_replication(primary_encrypted_url: str, standby_encrypted_url: str) -> dict:
-    """İki sunucu arasında PUBLICATION ve SUBSCRIPTION tünellerini (Logical Replication) kurar."""
+async def setup_replication(primary_encrypted_url: str, standby_encrypted_urls: list) -> dict:
+    """İki veya daha fazla sunucu arasında PUBLICATION ve SUBSCRIPTION tünellerini (Logical Replication) kurar."""
     try:
         primary_url = decrypt(primary_encrypted_url)
-        standby_url = decrypt(standby_encrypted_url)
         
-        if not primary_url or not standby_url:
-            return {"success": False, "message": "Failed to decrypt URLs"}
+        standby_urls = []
+        for enc_url in standby_encrypted_urls:
+            dec = decrypt(enc_url)
+            if dec:
+                standby_urls.append(dec)
+                
+        if not primary_url or not standby_urls:
+            return {"success": False, "message": "Failed to decrypt URLs or no valid standbys"}
 
-        # 0. Şema Senkronizasyonu (Schema Sync)
-        try:
-            await asyncio.to_thread(sync_schema_between_dbs, primary_url, standby_url)
-        except Exception as schema_err:
-            print(f"Schema sync error: {schema_err}")
-            return {"success": False, "message": f"Schema sync failed: {str(schema_err)}"}
+        # 0. Şema Senkronizasyonu (Schema Sync) for all standbys
+        for s_url in standby_urls:
+            try:
+                await asyncio.to_thread(sync_schema_between_dbs, primary_url, s_url)
+            except Exception as schema_err:
+                print(f"Schema sync error: {schema_err}")
+                return {"success": False, "message": f"Schema sync failed: {str(schema_err)}"}
 
         # 1. Primary Sunucuya Bağlan ve PUBLICATION oluştur (ALL TABLES)
-        # asyncpg ile bağlan
         p_conn = await asyncpg.connect(primary_url, timeout=10.0)
         try:
-            # Drop existing if any, then create (for idempotency)
             await p_conn.execute("DROP PUBLICATION IF EXISTS universal_pub;")
             await p_conn.execute("CREATE PUBLICATION universal_pub FOR ALL TABLES;")
         finally:
             await p_conn.close()
 
-        # 2. Standby Sunucuya Bağlan ve SUBSCRIPTION oluştur
-        # Standby'a bağlanırken bağlantı bilgisinden sslmode vs ayrıştırmak gerekebilir ama
-        # PostgreSQL CONNECTION stringi as-is formatında kabul eder. Sadece güvenlik için
-        # sslmode=prefer vb parse edilebilir. Şimdilik doğrudan veriyoruz.
-        s_conn = await asyncpg.connect(standby_url, timeout=10.0)
-        try:
-            await s_conn.execute("DROP SUBSCRIPTION IF EXISTS universal_sub;")
-            
-            # create subscription query
-            # PostgreSQL requires the connection string in single quotes
-            safe_primary_url = primary_url.replace("'", "''")
-            sub_query = f"CREATE SUBSCRIPTION universal_sub CONNECTION '{safe_primary_url}' PUBLICATION universal_pub;"
-            await s_conn.execute(sub_query)
-        finally:
-            await s_conn.close()
+        # 2. Tüm Standby Sunuculara Bağlan ve SUBSCRIPTION oluştur
+        safe_primary_url = primary_url.replace("'", "''")
+        for idx, s_url in enumerate(standby_urls):
+            s_conn = await asyncpg.connect(s_url, timeout=10.0)
+            try:
+                sub_name = f"universal_sub_{idx}"
+                # Clean up legacy and new names
+                await s_conn.execute("DROP SUBSCRIPTION IF EXISTS universal_sub;")
+                await s_conn.execute(f"DROP SUBSCRIPTION IF EXISTS {sub_name};")
+                
+                sub_query = f"CREATE SUBSCRIPTION {sub_name} CONNECTION '{safe_primary_url}' PUBLICATION universal_pub;"
+                await s_conn.execute(sub_query)
+            finally:
+                await s_conn.close()
 
-        return {"success": True, "message": "Logical replication (ALL TABLES) established successfully."}
+        return {"success": True, "message": f"Logical replication (1 Master to {len(standby_urls)} Standbys) established successfully."}
 
     except Exception as e:
         print(f"Replication setup error: {e}")
@@ -96,23 +99,32 @@ async def check_and_protect_wal_bloat(primary_encrypted_url: str, max_wal_lag_mb
                 SELECT slot_name, 
                        pg_wal_lsn_diff(pg_current_wal_lsn(), restart_lsn) AS lag_bytes 
                 FROM pg_replication_slots 
-                WHERE slot_name = 'universal_sub';
+                WHERE slot_name LIKE 'universal_sub%';
             """
-            row = await conn.fetchrow(query)
+            rows = await conn.fetch(query)
             
-            if not row or row['lag_bytes'] is None:
-                return {"success": True, "message": "Replication slot not found or inactive.", "dropped": False, "lag_mb": 0}
+            if not rows:
+                return {"success": True, "message": "No active replication slots found.", "dropped": False, "lag_mb": 0}
             
-            lag_mb = row['lag_bytes'] / (1024 * 1024)
-            
-            # Kritik eşiği aştı mı?
-            if lag_mb > max_wal_lag_mb:
-                # ACİL DURUM: DROP SLOT
-                print(f"[CRITICAL] WAL lag ({lag_mb:.2f} MB) exceeded max limit ({max_wal_lag_mb} MB). Dropping slot!")
-                await conn.execute("SELECT pg_drop_replication_slot('universal_sub');")
-                return {"success": True, "message": f"CRITICAL: Slot dropped to prevent WAL bloat. Lag was {lag_mb:.2f} MB", "dropped": True, "lag_mb": lag_mb}
+            max_lag_mb = 0
+            dropped_slots = []
+            for row in rows:
+                if row['lag_bytes'] is None:
+                    continue
+                lag_mb = row['lag_bytes'] / (1024 * 1024)
+                max_lag_mb = max(max_lag_mb, lag_mb)
+                
+                # Kritik eşiği aştı mı?
+                if lag_mb > max_wal_lag_mb:
+                    slot_name = row['slot_name']
+                    print(f"[CRITICAL] WAL lag ({lag_mb:.2f} MB) exceeded max limit for {slot_name}. Dropping slot!")
+                    await conn.execute(f"SELECT pg_drop_replication_slot('{slot_name}');")
+                    dropped_slots.append(slot_name)
+                    
+            if dropped_slots:
+                return {"success": True, "message": f"CRITICAL: Dropped slots {dropped_slots} to prevent WAL bloat.", "dropped": True, "lag_mb": max_lag_mb}
             else:
-                return {"success": True, "message": f"Lag is healthy ({lag_mb:.2f} MB)", "dropped": False, "lag_mb": lag_mb}
+                return {"success": True, "message": f"Lag is healthy (Max {max_lag_mb:.2f} MB)", "dropped": False, "lag_mb": max_lag_mb}
                 
         finally:
             await conn.close()

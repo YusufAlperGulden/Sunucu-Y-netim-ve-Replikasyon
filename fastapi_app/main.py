@@ -133,13 +133,14 @@ async def sync_replication(project_id: int, db: Session = Depends(get_db)):
         return JSONResponse(status_code=404, content={"message": "Project not found"})
     
     primary = next((n for n in proj.nodes if n.role.lower() == 'primary'), None)
-    standby = next((n for n in proj.nodes if n.role.lower() == 'standby'), None)
+    standbys = [n for n in proj.nodes if n.role.lower() == 'standby']
     
-    if not primary or not standby:
+    if not primary or not standbys:
         return JSONResponse(status_code=400, content={"success": False, "message": "Projenizde senkronizasyon için en az 1 Primary ve 1 Standby node bulunmalıdır."})
     
-    # 3. Setup Logical Replication
-    result = await setup_replication(primary.encrypted_url, standby.encrypted_url)
+    # 3. Setup Logical Replication (1-to-N)
+    standby_urls = [s.encrypted_url for s in standbys]
+    result = await setup_replication(primary.encrypted_url, standby_urls)
     if not result['success']:
         return JSONResponse(status_code=500, content=result)
         
