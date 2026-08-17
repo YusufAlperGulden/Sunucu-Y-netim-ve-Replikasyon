@@ -1,4 +1,4 @@
-import asyncpg
+﻿import asyncpg
 import asyncio
 import re
 from vault import decrypt
@@ -273,10 +273,33 @@ async def get_server_metrics(encrypted_url: str, project_id: int = None, role: s
             lag_val = 'Bağlantı Bekleniyor'
             # Check replication lag
             if role and role.lower() == 'primary' and project_id:
-                subs = await conn.fetch(f"SELECT pg_wal_lsn_diff(pg_current_wal_lsn(), restart_lsn) AS lag_bytes FROM pg_replication_slots WHERE slot_name LIKE 'univ_sub_{project_id}_%' ORDER BY lag_bytes DESC LIMIT 1;")
-                if subs and len(subs) > 0 and subs[0]['lag_bytes'] is not None:
-                    lag_mb = subs[0]['lag_bytes'] / (1024 * 1024)
-                    lag_val = f"{lag_mb:.2f} MB"
+                query = """
+                    SELECT slot_name, active, wal_status, invalidation_reason,
+                           pg_wal_lsn_diff(pg_current_wal_lsn(), confirmed_flush_lsn) AS consumer_gap_bytes,
+                           pg_wal_lsn_diff(pg_current_wal_lsn(), restart_lsn) AS retained_wal_bytes
+                    FROM pg_replication_slots
+                    WHERE slot_type = 'logical' AND database = current_database();
+                """
+                slots = await conn.fetch(query)
+                proj_slots = [s for s in slots if s['slot_name'].startswith(f'univ_sub_{project_id}_')]
+                if proj_slots:
+                    s = proj_slots[0]
+                    active = s['active']
+                    wal_status = s['wal_status']
+                    inv_reason = s['invalidation_reason']
+                    gap_mb = (s['consumer_gap_bytes'] / (1024*1024)) if s['consumer_gap_bytes'] is not None else 0
+                    retained_mb = (s['retained_wal_bytes'] / (1024*1024)) if s['retained_wal_bytes'] is not None else 0
+                    if inv_reason is not None or wal_status == 'lost':
+                        lag_val = f"LOST (Neden: {inv_reason or wal_status})"
+                    elif not active:
+                        lag_val = f"DISCONNECTED (Biriken WAL: {retained_mb:.1f} MB)"
+                    else:
+                        lag_val = f"STREAMING (Gap: {gap_mb:.2f} MB)"
+                else:
+                    if slots:
+                        lag_val = "Legacy/Harici Replikasyon Algılandı"
+                    else:
+                        lag_val = "Konfigüre Edilmedi (NOT_CONFIGURED)"
             elif role and role.lower() == 'standby':
                 lag_val = 'Subscriber'
             else:
