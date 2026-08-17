@@ -38,24 +38,44 @@ async def setup_replication(primary_encrypted_url: str, standby_encrypted_urls: 
                 print(f"Schema sync error: {schema_err}")
                 return {"success": False, "message": f"Schema sync failed: {str(schema_err)}"}
 
-        # 1. Primary Sunucuya Bağlan ve PUBLICATION oluştur (ALL TABLES)
+        # 1. Önce TÜM Standby'lardaki mevcut subscription'ları sil (Tünelleri kopart)
+        for idx, s_url in enumerate(standby_urls):
+            try:
+                s_conn = await asyncpg.connect(s_url, timeout=10.0)
+                sub_name = f"universal_sub_{idx}"
+                await s_conn.execute("DROP SUBSCRIPTION IF EXISTS universal_sub;")
+                await s_conn.execute(f"DROP SUBSCRIPTION IF EXISTS {sub_name};")
+                await s_conn.close()
+            except Exception as e:
+                print(f"Standby {idx} drop subscription error: {e}")
+
+        # 2. Primary Sunucuya Bağlan, PUBLICATION oluştur ve eski Slotları tamamen temizle
         p_conn = await asyncpg.connect(primary_url, timeout=10.0)
         try:
             await p_conn.execute("DROP PUBLICATION IF EXISTS universal_pub;")
             await p_conn.execute("CREATE PUBLICATION universal_pub FOR ALL TABLES;")
+            
+            # Primary'deki tüm 'universal_sub' ile başlayan slotları bul ve zorla sil
+            slots = await p_conn.fetch("SELECT slot_name, active_pid FROM pg_replication_slots WHERE slot_name LIKE 'universal_sub%';")
+            for slot in slots:
+                slot_name = slot['slot_name']
+                active_pid = slot['active_pid']
+                try:
+                    if active_pid:
+                        await p_conn.execute(f"SELECT pg_terminate_backend({active_pid});")
+                    await p_conn.execute(f"SELECT pg_drop_replication_slot('{slot_name}');")
+                    print(f"Dropped orphaned slot: {slot_name}")
+                except Exception as e:
+                    print(f"Could not drop slot {slot_name}: {e}")
         finally:
             await p_conn.close()
 
-        # 2. Tüm Standby Sunuculara Bağlan ve SUBSCRIPTION oluştur
+        # 3. Tüm Standby Sunuculara tekrar Bağlan ve YENİ SUBSCRIPTION oluştur
         safe_primary_url = primary_url.replace("'", "''")
         for idx, s_url in enumerate(standby_urls):
             s_conn = await asyncpg.connect(s_url, timeout=10.0)
             try:
                 sub_name = f"universal_sub_{idx}"
-                # Clean up legacy and new names
-                await s_conn.execute("DROP SUBSCRIPTION IF EXISTS universal_sub;")
-                await s_conn.execute(f"DROP SUBSCRIPTION IF EXISTS {sub_name};")
-                
                 sub_query = f"CREATE SUBSCRIPTION {sub_name} CONNECTION '{safe_primary_url}' PUBLICATION universal_pub;"
                 await s_conn.execute(sub_query)
             finally:
