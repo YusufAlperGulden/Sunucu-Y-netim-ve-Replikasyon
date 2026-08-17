@@ -17,7 +17,7 @@ async def test_connection(db_url: str) -> bool:
         print(f"Connection test failed: {e}")
         return False
 
-async def setup_replication(project_id: int, primary_encrypted_url: str, standbys_info: list, replication_tables: str = None, state_callback=None) -> dict:
+async def setup_replication(project_id: int, primary_encrypted_url: str, standbys_info: list, replication_tables: str = None, state_callback=None, check_lease_cb=None) -> dict:
     try:
         primary_url = decrypt(primary_encrypted_url)
         
@@ -96,12 +96,14 @@ async def setup_replication(project_id: int, primary_encrypted_url: str, standby
         # 1. Sync Schemas
         for s in valid_standbys:
             try:
-                await asyncio.to_thread(sync_schema_between_dbs, primary_url, s['url'], replication_tables)
+                if check_lease_cb: check_lease_cb()
+                await asyncio.to_thread(sync_schema_between_dbs, primary_url, s['url'], replication_tables, check_lease_cb)
             except Exception as schema_err:
                 print(f"Schema sync error: {schema_err}")
                 return {"success": False, "message": f"Schema sync failed: {str(schema_err)}"}
 
         # 2. Setup Primary (Idempotent)
+        if check_lease_cb: check_lease_cb()
         p_conn = await asyncpg.connect(primary_url, timeout=10.0)
         try:
             # Check if publication exists
@@ -124,6 +126,7 @@ async def setup_replication(project_id: int, primary_encrypted_url: str, standby
         safe_primary_url = primary_url.replace("'", "''")
         
         for s in valid_standbys:
+            if check_lease_cb: check_lease_cb()
             try:
                 s_conn = await asyncpg.connect(s['url'], timeout=10.0)
                 sub_name = f"univ_sub_{project_id}_{s['id']}"
@@ -131,10 +134,12 @@ async def setup_replication(project_id: int, primary_encrypted_url: str, standby
                 # Check if subscription exists
                 sub_exists = await s_conn.fetchval(f"SELECT subname FROM pg_subscription WHERE subname = '{sub_name}';")
                 if not sub_exists:
+                    if check_lease_cb: check_lease_cb()
                     sub_query = f"CREATE SUBSCRIPTION {sub_name} CONNECTION '{safe_primary_url}' PUBLICATION univ_pub_{project_id} WITH (copy_data = true);"
                     await s_conn.execute(sub_query)
                 else:
                     # Force the connection, publication, and enable state
+                    if check_lease_cb: check_lease_cb()
                     await s_conn.execute(f"ALTER SUBSCRIPTION {sub_name} CONNECTION '{safe_primary_url}';")
                     await s_conn.execute(f"ALTER SUBSCRIPTION {sub_name} SET PUBLICATION univ_pub_{project_id};")
                     await s_conn.execute(f"ALTER SUBSCRIPTION {sub_name} ENABLE;")
@@ -151,8 +156,9 @@ async def setup_replication(project_id: int, primary_encrypted_url: str, standby
         return {"success": False, "message": f"Setup failed: {str(e)}"}
 
 
-def sync_schema_between_dbs(primary_url: str, standby_url: str, replication_tables: str = None):
+def sync_schema_between_dbs(primary_url: str, standby_url: str, replication_tables: str = None, check_lease_cb=None):
     """SQLAlchemy MetaData Reflection kullanarak şemaları kopyalar (Sadece iskelet)."""
+    if check_lease_cb: check_lease_cb()
     if not replication_tables:
         raise ValueError("CRITICAL: replication_tables must be provided. Syncing all tables is disabled for safety.")
         
@@ -171,10 +177,12 @@ def sync_schema_between_dbs(primary_url: str, standby_url: str, replication_tabl
     engine_primary = create_engine(p_url)
     engine_standby = create_engine(s_url)
 
+    if check_lease_cb: check_lease_cb()
     metadata = MetaData()
     # Primary'den sadece belirtilen tablo yapılarını oku
     metadata.reflect(bind=engine_primary, only=tables_to_sync)
     
+    if check_lease_cb: check_lease_cb()
     # Standby'da aynı tabloları yarat (Var olanları atlar - checkfirst=True varsayılandır)
     metadata.create_all(bind=engine_standby)
     print(f"Schema sync completed. Processed {len(metadata.tables)} tables.")

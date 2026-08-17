@@ -15,7 +15,7 @@ WORKER_ID = os.environ.get("RENDER_INSTANCE_ID", f"local-{os.getpid()}")
 POLL_INTERVAL = 5
 LEASE_TIMEOUT_SECONDS = 60
 
-async def process_job(db: Session, job: SyncJob, worker_id: str):
+async def process_job(db: Session, job: SyncJob, worker_id: str, lease_lost_event: asyncio.Event):
     project_id = job.project_id
     proj = db.query(Project).filter(Project.id == project_id).first()
     if not proj:
@@ -70,7 +70,12 @@ async def process_job(db: Session, job: SyncJob, worker_id: str):
             
         standbys_info = [{"id": s.id, "url": s.encrypted_url} for s in standbys]
         
-        result = await setup_replication(project_id, primary.encrypted_url, standbys_info, proj.replication_tables, update_status)
+        # We pass a callback to ha_manager that checks if this task was cancelled or lease lost event is set
+        def check_lease():
+            if lease_lost_event.is_set():
+                raise RuntimeError("Task cancelled due to lease loss")
+            
+        result = await setup_replication(project_id, primary.encrypted_url, standbys_info, proj.replication_tables, update_status, check_lease_cb=check_lease)
         
         if result['success']:
             if execute_fenced_update(status_to_set="SUCCESS", error_msg=None, complete=True):
@@ -131,9 +136,20 @@ async def main_loop():
             if job:
                 print(f"Worker [{WORKER_ID}] picked up Job ID: {job.id} for Project ID: {job.project_id}")
                 
-                process_task = asyncio.create_task(process_job(db, job, WORKER_ID))
+                lease_lost_event = asyncio.Event()
+                
+                # Make the process task aware of lease loss event
+                async def process_job_wrapper():
+                    try:
+                        await process_job(db, job, WORKER_ID, lease_lost_event)
+                    except asyncio.CancelledError:
+                        lease_lost_event.set()
+                        raise
+                        
+                process_task = asyncio.create_task(process_job_wrapper())
 
                 async def heartbeat():
+                    fails = 0
                     while True:
                         await asyncio.sleep(LEASE_TIMEOUT_SECONDS / 3)
                         if process_task.done():
@@ -146,13 +162,21 @@ async def main_loop():
                                 {"expires": datetime.datetime.utcnow() + datetime.timedelta(seconds=LEASE_TIMEOUT_SECONDS), "job_id": job.id, "worker_id": WORKER_ID, "token": job.lease_token}
                             )
                             hb_db.commit()
+                            fails = 0
                             # If rowcount is 0, we lost the lease or job finished
                             if res.rowcount == 0:
                                 print(f"Worker [{WORKER_ID}] lost lease for Job ID: {job.id}")
+                                lease_lost_event.set()
                                 process_task.cancel()
                                 break
                         except Exception as hb_err:
                             print(f"Heartbeat error: {hb_err}")
+                            fails += 1
+                            if fails >= 2:
+                                print(f"Worker [{WORKER_ID}] heartbeat failed {fails} times. Cancelling task.")
+                                lease_lost_event.set()
+                                process_task.cancel()
+                                break
                         finally:
                             hb_db.close()
                             
