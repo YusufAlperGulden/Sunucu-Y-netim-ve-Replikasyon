@@ -774,13 +774,6 @@ document.addEventListener('DOMContentLoaded', () => {
     loginUsername.addEventListener('keypress', (e) => {
         if(e.key === 'Enter') attemptLogin();
     });
-});
-
-document.getElementById('toggle-url-btn').addEventListener('click', function() { const input = document.getElementById('node-url'); const icon = this.querySelector('svg'); if (input.type === 'password') { input.type = 'text'; icon.innerHTML = '<path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle>'; } else { input.type = 'password'; icon.innerHTML = '<path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle><line x1="1" y1="1" x2="23" y2="23"></line>'; } });
-
-document.getElementById('copy-url-btn').addEventListener('click', function() { const input = document.getElementById('node-url'); navigator.clipboard.writeText(input.value).then(() => { const originalHTML = this.innerHTML; this.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#00ff00" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>'; setTimeout(() => { this.innerHTML = originalHTML; }, 2000); }); });
-
-
 
     document.getElementById('btn-delete-node').addEventListener('click', async () => {
         const nodeId = document.getElementById('edit-node-id').value;
@@ -798,3 +791,12 @@ document.getElementById('copy-url-btn').addEventListener('click', function() { c
             alert('Sunucu silinemedi.');
         }
     });
+});
+
+document.getElementById('toggle-url-btn').addEventListener('click', function() { const input = document.getElementById('node-url'); const icon = this.querySelector('svg'); if (input.type === 'password') { input.type = 'text'; icon.innerHTML = '<path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle>'; } else { input.type = 'password'; icon.innerHTML = '<path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle><line x1="1" y1="1" x2="23" y2="23"></line>'; } });
+
+document.getElementById('copy-url-btn').addEventListener('click', function() { const input = document.getElementById('node-url'); navigator.clipboard.writeText(input.value).then(() => { const originalHTML = this.innerHTML; this.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#00ff00" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>'; setTimeout(() => { this.innerHTML = originalHTML; }, 2000); }); });
+
+
+
+
