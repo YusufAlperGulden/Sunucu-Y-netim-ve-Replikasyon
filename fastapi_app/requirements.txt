@@ -1,4 +1,4 @@
-﻿fastapi
+fastapi
 uvicorn
 sqlalchemy
 asyncpg
@@ -6,3 +6,4 @@ cryptography
 
 jinja2
 psycopg2-binary
+alembic
