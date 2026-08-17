@@ -151,7 +151,7 @@ async def check_and_protect_wal_bloat(primary_encrypted_url: str, max_wal_lag_mb
 
     except Exception as e:
         print(f"WAL Bloat check error: {e}")
-        return {"success": False, "message": f"Check failed: {str(e)}", "dropped": False}
+        return {"success": False, "message": f"Check failed: {str(e)}", "dropped": False, "lag_mb": 0}
 
 import time
 
