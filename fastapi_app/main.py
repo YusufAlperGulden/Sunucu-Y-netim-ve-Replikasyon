@@ -24,8 +24,6 @@ def verify_credentials(credentials: HTTPBasicCredentials = Depends(security)):
     admin_pass = os.environ.get("ADMIN_PASS")
     if not admin_user or not admin_pass:
         raise ValueError("CRITICAL: ADMIN_USER or ADMIN_PASS environment variables are missing.")
-    if admin_pass == "admin123":
-        raise ValueError("CRITICAL: 'admin123' is no longer allowed. Please change ADMIN_PASS in Render Environment Variables for security.")
 
     correct_username = secrets.compare_digest(credentials.username, admin_user)
     correct_password = secrets.compare_digest(credentials.password, admin_pass)
