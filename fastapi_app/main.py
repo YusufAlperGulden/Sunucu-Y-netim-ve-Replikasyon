@@ -41,9 +41,9 @@ async def lifespan(app: FastAPI):
         from alembic.config import Config
         from alembic import command
         alembic_cfg = Config(os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "alembic.ini"))
-        # Alembic upgrade is intentionally removed from app startup to prevent deployment failures.
-        # It must be run manually or via Render Release command: `alembic upgrade head`
-        print("Alembic integration verified. Migrations must be run externally.")
+        # Run migrations on startup to prevent 500 errors if user forgets to run them
+        command.upgrade(alembic_cfg, "head")
+        print("Alembic migrations ran successfully.")
     except Exception as e:
         print(f"Migration error: {e}")
         # Uygulamanın başlatılmasını durdurmak (fail-closed)
