@@ -70,9 +70,12 @@ def upgrade() -> None:
 
 
 def downgrade() -> None:
-    """Downgrade schema."""
-    # Protect downgrade for legacy databases
-    # As this is the base schema migration for V2, and legacy databases 
-    # might already contain max_wal_lag_mb and other columns, dropping columns 
-    # here will lead to data loss. Base migration downgrade is a no-op.
+    """
+    Downgrade schema (Irreversible / No-Op).
+    
+    NOTE: As this is the base schema migration for V2, and legacy databases 
+    might already contain max_wal_lag_mb and other columns, dropping columns 
+    here will lead to data loss. Therefore, this downgrade is a no-op to prevent 
+    any destructive actions.
+    """
     pass
