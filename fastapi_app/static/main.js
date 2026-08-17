@@ -207,11 +207,60 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
+    let syncPollInterval = null;
+    
+    function stopSyncPolling() {
+        if (syncPollInterval) {
+            clearInterval(syncPollInterval);
+            syncPollInterval = null;
+        }
+    }
+
     async function refreshCurrentProject() {
         if (!currentProjectId) return;
         const res = await apiFetch(`/api/projects/${currentProjectId}`);
         const detailData = await res.json();
+        
+        // Update nodes
         renderNodes(detailData.nodes);
+        
+        // Update Sync Status Badge
+        const badge = document.getElementById('sync-status-badge');
+        const syncBtn = document.getElementById('btn-sync-replication');
+        
+        if (badge) {
+            if (detailData.sync_status !== 'IDLE' && detailData.sync_status !== 'HEALTHY' && detailData.sync_status !== 'FAILED' && detailData.sync_status !== 'ROLLBACK_FAILED') {
+                badge.style.display = 'inline-block';
+                badge.innerText = `Sync: ${detailData.sync_status}`;
+                badge.style.color = '#fbbf24'; // yellow-ish
+                syncBtn.disabled = true;
+                syncBtn.innerText = "Syncing...";
+                
+                // Start polling if not already started
+                if (!syncPollInterval) {
+                    syncPollInterval = setInterval(refreshCurrentProject, 3000);
+                }
+            } else {
+                if (detailData.sync_status === 'HEALTHY') {
+                    badge.style.display = 'inline-block';
+                    badge.innerText = `Sync: HEALTHY`;
+                    badge.style.color = 'var(--success)';
+                } else if (detailData.sync_status === 'FAILED' || detailData.sync_status === 'ROLLBACK_FAILED') {
+                    badge.style.display = 'inline-block';
+                    badge.innerText = `Sync: ${detailData.sync_status}`;
+                    badge.style.color = 'var(--danger)';
+                    if (detailData.sync_error) {
+                        badge.title = detailData.sync_error; // tooltip
+                    }
+                } else {
+                    badge.style.display = 'none';
+                }
+                
+                syncBtn.disabled = false;
+                syncBtn.innerText = "Sync Replication";
+                stopSyncPolling();
+            }
+        }
     }
 
     async function fetchAuditLogs() {
@@ -604,7 +653,7 @@ document.addEventListener('DOMContentLoaded', () => {
     btnSyncReplication.addEventListener('click', async () => {
         if (!currentProjectId) return;
         
-        btnSyncReplication.innerText = "Syncing...";
+        btnSyncReplication.innerText = "Starting...";
         btnSyncReplication.disabled = true;
 
         try {
@@ -614,13 +663,15 @@ document.addEventListener('DOMContentLoaded', () => {
             const res = await response.json();
             
             if (response.ok && res.success) {
-                alert("SUCCESS! " + res.message);
+                // Job queued successfully, start polling
+                refreshCurrentProject();
             } else {
-                alert("ERROR: " + (res.message || "Sync failed."));
+                alert("ERROR: " + (res.message || "Sync failed to start."));
+                btnSyncReplication.innerText = "Sync Replication";
+                btnSyncReplication.disabled = false;
             }
         } catch (err) {
-            alert('Server error during replication sync.');
-        } finally {
+            alert('Server error while starting sync.');
             btnSyncReplication.innerText = "Sync Replication";
             btnSyncReplication.disabled = false;
         }

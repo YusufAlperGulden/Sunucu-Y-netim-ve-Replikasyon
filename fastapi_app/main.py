@@ -41,13 +41,13 @@ async def lifespan(app: FastAPI):
         from alembic.config import Config
         from alembic import command
         alembic_cfg = Config(os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "alembic.ini"))
-        # Run Alembic upgrade head
-        command.upgrade(alembic_cfg, "head")
-        print("Alembic migrations completed successfully.")
+        # Alembic upgrade is intentionally removed from app startup to prevent deployment failures.
+        # It must be run manually or via Render Release command: `alembic upgrade head`
+        print("Alembic integration verified. Migrations must be run externally.")
     except Exception as e:
         print(f"Migration error: {e}")
         # Uygulamanın başlatılmasını durdurmak (fail-closed)
-        raise RuntimeError(f"Database migration failed. System cannot start. Error: {e}")
+        raise RuntimeError(f"Database migration check failed: {e}")
         
     yield
     # Shutdown
@@ -211,10 +211,17 @@ async def add_node(project_id: int, node: NodeCreate, db: Session = Depends(get_
     return {"success": True, "message": "Node added securely."}
 
 @app.post("/api/projects/{project_id}/sync", dependencies=[Depends(verify_credentials)])
-async def sync_replication(project_id: int, db: Session = Depends(get_db)):
+async def sync_replication(project_id: int, background_tasks: BackgroundTasks, db: Session = Depends(get_db)):
+    import datetime
+    from ha_manager import run_sync_state_machine_bg
+    
     proj = db.query(Project).filter(Project.id == project_id).first()
     if not proj:
         return JSONResponse(status_code=404, content={"message": "Project not found"})
+        
+    # 1. Distributed Lock Control
+    if proj.sync_status not in ["IDLE", "HEALTHY", "FAILED", "ROLLBACK_FAILED"]:
+        return JSONResponse(status_code=409, content={"success": False, "message": "A sync process is already running for this project."})
     
     primary = next((n for n in proj.nodes if n.role.lower() == 'primary'), None)
     standbys = [n for n in proj.nodes if n.role.lower() == 'standby']
@@ -222,20 +229,17 @@ async def sync_replication(project_id: int, db: Session = Depends(get_db)):
     if not primary or not standbys:
         return JSONResponse(status_code=400, content={"success": False, "message": "Projenizde senkronizasyon için en az 1 Primary ve 1 Standby node bulunmalıdır."})
     
-    # 3. Setup Logical Replication (1-to-N)
-    standbys_info = [{"id": s.id, "url": s.encrypted_url} for s in standbys]
-    result = await setup_replication(project_id, primary.encrypted_url, standbys_info, proj.replication_tables)
+    # 2. Lock the state and enqueue the job
+    proj.sync_status = "QUEUED"
+    proj.sync_error = None
+    proj.sync_locked_at = datetime.datetime.utcnow()
+    db.commit()
     
-    # Audit log
-    if result['success']:
-        from models import AuditLog
-        audit = AuditLog(project_id=project_id, action="Replication Synced", details=result.get("message", "Success"))
-        db.add(audit)
-        db.commit()
-    if not result['success']:
-        return JSONResponse(status_code=500, content=result)
-        
-    return result
+    # 3. Offload to background worker
+    background_tasks.add_task(run_sync_state_machine_bg, project_id)
+    
+    # Return 202 Accepted immediately
+    return {"success": True, "message": "Sync job has been queued and is processing in the background."}
 
 @app.get('/api/audit-logs', dependencies=[Depends(verify_credentials)])
 def get_audit_logs(db: Session = Depends(get_db)):

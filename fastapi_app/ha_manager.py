@@ -17,7 +17,7 @@ async def test_connection(db_url: str) -> bool:
         print(f"Connection test failed: {e}")
         return False
 
-async def setup_replication(project_id: int, primary_encrypted_url: str, standbys_info: list, replication_tables: str = None) -> dict:
+async def setup_replication(project_id: int, primary_encrypted_url: str, standbys_info: list, replication_tables: str = None, state_callback=None) -> dict:
     """İki veya daha fazla sunucu arasında PUBLICATION ve SUBSCRIPTION tünellerini (Logical Replication) kurar."""
     try:
         primary_url = decrypt(primary_encrypted_url)
@@ -30,6 +30,9 @@ async def setup_replication(project_id: int, primary_encrypted_url: str, standby
                 
         if not primary_url or not valid_standbys:
             return {"success": False, "message": "Failed to decrypt URLs or no valid standbys"}
+
+        if state_callback:
+            await state_callback("BOOTSTRAPPING")
 
         for s in valid_standbys:
             try:
@@ -82,6 +85,10 @@ async def setup_replication(project_id: int, primary_encrypted_url: str, standby
         finally:
             await p_conn.close()
 
+        # 4. Standby Sunuculara Bağlan, SUBSCRIPTION oluştur
+        if state_callback:
+            await state_callback("CATCHING_UP")
+        
         # 3. Tüm Standby Sunuculara tekrar Bağlan ve YENİ SUBSCRIPTION oluştur
         safe_primary_url = primary_url.replace("'", "''")
         created_subs = []
@@ -364,3 +371,62 @@ async def cleanup_project_replication(project_id: int, primary_url: str, standby
     except Exception as e:
         print(f"Cleanup proj pub/slot err: {e}")
         raise Exception(f"Primary cleanup failed: {e}")
+async def run_sync_state_machine_bg(project_id: int):
+    from models import SessionLocal, Project, AuditLog
+    import asyncio
+    db = SessionLocal()
+    
+    try:
+        proj = db.query(Project).filter(Project.id == project_id).first()
+        if not proj:
+            return
+            
+        async def state_callback(state: str):
+            # Yeniden sorgulama yapmak iyi olabilir
+            p = db.query(Project).filter(Project.id == project_id).first()
+            if p:
+                p.sync_status = state
+                db.commit()
+
+        # VALIDATING
+        await state_callback("VALIDATING")
+        primary = next((n for n in proj.nodes if n.role.lower() == 'primary'), None)
+        standbys = [n for n in proj.nodes if n.role.lower() == 'standby']
+        
+        if not primary or not standbys:
+            proj.sync_status = "FAILED"
+            proj.sync_error = "Projenizde en az 1 Primary ve 1 Standby node bulunmalidir."
+            proj.sync_locked_at = None
+            db.commit()
+            return
+            
+        standbys_info = [{"id": s.id, "url": s.encrypted_url} for s in standbys]
+        result = await setup_replication(project_id, primary.encrypted_url, standbys_info, proj.replication_tables, state_callback)
+        
+        # Sonucu veritabanina yaz
+        proj = db.query(Project).filter(Project.id == project_id).first()
+        if result['success']:
+            proj.sync_status = "HEALTHY"
+            proj.sync_error = ""
+            audit = AuditLog(project_id=project_id, action="Replication Synced", details="Background Sync Job completed successfully.")
+            db.add(audit)
+        else:
+            if "ROLLBACK_FAILED" in result.get('message', ''):
+                proj.sync_status = "ROLLBACK_FAILED"
+            else:
+                proj.sync_status = "FAILED"
+            proj.sync_error = result.get('message', 'Unknown Error')
+            audit = AuditLog(project_id=project_id, action="Sync Failed", details=proj.sync_error)
+            db.add(audit)
+            
+        proj.sync_locked_at = None
+        db.commit()
+    except Exception as e:
+        proj = db.query(Project).filter(Project.id == project_id).first()
+        if proj:
+            proj.sync_status = "FAILED"
+            proj.sync_error = str(e)
+            proj.sync_locked_at = None
+            db.commit()
+    finally:
+        db.close()

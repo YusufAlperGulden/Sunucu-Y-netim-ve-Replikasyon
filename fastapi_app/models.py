@@ -30,6 +30,12 @@ class Project(Base):
     metric_table = Column(String(100), nullable=True) # E.g., 'vehicles', 'email_records'
     replication_tables = Column(String(500), nullable=True) # E.g. 'vehicles, metadata'
     max_wal_lag_mb = Column(Integer, default=500) # Esnek limit ayarı
+    
+    # State Machine / Background Worker Fields
+    sync_status = Column(String(50), default="IDLE") # IDLE, QUEUED, VALIDATING, BOOTSTRAPPING, CATCHING_UP, HEALTHY, FAILED, ROLLBACK_FAILED
+    sync_error = Column(String(1000), nullable=True)
+    sync_locked_at = Column(DateTime, nullable=True)
+    
     nodes = relationship("DatabaseNode", back_populates="project", cascade="all, delete-orphan")
 
 class DatabaseNode(Base):
