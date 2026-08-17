@@ -187,6 +187,11 @@ async def add_node(project_id: int, node: NodeCreate, db: Session = Depends(get_
     if not proj:
         return JSONResponse(status_code=404, content={"message": "Project not found"})
     
+    from vault import decrypt
+    for n in db.query(DatabaseNode).all():
+        if decrypt(n.encrypted_url) == node.url:
+            return JSONResponse(status_code=400, content={"success": False, "message": "Bu sunucu bağlantı URL'si zaten başka bir projede veya rolde kayıtlı. Sistem güvenliği için aynı veritabanı birden fazla node olarak eklenemez."})
+
     # 1. PING (Test Connection)
     is_alive = await test_connection(node.url)
     if not is_alive:

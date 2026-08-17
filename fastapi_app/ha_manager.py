@@ -234,9 +234,11 @@ async def cleanup_node_replication(project_id: int, node_id: int, primary_url: s
     if standby_url:
         try:
             s_conn = await asyncpg.connect(standby_url, timeout=5.0)
-            await s_conn.execute(f"ALTER SUBSCRIPTION {sub_name} DISABLE;")
-            await s_conn.execute(f"ALTER SUBSCRIPTION {sub_name} SET (slot_name = NONE);")
-            await s_conn.execute(f"DROP SUBSCRIPTION IF EXISTS {sub_name};")
+            sub_exists = await s_conn.fetchrow(f"SELECT 1 FROM pg_subscription WHERE subname='{sub_name}';")
+            if sub_exists:
+                await s_conn.execute(f"ALTER SUBSCRIPTION {sub_name} DISABLE;")
+                await s_conn.execute(f"ALTER SUBSCRIPTION {sub_name} SET (slot_name = NONE);")
+                await s_conn.execute(f"DROP SUBSCRIPTION IF EXISTS {sub_name};")
             await s_conn.close()
         except Exception as e:
             print(f"Cleanup node sub err: {e}")
@@ -246,9 +248,10 @@ async def cleanup_node_replication(project_id: int, node_id: int, primary_url: s
     try:
         p_conn = await asyncpg.connect(primary_url, timeout=5.0)
         active_pid_row = await p_conn.fetchrow(f"SELECT active_pid FROM pg_replication_slots WHERE slot_name='{sub_name}';")
-        if active_pid_row and active_pid_row['active_pid']:
-            await p_conn.execute(f"SELECT pg_terminate_backend({active_pid_row['active_pid']});")
-        await p_conn.execute(f"SELECT pg_drop_replication_slot('{sub_name}');")
+        if active_pid_row:
+            if active_pid_row['active_pid']:
+                await p_conn.execute(f"SELECT pg_terminate_backend({active_pid_row['active_pid']});")
+            await p_conn.execute(f"SELECT pg_drop_replication_slot('{sub_name}');")
         await p_conn.close()
     except Exception as e:
         print(f"Cleanup node slot err: {e}")
