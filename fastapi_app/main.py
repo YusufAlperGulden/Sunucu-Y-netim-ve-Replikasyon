@@ -6,7 +6,7 @@ from fastapi.security import HTTPBasic, HTTPBasicCredentials
 from sqlalchemy.orm import Session
 from models import SessionLocal, Project, DatabaseNode
 from pydantic import BaseModel
-from ha_manager import test_connection, setup_replication, check_and_protect_wal_bloat
+from ha_manager import test_connection, setup_replication, check_and_protect_wal_bloat, cleanup_node_replication, cleanup_project_replication
 import traceback
 import asyncio
 import secrets
@@ -102,6 +102,11 @@ def add_project(project: ProjectCreate, db: Session = Depends(get_db)):
     db.add(db_proj)
     db.commit()
     db.refresh(db_proj)
+    
+    from models import AuditLog
+    audit = AuditLog(project_id=db_proj.id, action="Project Created", details=f"Name: {project.name}")
+    db.add(audit)
+    db.commit()
     return {"success": True, "id": db_proj.id}
 
 @app.put("/api/projects/{project_id}", dependencies=[Depends(verify_credentials)])
@@ -116,19 +121,47 @@ def update_project(project_id: int, project: ProjectCreate, db: Session = Depend
 
 
 @app.delete("/api/nodes/{node_id}", dependencies=[Depends(verify_credentials)])
-def delete_node(node_id: int, db: Session = Depends(get_db)):
+async def delete_node(node_id: int, db: Session = Depends(get_db)):
     node = db.query(DatabaseNode).filter(DatabaseNode.id == node_id).first()
     if not node:
         return JSONResponse(status_code=404, content={"message": "Node not found"})
+    
+    from vault import decrypt
+    proj = node.project
+    if proj:
+        primary = next((n for n in proj.nodes if n.role.lower() == 'primary' and n.id != node_id), None)
+        if primary and node.role.lower() == 'standby':
+            p_url = decrypt(primary.encrypted_url)
+            s_url = decrypt(node.encrypted_url)
+            if p_url:
+                await cleanup_node_replication(proj.id, node_id, p_url, s_url)
+                
     db.delete(node)
+    
+    from models import AuditLog
+    audit = AuditLog(project_id=node.project_id, action="Node Deleted", details=f"ID: {node_id}, Name: {node.name}")
+    db.add(audit)
     db.commit()
     return {"success": True}
 
 @app.delete("/api/projects/{project_id}", dependencies=[Depends(verify_credentials)])
-def delete_project(project_id: int, db: Session = Depends(get_db)):
+async def delete_project(project_id: int, db: Session = Depends(get_db)):
     proj = db.query(Project).filter(Project.id == project_id).first()
     if not proj:
         return JSONResponse(status_code=404, content={"message": "Project not found"})
+    
+    from vault import decrypt
+    primary = next((n for n in proj.nodes if n.role.lower() == 'primary'), None)
+    if primary:
+        p_url = decrypt(primary.encrypted_url)
+        if p_url:
+            s_urls = []
+            for n in proj.nodes:
+                if n.role.lower() == 'standby':
+                    dec = decrypt(n.encrypted_url)
+                    if dec: s_urls.append(dec)
+            await cleanup_project_replication(project_id, p_url, s_urls)
+
     db.delete(proj)
     db.commit()
     return {"success": True}
@@ -157,6 +190,10 @@ async def add_node(project_id: int, node: NodeCreate, db: Session = Depends(get_
     db_node = DatabaseNode(project_id=proj.id, role=node.role, name=node.name)
     db_node.set_url(node.url) # AES-256 encrypts the url
     db.add(db_node)
+    
+    from models import AuditLog
+    audit = AuditLog(project_id=proj.id, action="Node Added", details=f"Role: {node.role}, Name: {node.name}")
+    db.add(audit)
     db.commit()
     
     return {"success": True, "message": "Node added securely."}
@@ -174,8 +211,15 @@ async def sync_replication(project_id: int, db: Session = Depends(get_db)):
         return JSONResponse(status_code=400, content={"success": False, "message": "Projenizde senkronizasyon için en az 1 Primary ve 1 Standby node bulunmalıdır."})
     
     # 3. Setup Logical Replication (1-to-N)
-    standby_urls = [s.encrypted_url for s in standbys]
-    result = await setup_replication(project_id, primary.encrypted_url, standby_urls)
+    standbys_info = [{"id": s.id, "url": s.encrypted_url} for s in standbys]
+    result = await setup_replication(project_id, primary.encrypted_url, standbys_info)
+    
+    # Audit log
+    if result['success']:
+        from models import AuditLog
+        audit = AuditLog(project_id=project_id, action="Replication Synced", details=result.get("message", "Success"))
+        db.add(audit)
+        db.commit()
     if not result['success']:
         return JSONResponse(status_code=500, content=result)
         
@@ -210,7 +254,7 @@ async def get_project_metrics(project_id: int, db: Session = Depends(get_db)):
     # Concurrently fetch metrics from all servers
     tasks = []
     for node in proj.nodes:
-        tasks.append(get_server_metrics(node.encrypted_url))
+        tasks.append(get_server_metrics(node.encrypted_url, project_id=proj.id, role=node.role))
         
     results = await asyncio.gather(*tasks)
     

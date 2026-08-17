@@ -73,7 +73,8 @@ async def setup_replication(project_id: int, primary_encrypted_url: str, standby
             s_conn = await asyncpg.connect(s['url'], timeout=10.0)
             try:
                 sub_name = f"univ_sub_{project_id}_{s['id']}"
-                sub_query = f"CREATE SUBSCRIPTION {sub_name} CONNECTION '{safe_primary_url}' PUBLICATION univ_pub_{project_id} WITH (copy_data = false);"
+                await s_conn.execute('TRUNCATE vehicles CASCADE;')
+                sub_query = f"CREATE SUBSCRIPTION {sub_name} CONNECTION '{safe_primary_url}' PUBLICATION univ_pub_{project_id} WITH (copy_data = true);"
                 await s_conn.execute(sub_query)
             finally:
                 await s_conn.close()
@@ -156,7 +157,7 @@ async def check_and_protect_wal_bloat(project_id: int, primary_encrypted_url: st
 
 import time
 
-async def get_server_metrics(encrypted_url: str) -> dict:
+async def get_server_metrics(encrypted_url: str, project_id: int = None, role: str = None) -> dict:
     try:
         url = decrypt(encrypted_url)
         if not url:
@@ -191,13 +192,16 @@ async def get_server_metrics(encrypted_url: str) -> dict:
             uptime = str(uptime_row['uptime']) if uptime_row else 'Unknown'
             
             lag_val = '0ms'
-            # Check replication lag correctly
-            subs = await conn.fetch("SELECT pg_wal_lsn_diff(pg_current_wal_lsn(), replay_lsn) AS lag_bytes FROM pg_stat_replication WHERE application_name LIKE 'univ_sub_%' ORDER BY lag_bytes DESC LIMIT 1;")
-            if subs and len(subs) > 0 and subs[0]['lag_bytes'] is not None:
-                lag_mb = subs[0]['lag_bytes'] / (1024 * 1024)
-                lag_val = f"{lag_mb:.2f} MB"
+            # Check replication lag
+            if role and role.lower() == 'primary' and project_id:
+                subs = await conn.fetch(f"SELECT pg_wal_lsn_diff(pg_current_wal_lsn(), replay_lsn) AS lag_bytes FROM pg_stat_replication WHERE application_name LIKE 'univ_sub_{project_id}_%' ORDER BY lag_bytes DESC LIMIT 1;")
+                if subs and len(subs) > 0 and subs[0]['lag_bytes'] is not None:
+                    lag_mb = subs[0]['lag_bytes'] / (1024 * 1024)
+                    lag_val = f"{lag_mb:.2f} MB"
+            elif role and role.lower() == 'standby':
+                lag_val = 'Subscriber'
             else:
-                pass
+                lag_val = 'N/A' 
                 
             plates_count = 'N/A'
             try:
@@ -223,3 +227,54 @@ async def get_server_metrics(encrypted_url: str) -> dict:
             await conn.close()
     except Exception as e:
         return {'status': 'offline', 'error': str(e)}
+
+
+async def cleanup_node_replication(project_id: int, node_id: int, primary_url: str, standby_url: str = None):
+    # Drop slot on primary
+    try:
+        p_conn = await asyncpg.connect(primary_url, timeout=5.0)
+        slot_name = f"univ_sub_{project_id}_{node_id}"
+        active_pid_row = await p_conn.fetchrow(f"SELECT active_pid FROM pg_replication_slots WHERE slot_name='{slot_name}';")
+        if active_pid_row and active_pid_row['active_pid']:
+            await p_conn.execute(f"SELECT pg_terminate_backend({active_pid_row['active_pid']});")
+        await p_conn.execute(f"SELECT pg_drop_replication_slot('{slot_name}');")
+        await p_conn.close()
+    except Exception as e:
+        print(f"Cleanup node slot err: {e}")
+    
+    # Drop sub on standby
+    if standby_url:
+        try:
+            s_conn = await asyncpg.connect(standby_url, timeout=5.0)
+            await s_conn.execute(f"DROP SUBSCRIPTION IF EXISTS univ_sub_{project_id}_{node_id};")
+            await s_conn.close()
+        except Exception as e:
+            print(f"Cleanup node sub err: {e}")
+
+async def cleanup_project_replication(project_id: int, primary_url: str, standby_urls: list):
+    try:
+        p_conn = await asyncpg.connect(primary_url, timeout=5.0)
+        # Terminate and drop all slots for project
+        slots = await p_conn.fetch(f"SELECT slot_name, active_pid FROM pg_replication_slots WHERE slot_name LIKE 'univ_sub_{project_id}_%';")
+        for slot in slots:
+            slot_name = slot['slot_name']
+            active_pid = slot['active_pid']
+            if active_pid:
+                await p_conn.execute(f"SELECT pg_terminate_backend({active_pid});")
+            await p_conn.execute(f"SELECT pg_drop_replication_slot('{slot_name}');")
+            
+        await p_conn.execute(f"DROP PUBLICATION IF EXISTS univ_pub_{project_id};")
+        await p_conn.close()
+    except Exception as e:
+        print(f"Cleanup proj pub/slot err: {e}")
+        
+    for s_url in standby_urls:
+        try:
+            s_conn = await asyncpg.connect(s_url, timeout=5.0)
+            # Find and drop subscriptions
+            subs = await s_conn.fetch("SELECT subname FROM pg_subscription WHERE subname LIKE ;", f"univ_sub_{project_id}_%")
+            for sub in subs:
+                await s_conn.execute(f"DROP SUBSCRIPTION IF EXISTS {sub['subname']};")
+            await s_conn.close()
+        except Exception as e:
+            print(f"Cleanup proj sub err: {e}")
