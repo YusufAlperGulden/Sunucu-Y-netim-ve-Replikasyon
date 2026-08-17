@@ -262,17 +262,20 @@ document.addEventListener('DOMContentLoaded', () => {
                 container.innerHTML = '';
             }
             
+            // Fetch metrics for all projects concurrently
+            const metricPromises = projs.map(p => apiFetch(`/api/projects/${p.id}/metrics`).then(r => r.ok ? r.json() : []));
+            const metricsResults = await Promise.all(metricPromises);
+            
+            // Flat list of all nodes returned by metrics API
+            const allNodes = metricsResults.flat();
+            
             // Remove columns for nodes that no longer exist
-            const allNodeIds = projs.flatMap(p => p.nodes.map(n => "dash-node-" + n.id));
+            const allNodeIds = allNodes.map(n => "dash-node-" + n.id);
             Array.from(container.children).forEach(child => {
                 if (!allNodeIds.includes(child.id)) {
                     child.remove();
                 }
             });
-            
-            // Fetch metrics for all projects concurrently
-            const metricPromises = projs.map(p => apiFetch("/api/projects/" + p.id + "/metrics").then(r => r.ok ? r.json() : []));
-            const metricsResults = await Promise.all(metricPromises);
             
             projs.forEach((proj, i) => {
                 const dataList = metricsResults[i];
@@ -319,12 +322,12 @@ document.addEventListener('DOMContentLoaded', () => {
                         document.getElementById("metric-" + node.id + "-status").className = 'status-badge status-online';
                         document.getElementById("metric-" + node.id + "-status").innerText = 'Aktif';
                         
-                        document.getElementById("metric-" + node.id + "-ping").innerText = m.ping + 'ms';
-                        document.getElementById("metric-" + node.id + "-lag").innerText = m.lag !== 'N/A' ? (m.lag + 'ms') : 'N/A';
-                        document.getElementById("metric-" + node.id + "-storage").innerText = m.storage + ' kB';
-                        document.getElementById("metric-" + node.id + "-conn").innerText = m.conn_active + ' / ' + m.conn_max;
-                        document.getElementById("metric-" + node.id + "-xact").innerText = m.xact_commit + ' ✔ / ' + m.xact_rollback + ' ✖';
-                        document.getElementById("metric-" + node.id + "-cache").innerText = m.blks_hit_percent + '%';
+                        document.getElementById("metric-" + node.id + "-ping").innerText = m.ping;
+                        document.getElementById("metric-" + node.id + "-lag").innerText = m.lag;
+                        document.getElementById("metric-" + node.id + "-storage").innerText = m.storage;
+                        document.getElementById("metric-" + node.id + "-conn").innerText = m.connections;
+                        document.getElementById("metric-" + node.id + "-xact").innerText = m.xact;
+                        document.getElementById("metric-" + node.id + "-cache").innerText = m.cache_hit;
                         document.getElementById("metric-" + node.id + "-version").innerText = m.version;
                         document.getElementById("metric-" + node.id + "-uptime").innerText = m.uptime;
                         document.getElementById("metric-" + node.id + "-plates").innerText = m.plates;

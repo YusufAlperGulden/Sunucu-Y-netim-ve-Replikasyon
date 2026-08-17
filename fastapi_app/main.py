@@ -338,7 +338,7 @@ async def cleanup_orphaned_slots(project_id: int, db: Session = Depends(get_db))
     try:
         p_conn = await asyncpg.connect(p_url, timeout=10.0)
         # Fetch all our slots
-        slots = await p_conn.fetch("SELECT slot_name, active_pid FROM pg_replication_slots WHERE slot_name LIKE 'univ_sub_%';")
+        slots = await p_conn.fetch(f"SELECT slot_name, active_pid FROM pg_replication_slots WHERE slot_name LIKE 'univ_sub_{project_id}_%';")
         for slot in slots:
             slot_name = slot['slot_name']
             if slot_name not in valid_sub_names:

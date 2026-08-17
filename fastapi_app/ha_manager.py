@@ -73,7 +73,6 @@ async def setup_replication(project_id: int, primary_encrypted_url: str, standby
             s_conn = await asyncpg.connect(s['url'], timeout=10.0)
             try:
                 sub_name = f"univ_sub_{project_id}_{s['id']}"
-                await s_conn.execute('TRUNCATE vehicles CASCADE;')
                 sub_query = f"CREATE SUBSCRIPTION {sub_name} CONNECTION '{safe_primary_url}' PUBLICATION univ_pub_{project_id} WITH (copy_data = true);"
                 await s_conn.execute(sub_query)
             finally:
@@ -262,7 +261,7 @@ async def cleanup_project_replication(project_id: int, primary_url: str, standby
     for s_url in standby_urls:
         try:
             s_conn = await asyncpg.connect(s_url, timeout=5.0)
-            subs = await s_conn.fetch("SELECT subname FROM pg_subscription WHERE subname LIKE ;", f"univ_sub_{project_id}_%")
+            subs = await s_conn.fetch(f"SELECT subname FROM pg_subscription WHERE subname LIKE 'univ_sub_{project_id}_%';")
             for sub in subs:
                 await s_conn.execute(f"ALTER SUBSCRIPTION {sub['subname']} DISABLE;")
                 await s_conn.execute(f"ALTER SUBSCRIPTION {sub['subname']} SET (slot_name = NONE);")
