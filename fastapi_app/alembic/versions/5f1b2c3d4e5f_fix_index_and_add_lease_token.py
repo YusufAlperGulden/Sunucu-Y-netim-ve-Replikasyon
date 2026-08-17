@@ -42,4 +42,4 @@ def downgrade() -> None:
     with op.batch_alter_table('sync_jobs', schema=None) as batch_op:
         batch_op.drop_column('lease_token')
         batch_op.drop_index('ix_sync_jobs_active', postgresql_where=sa.text("status NOT IN ('SUCCESS', 'FAILED')"), sqlite_where=sa.text("status NOT IN ('SUCCESS', 'FAILED')"))
-        batch_op.create_index('ix_sync_jobs_active', ['project_id'], unique=True, postgresql_where=sa.text("status NOT IN ('SUCCESS', 'FAILED')"))
+        batch_op.create_index('ix_sync_jobs_active', ['project_id'], unique=True, postgresql_where=sa.text("status NOT IN ('SUCCESS', 'FAILED')"), sqlite_where=sa.text("status NOT IN ('SUCCESS', 'FAILED')"))

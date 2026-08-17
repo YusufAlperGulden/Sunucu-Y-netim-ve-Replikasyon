@@ -131,9 +131,13 @@ async def main_loop():
             if job:
                 print(f"Worker [{WORKER_ID}] picked up Job ID: {job.id} for Project ID: {job.project_id}")
                 
+                process_task = asyncio.create_task(process_job(db, job, WORKER_ID))
+
                 async def heartbeat():
                     while True:
                         await asyncio.sleep(LEASE_TIMEOUT_SECONDS / 3)
+                        if process_task.done():
+                            break
                         hb_db = SessionLocal()
                         try:
                             # Conditional update ensures we don't blindly renew if lease was lost
@@ -145,6 +149,7 @@ async def main_loop():
                             # If rowcount is 0, we lost the lease or job finished
                             if res.rowcount == 0:
                                 print(f"Worker [{WORKER_ID}] lost lease for Job ID: {job.id}")
+                                process_task.cancel()
                                 break
                         except Exception as hb_err:
                             print(f"Heartbeat error: {hb_err}")
@@ -154,7 +159,9 @@ async def main_loop():
                 heartbeat_task = asyncio.create_task(heartbeat())
                 
                 try:
-                    await process_job(db, job, WORKER_ID)
+                    await process_task
+                except asyncio.CancelledError:
+                    print(f"Worker [{WORKER_ID}] job processing cancelled due to lease loss.")
                 finally:
                     heartbeat_task.cancel()
                     # Wait for the task to actually cancel
