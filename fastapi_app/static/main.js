@@ -319,6 +319,21 @@ document.addEventListener('DOMContentLoaded', () => {
             
             let operationalCount = 0;
             let allNodes = [];
+              const submenu = document.getElementById('clusters-submenu');
+              if (submenu) {
+                  submenu.innerHTML = '';
+                  data.forEach(proj => {
+                      let isOperational = proj.nodesCount > 0 && proj.sync_status !== 'FAILED';
+                      let color = isOperational ? 'var(--success)' : 'var(--danger)';
+                      
+                      let a = document.createElement('div');
+                      
+                      a.className = "submenu-item"; a.onclick = () => document.querySelector('a[data-view="clusters-view"]').click();
+                      a.innerHTML = `<span style="color: ${color}; font-size: 1.2rem; line-height: 1;">&#8226;</span> <span style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 150px;">${proj.name}</span>`;
+                      submenu.appendChild(a);
+                  });
+              }
+
 
             data.forEach(proj => {
                 let isOperational = proj.nodesCount > 0 && proj.sync_status !== 'FAILED';
