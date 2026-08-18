@@ -787,7 +787,7 @@ document.addEventListener('DOMContentLoaded', () => {
                                     ntt.style.transform = 'translateY(0)';
                                 });
                             }
-                        }, 1000);
+                        }, 500);
                     };
                     el.onmouseleave = (e) => {
                         clearTimeout(hoverTimeout);
