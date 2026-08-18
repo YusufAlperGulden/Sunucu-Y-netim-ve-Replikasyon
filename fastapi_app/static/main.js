@@ -1118,3 +1118,16 @@ document.getElementById('copy-url-btn').addEventListener('click', function() { c
 
 
 
+
+
+// Sidebar Toggle Logic
+document.getElementById('btn-toggle-sidebar').addEventListener('click', () => {
+    const sidebar = document.querySelector('.sidebar');
+    sidebar.classList.toggle('collapsed');
+    const icon = document.getElementById('icon-sidebar-arrow');
+    if (sidebar.classList.contains('collapsed')) {
+        icon.innerHTML = '<polyline points="9 18 15 12 9 6"></polyline>';
+    } else {
+        icon.innerHTML = '<polyline points="15 18 9 12 15 6"></polyline>';
+    }
+});
