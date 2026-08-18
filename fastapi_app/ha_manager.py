@@ -104,7 +104,7 @@ async def setup_replication(project_id: int, primary_encrypted_url: str, standby
 
         # 2. Setup Primary (Idempotent)
         if check_lease_cb: check_lease_cb()
-        p_conn = await asyncpg.connect(primary_url, timeout=10.0, command_timeout=30.0, server_settings={'statement_timeout': '30000', 'lock_timeout': '10000'})
+        p_conn = await asyncpg.connect(primary_url, timeout=10.0)
         lock_acquired_p = False
         try:
             has_lock = await p_conn.fetchval("SELECT pg_try_advisory_lock($1)", project_id)
@@ -203,8 +203,8 @@ def sync_schema_between_dbs(project_id: int, primary_url: str, standby_url: str,
     s_url = standby_url.replace("postgres://", "postgresql://")
 
     from sqlalchemy import create_engine, MetaData, text
-    engine_primary = create_engine(p_url, connect_args={"connect_timeout": 10, "options": "-c statement_timeout=30000 -c lock_timeout=10000"})
-    engine_standby = create_engine(s_url, connect_args={"connect_timeout": 10, "options": "-c statement_timeout=30000 -c lock_timeout=10000"})
+    engine_primary = create_engine(p_url, connect_args={"connect_timeout": 10})
+    engine_standby = create_engine(s_url, connect_args={"connect_timeout": 10})
 
     with engine_primary.connect() as conn_p, engine_standby.connect() as conn_s:
         # Advisory locks via sync driver
