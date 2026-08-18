@@ -48,11 +48,11 @@ document.addEventListener('DOMContentLoaded', () => {
                     this.y = Math.random() > 0.5 ? -this.size : height + this.size;
                 }
                 
-                this.vx = (Math.random() - 0.5) * 1.0;
-                this.vy = (Math.random() - 0.5) * 1.0;
+                this.vx = (Math.random() - 0.5) * 0.4;
+                this.vy = (Math.random() - 0.5) * 0.4;
                 
-                if (Math.abs(this.vx) < 0.2) this.vx = 0.5 * Math.sign(this.vx || 1);
-                if (Math.abs(this.vy) < 0.2) this.vy = 0.5 * Math.sign(this.vy || 1);
+                if (Math.abs(this.vx) < 0.1) this.vx = 0.2 * Math.sign(this.vx || 1);
+                if (Math.abs(this.vy) < 0.1) this.vy = 0.2 * Math.sign(this.vy || 1);
             }
             update() {
                 this.x += this.vx;
@@ -60,8 +60,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 
                 // Exclusion zone for the Title and Login Box
                 // Approximate size: 850px wide, 550px tall, centered
-                const boxW = 850;
-                const boxH = 550;
+                const boxW = 500;
+                const boxH = 500;
                 const boxX = width / 2 - boxW / 2;
                 const boxY = height / 2 - boxH / 2;
                 
