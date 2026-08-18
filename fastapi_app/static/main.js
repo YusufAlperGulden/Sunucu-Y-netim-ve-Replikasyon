@@ -328,7 +328,15 @@ document.addEventListener('DOMContentLoaded', () => {
                       
                       let a = document.createElement('div');
                       
-                      a.className = "submenu-item"; a.onclick = () => document.querySelector('a[data-view="clusters-view"]').click();
+                      a.className = "submenu-item"; a.onclick = (e) => {
+                          e.preventDefault();
+                          document.querySelectorAll('.view-section').forEach(v => v.style.display = 'none');
+                          document.getElementById('dashboard-view').style.display = 'block';
+                          document.querySelectorAll('.sidebar-nav a').forEach(l => l.classList.remove('active'));
+                          const clustersLink = document.querySelector('a[data-view="clusters-view"]');
+                          if (clustersLink) clustersLink.classList.add('active');
+                          if (typeof startDashboardInterval === 'function') startDashboardInterval();
+                      };
                       a.innerHTML = `<span style="color: ${color}; font-size: 1.2rem; line-height: 1;">&#8226;</span> <span style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 150px;">${proj.name}</span>`;
                       submenu.appendChild(a);
                   });
