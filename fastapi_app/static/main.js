@@ -200,7 +200,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 showProjectsView();
                 stopDashboardInterval();
             } else if (targetId === 'audit-logs-view') {
-                fetchAuditLogs();
+                window.fetchAuditLogs();
                 stopDashboardInterval();
             } else if (targetId === 'settings-view') {
                 stopDashboardInterval();
@@ -807,34 +807,74 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
-    async function fetchAuditLogs() {
-        const tbody = document.getElementById('logs-table-body');
-        tbody.innerHTML = '<tr><td colspan="3" style="padding: 16px; text-align: center; color: var(--text-muted);">Loading logs...</td></tr>';
+    
+    window.fetchAuditLogs = async function() {
+
+        const tbody = document.getElementById('audit-table-body');
+        if(!tbody) return;
+        
+        tbody.innerHTML = '<tr><td colspan="6" style="padding: 16px 24px; text-align: center; color: var(--text-muted);">Loading logs...</td></tr>';
+        
         try {
             const res = await apiFetch('/api/audit-logs');
             if (!res.ok) {
                 const errText = await res.text();
-                tbody.innerHTML = `<tr><td colspan="3" style="padding: 16px; text-align: center; color: var(--danger);">Failed to load logs. Server returned ${res.status}: ${escapeHTML(errText)}</td></tr>`;
+                tbody.innerHTML = `<tr><td colspan="6" style="padding: 16px 24px; text-align: center; color: var(--danger);">Failed to load logs: ${escapeHTML(errText)}</td></tr>`;
                 return;
             }
             const data = await res.json();
+            
             if (data.length === 0) {
-                tbody.innerHTML = '<tr><td colspan="3" style="padding: 16px; text-align: center; color: var(--text-muted);">No audit logs found.</td></tr>';
+                tbody.innerHTML = `
+                    <tr>
+                        <td colspan="6" style="padding: 60px 20px; text-align: center;">
+                            <svg width="72" height="72" viewBox="0 0 24 24" fill="#e5e7eb" stroke="none" style="margin-bottom: 24px;">
+                                <path d="M10 4H4c-1.1 0-1.99.9-1.99 2L2 18c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V8c0-1.1-.9-2-2-2h-8l-2-2z"/>
+                            </svg>
+                            <div style="color: #4b5563; font-size: 0.95rem; font-weight: 400; margin-bottom: 16px;">No audit log entries match your current filters.</div>
+                            <a href="#" style="color: var(--primary); font-size: 0.9rem; text-decoration: none; font-weight: 500;">Clear all filters</a>
+                        </td>
+                    </tr>
+                `;
                 return;
             }
+            
             tbody.innerHTML = '';
             data.forEach(log => {
-                const row = document.createElement('tr');
-                row.style.borderBottom = '1px solid rgba(255,255,255,0.05)';
-                row.innerHTML = `
-                    <td style="padding: 16px 16px;">${escapeHTML(log.action)}</td>
-                    <td style="padding: 16px 16px; color: var(--text-secondary);">${new Date(log.timestamp).toLocaleString()}</td>
-                    <td style="padding: 16px 16px; color: var(--text-secondary);">${escapeHTML(log.details || '-')}</td>
+                const tr = document.createElement('tr');
+                tr.style.borderBottom = '1px solid var(--glass-border)';
+                
+                let timeStr = log.timestamp;
+                if (timeStr) {
+                    const d = new Date(timeStr);
+                    timeStr = d.toISOString().replace('T', ' ').substring(0, 19) + ' +03';
+                } else {
+                    timeStr = 'Unknown';
+                }
+                
+                let type = "system";
+                let actionLower = log.action ? log.action.toLowerCase() : "";
+                if(actionLower.includes('login') || actionLower.includes('auth')) type = "authentication";
+                else if(actionLower.includes('project') || actionLower.includes('create') || actionLower.includes('delete')) type = "project_management";
+                
+                let actionStr = log.action || "Unknown action";
+                if (log.details) {
+                    actionStr += " - " + log.details;
+                }
+                
+                tr.innerHTML = `
+                    <td style="padding: 16px 24px; font-size: 0.85rem; color: #111827;">${escapeHTML(timeStr)}</td>
+                    <td style="padding: 16px 24px; font-size: 0.85rem; color: #374151;">${escapeHTML(actionStr)}</td>
+                    <td style="padding: 16px 24px; font-size: 0.85rem; color: #374151;">${escapeHTML(type)}</td>
+                    <td style="padding: 16px 24px; font-size: 0.85rem; color: #374151;">admin@sunucu.local</td>
+                    <td style="padding: 16px 24px; font-size: 0.85rem; color: #374151;">127.0.0.1</td>
+                    <td style="padding: 16px 24px; font-size: 0.85rem; color: #374151;">${log.project_id ? "Project ID: " + log.project_id : "N/A"}</td>
                 `;
-                tbody.appendChild(row);
+                tbody.appendChild(tr);
             });
+            
         } catch (e) {
-            tbody.innerHTML = `<tr><td colspan="3" style="padding: 16px; text-align: center; color: var(--danger);">Failed to load logs. Exception: ${escapeHTML(e.toString())}</td></tr>`;
+            tbody.innerHTML = `<tr><td colspan="6" style="padding: 16px 24px; text-align: center; color: var(--danger);">Network error fetching logs.</td></tr>`;
         }
     }
 
@@ -1238,7 +1278,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 const data = await res.json();
                 if (res.ok && data.success) {
                     alert(data.message);
-                    fetchAuditLogs();
+                    window.fetchAuditLogs();
                 } else {
                     alert(data.message || "Temizleme işlemi başarısız.");
                 }
@@ -1275,7 +1315,7 @@ document.addEventListener('DOMContentLoaded', () => {
     // Button: Refresh Logs
     const btnRefreshLogs = document.getElementById('btn-refresh-logs');
     if(btnRefreshLogs) {
-        btnRefreshLogs.addEventListener('click', fetchAuditLogs);
+        btnRefreshLogs.addEventListener('click', window.fetchAuditLogs);
     }
 
     // Button: Save Settings
@@ -1505,3 +1545,49 @@ if (nodesSvg && tooltip) {
         tooltip.style.display = 'none';
     });
 }
+
+
+// --- ACTIVITY CENTER TABS ---
+document.addEventListener('DOMContentLoaded', () => {
+    const btnAlarms = document.getElementById('tab-btn-alarms');
+    const btnJobs = document.getElementById('tab-btn-jobs');
+    const btnAudit = document.getElementById('tab-btn-audit');
+
+    const contentAlarms = document.getElementById('content-alarms');
+    const contentJobs = document.getElementById('content-jobs');
+    const contentAudit = document.getElementById('content-audit');
+
+    function switchActivityTab(tab) {
+        [btnAlarms, btnJobs, btnAudit].forEach(btn => {
+            if(btn) {
+                btn.classList.remove('active');
+                btn.style.color = '#4b5563';
+                btn.style.borderBottom = '2px solid transparent';
+            }
+        });
+        [contentAlarms, contentJobs, contentAudit].forEach(content => {
+            if(content) content.style.display = 'none';
+        });
+        
+        if (tab === 'alarms') {
+            if(btnAlarms) { btnAlarms.style.color = 'var(--primary)'; btnAlarms.style.borderBottom = '2px solid var(--primary)'; }
+            if(contentAlarms) contentAlarms.style.display = 'flex';
+        } else if (tab === 'jobs') {
+            if(btnJobs) { btnJobs.style.color = 'var(--primary)'; btnJobs.style.borderBottom = '2px solid var(--primary)'; }
+            if(contentJobs) contentJobs.style.display = 'flex';
+        } else if (tab === 'audit') {
+            if(btnAudit) { btnAudit.style.color = 'var(--primary)'; btnAudit.style.borderBottom = '2px solid var(--primary)'; }
+            if(contentAudit) {
+                contentAudit.style.display = 'flex';
+                // Only call if we are sure fetchAuditLogs exists
+                if (typeof window.fetchAuditLogs === 'function') {
+                    window.fetchAuditLogs();
+                }
+            }
+        }
+    }
+
+    if(btnAlarms) btnAlarms.addEventListener('click', () => switchActivityTab('alarms'));
+    if(btnJobs) btnJobs.addEventListener('click', () => switchActivityTab('jobs'));
+    if(btnAudit) btnAudit.addEventListener('click', () => switchActivityTab('audit'));
+});
