@@ -658,8 +658,13 @@
                                 <div style="flex: 1; display: flex; align-items: center; justify-content: center; position: relative;">
                                     <svg id="nodes-donut-svg" width="180" height="180" viewBox="0 0 200 200" style="cursor: pointer;" onclick="document.querySelector('a[data-view=\'nodes-view\']').click()">
                                         <circle cx="100" cy="100" r="70" fill="none" stroke="#e5e7eb" stroke-width="20"></circle>
-                                        <circle id="nodes-donut-slice" cx="100" cy="100" r="70" fill="none" stroke="var(--success)" stroke-width="20" stroke-dasharray="439.8 439.8" stroke-dashoffset="0" style="transform: rotate(-90deg); transform-origin: 50% 50%;"></circle>
+                                        <circle id="nodes-donut-slice" cx="100" cy="100" r="70" fill="none" stroke="var(--success)" stroke-width="20" stroke-dasharray="439.8 439.8" stroke-dashoffset="439.8" style="transition: stroke-dashoffset 1s ease-out; transform: rotate(-90deg); transform-origin: 50% 50%;"></circle>
                                     </svg>
+                                      <div style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); text-align: center; pointer-events: none;">
+                                          <div id="nodes-donut-center-num" style="font-size: 1.5rem; font-weight: bold; color: var(--success);">0</div>
+                                          <div style="font-size: 0.8rem; color: var(--text-muted);">Nodes</div>
+                                      </div>
+
                                 </div>
                                 <div style="margin-top: 10px; display: flex; font-size: 0.9rem; gap: 12px; justify-content: center;">
                                     <span style="color: var(--success);">&#8226; 4 Operational</span>
