@@ -263,8 +263,8 @@ body {
 
 .metrics-column { background: rgba(0,0,0,0.2); padding: 20px; border-radius: 12px; border: 1px solid var(--border); }
 .metric-card { padding: 16px; display: flex; flex-direction: column; gap: 8px; }
-.metric-label { font-size: 0.85rem; color: var(--text-muted); }
-.metric-val { font-size: 1.5rem; font-weight: 700; color: white; }
+.metric-label { font-size: 0.85rem; color: #6b7280; font-weight: 500; }
+.metric-val { font-size: 1.5rem; font-weight: 700; color: var(--text-main); }
 .status-badge { padding: 4px 10px; border-radius: 20px; font-size: 0.8rem; font-weight: 600; display: inline-flex; align-items: center; gap: 6px; }
 .status-badge::before { content: ''; width: 8px; height: 8px; border-radius: 50%; display: block; }
 .status-online { background: rgba(0, 200, 83, 0.1); color: var(--success); border: 1px solid rgba(0, 200, 83, 0.2); }

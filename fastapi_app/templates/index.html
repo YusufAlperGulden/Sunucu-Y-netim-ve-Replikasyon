@@ -440,7 +440,7 @@
                         <div style="display: flex; border: 1px solid var(--border); border-radius: 8px; overflow: hidden; margin-bottom: 16px;">
                             <div class="node-status-card" onclick="filterNodes('Operational', this)" style="flex: 1; padding: 16px 20px; border-right: 1px solid var(--border); border-bottom: 2px solid var(--primary); background: #f9fafb; cursor: pointer;">
                                 <div style="color: #6b7280; font-size: 0.85rem; margin-bottom: 8px;">Operational</div>
-                                <div style="color: var(--success); font-size: 1.5rem; font-weight: 500;">34</div>
+                                <div style="color: var(--success); font-size: 1.5rem; font-weight: 500;">4</div>
                             </div>
                             <div class="node-status-card" onclick="filterNodes('Failed', this)" style="flex: 1; padding: 16px 20px; border-right: 1px solid var(--border); cursor: pointer;">
                                 <div style="color: #6b7280; font-size: 0.85rem; margin-bottom: 8px;">Failed</div>
@@ -452,7 +452,7 @@
                             </div>
                             <div class="node-status-card" onclick="filterNodes('Shut Down', this)" style="flex: 1; padding: 16px 20px; border-right: 1px solid var(--border); cursor: pointer;">
                                 <div style="color: #6b7280; font-size: 0.85rem; margin-bottom: 8px;">Shut Down</div>
-                                <div style="color: var(--primary); font-size: 1.5rem; font-weight: 500;">2</div>
+                                <div style="color: var(--text-main); font-size: 1.5rem; font-weight: 500;">0</div>
                             </div>
                             <div class="node-status-card" onclick="filterNodes('Recovering', this)" style="flex: 1; padding: 16px 20px; border-right: 1px solid var(--border); cursor: pointer;">
                                 <div style="color: #6b7280; font-size: 0.85rem; margin-bottom: 8px;">Recovering</div>
@@ -464,7 +464,7 @@
                             </div>
                             <div class="node-status-card" onclick="filterNodes('All', this)" style="flex: 1; padding: 16px 20px; cursor: pointer;">
                                 <div style="color: #6b7280; font-size: 0.85rem; margin-bottom: 8px;">All</div>
-                                <div style="color: var(--text-main); font-size: 1.5rem; font-weight: 500;">36</div>
+                                <div style="color: var(--text-main); font-size: 1.5rem; font-weight: 500;">4</div>
                             </div>
                         </div>
 
@@ -944,35 +944,35 @@
                 
                 <!-- Metrics Grid -->
                 <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 24px;">
-                    <div class="metric-card" style="background: rgba(0,0,0,0.3); border: 1px solid var(--border);">
+                    <div class="metric-card" style="background: #f9fafb; border: 1px solid var(--border);">
                         <div class="metric-label">Ağ Gecikmesi (Ping)</div>
                         <div class="metric-val" id="modal-metric-ping"><svg class="spinner" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 1 1-6.219-8.56"></path></svg> Yükleniyor...</div>
                     </div>
-                    <div class="metric-card" style="background: rgba(0,0,0,0.3); border: 1px solid var(--border);">
+                    <div class="metric-card" style="background: #f9fafb; border: 1px solid var(--border);">
                         <div class="metric-label">Senkronizasyon (Lag)</div>
                         <div class="metric-val" id="modal-metric-lag"><svg class="spinner" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 1 1-6.219-8.56"></path></svg> Yükleniyor...</div>
                     </div>
-                    <div class="metric-card" style="background: rgba(0,0,0,0.3); border: 1px solid var(--border);">
+                    <div class="metric-card" style="background: #f9fafb; border: 1px solid var(--border);">
                         <div class="metric-label">Depolama (Storage)</div>
                         <div class="metric-val" id="modal-metric-storage"><svg class="spinner" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 1 1-6.219-8.56"></path></svg> Yükleniyor...</div>
                     </div>
-                    <div class="metric-card" style="background: rgba(0,0,0,0.3); border: 1px solid var(--border);">
+                    <div class="metric-card" style="background: #f9fafb; border: 1px solid var(--border);">
                         <div class="metric-label">Bağlantılar (Aktif/Top.)</div>
                         <div class="metric-val" id="modal-metric-conn"><svg class="spinner" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 1 1-6.219-8.56"></path></svg> Yükleniyor...</div>
                     </div>
-                    <div class="metric-card" style="background: rgba(0,0,0,0.3); border: 1px solid var(--border);">
+                    <div class="metric-card" style="background: #f9fafb; border: 1px solid var(--border);">
                         <div class="metric-label">İşlem Yükü (Başarılı / İptal)</div>
                         <div class="metric-val" id="modal-metric-xact"><svg class="spinner" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 1 1-6.219-8.56"></path></svg> Yükleniyor...</div>
                     </div>
-                    <div class="metric-card" style="background: rgba(0,0,0,0.3); border: 1px solid var(--border);">
+                    <div class="metric-card" style="background: #f9fafb; border: 1px solid var(--border);">
                         <div class="metric-label">Ana Tablo Kaydı</div>
                         <div class="metric-val" id="modal-metric-plates"><svg class="spinner" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 1 1-6.219-8.56"></path></svg> Yükleniyor...</div>
                     </div>
-                    <div class="metric-card" style="background: rgba(0,0,0,0.3); border: 1px solid var(--border);">
+                    <div class="metric-card" style="background: #f9fafb; border: 1px solid var(--border);">
                         <div class="metric-label">Önbellek Başarısı</div>
                         <div class="metric-val" id="modal-metric-cache"><svg class="spinner" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 1 1-6.219-8.56"></path></svg> Yükleniyor...</div>
                     </div>
-                    <div class="metric-card" style="background: rgba(0,0,0,0.3); border: 1px solid var(--border);">
+                    <div class="metric-card" style="background: #f9fafb; border: 1px solid var(--border);">
                         <div class="metric-label">Çalışma Süresi</div>
                         <div class="metric-val" id="modal-metric-uptime">Yükleniyor...</div>
                     </div>
