@@ -46,7 +46,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 this.swirl = (Math.random() - 0.5) * 0.02;
                 this.radius = initial ? Math.random() * (Math.max(width, height) / 2) : Math.random() * 20;
                 this.color = colors[Math.floor(Math.random() * colors.length)];
-                this.size = Math.random() * 2.5 + 1;
+                this.size = Math.random() * 20 + 8;
                 this.life = initial ? Math.random() * 200 : 0;
                 this.maxLife = Math.random() * 300 + 150;
             }
