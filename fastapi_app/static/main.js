@@ -1131,3 +1131,19 @@ document.getElementById('btn-toggle-sidebar').addEventListener('click', () => {
         icon.innerHTML = '<polyline points="15 18 9 12 15 6"></polyline>';
     }
 });
+
+
+// Nodes Donut Tooltip
+const nodesSvg = document.getElementById('nodes-donut-svg');
+const tooltip = document.getElementById('custom-tooltip');
+if (nodesSvg && tooltip) {
+    nodesSvg.addEventListener('mousemove', (e) => {
+        tooltip.style.display = 'block';
+        tooltip.innerHTML = '4 Operational';
+        tooltip.style.left = (e.pageX + 10) + 'px';
+        tooltip.style.top = (e.pageY + 10) + 'px';
+    });
+    nodesSvg.addEventListener('mouseleave', () => {
+        tooltip.style.display = 'none';
+    });
+}
