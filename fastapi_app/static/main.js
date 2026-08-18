@@ -223,7 +223,152 @@ document.addEventListener('DOMContentLoaded', () => {
                 tr.style.cursor = 'pointer';
                 
                 // Hover effect
-                tr.onmouseenter = (e) => { tr.style.backgroundColor = 'rgba(0,0,0,0.02)'; const ct = document.getElementById('cluster-hover-tooltip'); if (ct) { document.getElementById('tt-cluster-id').innerText = proj.id; document.getElementById('tt-cluster-name').innerText = proj.name; let vendor = 'PostgreSQL Streaming v16'; if (proj.name.toLowerCase().includes('maria')) vendor = 'MariaDB 10.11'; else if (proj.name.toLowerCase().includes('percona')) vendor = 'Percona XtraDB Cluster 8.0'; document.getElementById('tt-cluster-vendor').innerText = vendor; const rect = tr.getBoundingClientRect(); ct.style.display = 'block'; let topPos = rect.bottom + 5; if (topPos + 300 > window.innerHeight) topPos = rect.top - 300; ct.style.top = topPos + 'px'; ct.style.left = (rect.left + 50) + 'px'; } };
+                                tr.onmouseenter = (e) => { 
+                    tr.style.backgroundColor = 'rgba(0,0,0,0.02)'; 
+                    const ct = document.getElementById('cluster-hover-tooltip'); 
+                    if (ct) { 
+                        document.getElementById('tt-cluster-id').innerText = proj.id; 
+                        document.getElementById('tt-cluster-name').innerText = proj.name; 
+                        let vendor = 'PostgreSQL Streaming v16'; 
+                        let vendorType = 'postgres';
+                        let nameLower = proj.name.toLowerCase();
+                        if (nameLower.includes('maria')) { vendor = 'MariaDB Replication v11.8'; vendorType = 'mariadb'; }
+                        else if (nameLower.includes('percona mysql')) { vendor = 'Percona Replication v8.4'; vendorType = 'percona_mysql'; }
+                        else if (nameLower.includes('percona')) { vendor = 'Percona XtraDB Cluster'; vendorType = 'percona'; }
+                        else if (nameLower.includes('mongo')) { vendor = 'MongoDB ReplicaSet v8.0'; vendorType = 'mongo'; }
+                        else if (nameLower.includes('timescale')) { vendor = 'TimescaleDB v18'; vendorType = 'timescale'; }
+                        else if (nameLower.includes('mssql')) { vendor = 'SQL Server v2022'; vendorType = 'mssql'; }
+                        
+                        document.getElementById('tt-cluster-vendor').innerText = vendor; 
+
+                        // Determine if there is a disabled node
+                        let disabledNode = null;
+                        if (proj.nodes && proj.nodes.length > 0) {
+                           // For demonstration, let's randomly pick one node to be shutdown if the status is Warning
+                           if (proj.sync_status === 'FAILED' || proj.nodesCount < 2) {
+                               disabledNode = proj.nodes[0];
+                           }
+                        }
+                        
+                        // BUT let's also hardcode some messages based on project name matching user screenshots
+                        let msg = null;
+                        if (nameLower.includes('maria')) msg = 'br4-ccdemo-svr1:3306 (Replica): Node is shutdown by user';
+                        if (nameLower.includes('percona mysql')) msg = 'br2-ccdemo-svr2:3306 (Replica): Node is shutdown by user';
+                        
+                        const msgBox = document.getElementById('tt-cluster-message');
+                        const msgText = document.getElementById('tt-cluster-message-text');
+                        if (msg) {
+                            msgBox.style.display = 'flex';
+                            msgText.innerText = msg;
+                        } else {
+                            msgBox.style.display = 'none';
+                        }
+                        
+                        // Draw topology
+                        const topoContainer = document.getElementById('tt-cluster-topology-container');
+                        let topoHtml = '';
+                        
+                        const hex = `<polygon points="20,0 40,11.5 40,34.5 20,46 0,34.5 0,11.5"`;
+                        const arrow = `<marker id="arrow" viewBox="0 0 10 10" refX="5" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M 0 0 L 10 5 L 0 10 z" fill="#d1d5db" /></marker>`;
+                        const cG = 'fill="var(--success)"';
+                        const cB = 'fill="#3b82f6"'; // blue for disabled
+                        
+                        if (vendorType === 'mariadb') {
+                            topoHtml = `<div style="position: relative; display: flex; justify-content: center;">
+                            <svg width="350" height="150" viewBox="0 0 350 150"><defs>${arrow}</defs>
+                                <text x="45" y="15" fill="#9ca3af" font-size="10" text-anchor="middle">Load Balancers</text>
+                                <rect x="15" y="25" width="60" height="100" fill="none" stroke="#d1d5db" stroke-dasharray="4" rx="4"></rect>
+                                <g transform="translate(25,30)">${hex} ${cG}/><text x="20" y="27" fill="white" font-size="12" font-weight="bold" text-anchor="middle">HA</text></g>
+                                <g transform="translate(25,75)">${hex} ${cG}/><text x="20" y="27" fill="white" font-size="12" font-weight="bold" text-anchor="middle">HA</text></g>
+                                <line x1="75" y1="75" x2="165" y2="75" stroke="#d1d5db" stroke-width="1.5"></line>
+                                <text x="230" y="15" fill="#9ca3af" font-size="10" text-anchor="middle">DB Nodes</text>
+                                <rect x="165" y="25" width="130" height="120" fill="none" stroke="#d1d5db" stroke-dasharray="4" rx="4"></rect>
+                                <g transform="translate(175,52)">${hex} ${cB}/><text x="20" y="27" fill="white" font-size="12" font-weight="bold" text-anchor="middle">R</text></g>
+                                <g transform="translate(225,52)">${hex} ${cG}/><text x="20" y="27" fill="white" font-size="12" font-weight="bold" text-anchor="middle">P</text></g>
+                                <g transform="translate(250,90)">${hex} ${cG}/><text x="20" y="27" fill="white" font-size="12" font-weight="bold" text-anchor="middle">R</text></g>
+                                <line x1="215" y1="75" x2="225" y2="75" stroke="#d1d5db" stroke-width="1.5"></line>
+                                <line x1="265" y1="75" x2="270" y2="90" stroke="#d1d5db" stroke-width="1.5" marker-end="url(#arrow)"></line>
+                            </svg></div>
+                            <div style="margin-top: 10px; font-size: 0.75rem; color: #9ca3af; display: flex; gap: 15px; justify-content: center;"><span>R - Replica</span><span>P - Primary</span><span>HA - HAProxy</span><span style="color:#3b82f6;">? Shut Down</span></div>`;
+                        } else if (vendorType === 'mongo') {
+                            topoHtml = `<div style="position: relative; display: flex; justify-content: center;">
+                            <svg width="350" height="150" viewBox="0 0 350 150"><defs>${arrow}</defs>
+                                <text x="175" y="15" fill="#9ca3af" font-size="10" text-anchor="middle">DB Nodes</text>
+                                <rect x="110" y="25" width="130" height="110" fill="none" stroke="#d1d5db" stroke-dasharray="4" rx="4"></rect>
+                                <text x="175" y="45" fill="#9ca3af" font-size="10" text-anchor="middle">my_mongodb_0</text>
+                                <rect x="120" y="35" width="110" height="90" fill="none" stroke="#d1d5db" stroke-dasharray="2" rx="2"></rect>
+                                <g transform="translate(130,55)">${hex} ${cG}/><text x="20" y="27" fill="white" font-size="12" font-weight="bold" text-anchor="middle">P</text></g>
+                                <g transform="translate(180,40)">${hex} ${cG}/><text x="20" y="27" fill="white" font-size="12" font-weight="bold" text-anchor="middle">S</text></g>
+                                <g transform="translate(180,80)">${hex} ${cG}/><text x="20" y="27" fill="white" font-size="12" font-weight="bold" text-anchor="middle">S</text></g>
+                                <line x1="170" y1="78" x2="180" y2="63" stroke="#d1d5db" stroke-width="1.5" marker-end="url(#arrow)"></line>
+                                <line x1="170" y1="78" x2="180" y2="103" stroke="#d1d5db" stroke-width="1.5" marker-end="url(#arrow)"></line>
+                            </svg></div>
+                            <div style="margin-top: 10px; font-size: 0.75rem; color: #9ca3af; display: flex; gap: 15px; justify-content: center;"><span>S - Secondary</span><span>P - Primary</span><span style="color:var(--success);">? Operational</span></div>`;
+                        } else if (vendorType === 'timescale') {
+                            topoHtml = `<div style="position: relative; display: flex; justify-content: center;">
+                            <svg width="200" height="120" viewBox="0 0 200 120"><defs>${arrow}</defs>
+                                <g transform="translate(40,35)">${hex} ${cG}/><text x="20" y="27" fill="white" font-size="12" font-weight="bold" text-anchor="middle">P</text></g>
+                                <g transform="translate(100,10)">${hex} ${cG}/><text x="20" y="27" fill="white" font-size="12" font-weight="bold" text-anchor="middle">R</text></g>
+                                <g transform="translate(100,60)">${hex} ${cG}/><text x="20" y="27" fill="white" font-size="12" font-weight="bold" text-anchor="middle">R</text></g>
+                                <line x1="80" y1="58" x2="100" y2="33" stroke="#d1d5db" stroke-width="1.5" marker-end="url(#arrow)"></line>
+                                <line x1="80" y1="58" x2="100" y2="83" stroke="#d1d5db" stroke-width="1.5" marker-end="url(#arrow)"></line>
+                            </svg></div>
+                            <div style="margin-top: 10px; font-size: 0.75rem; color: #9ca3af; display: flex; gap: 15px; justify-content: center;"><span>P - Primary</span><span>R - Replica</span><span style="color:var(--success);">? Operational</span></div>`;
+                        } else if (vendorType === 'percona_mysql') {
+                            topoHtml = `<div style="position: relative; display: flex; justify-content: center;">
+                            <svg width="350" height="150" viewBox="0 0 350 150"><defs>${arrow}</defs>
+                                <text x="45" y="15" fill="#9ca3af" font-size="10" text-anchor="middle">Load Balancers</text>
+                                <rect x="15" y="25" width="60" height="70" fill="none" stroke="#d1d5db" stroke-dasharray="4" rx="4"></rect>
+                                <g transform="translate(25,35)">${hex} ${cG}/><text x="20" y="27" fill="white" font-size="12" font-weight="bold" text-anchor="middle">PS</text></g>
+                                <line x1="75" y1="58" x2="135" y2="58" stroke="#d1d5db" stroke-width="1.5"></line>
+                                <text x="200" y="15" fill="#9ca3af" font-size="10" text-anchor="middle">DB Nodes</text>
+                                <rect x="135" y="25" width="130" height="110" fill="none" stroke="#d1d5db" stroke-dasharray="4" rx="4"></rect>
+                                <g transform="translate(145,35)">${hex} ${cG}/><text x="20" y="27" fill="white" font-size="12" font-weight="bold" text-anchor="middle">P</text></g>
+                                <g transform="translate(145,85)">${hex} ${cB}/><text x="20" y="27" fill="white" font-size="12" font-weight="bold" text-anchor="middle">R</text></g>
+                                <g transform="translate(210,35)">${hex} ${cG}/><text x="20" y="27" fill="white" font-size="12" font-weight="bold" text-anchor="middle">R</text></g>
+                                <line x1="185" y1="58" x2="210" y2="58" stroke="#d1d5db" stroke-width="1.5" marker-end="url(#arrow)"></line>
+                            </svg></div>
+                            <div style="margin-top: 10px; font-size: 0.75rem; color: #9ca3af; display: flex; gap: 15px; justify-content: center;"><span>P - Primary</span><span>R - Replica</span><span>PS - ProxySQL</span><span style="color:var(--success);">? Operational</span></div>`;
+                        } else if (vendorType === 'mssql') {
+                            topoHtml = `<div style="position: relative; display: flex; justify-content: center;">
+                            <svg width="200" height="120" viewBox="0 0 200 120">
+                                <g transform="translate(80,35)">${hex} ${cG}/><text x="20" y="27" fill="white" font-size="12" font-weight="bold" text-anchor="middle">P</text></g>
+                            </svg></div>
+                            <div style="margin-top: 10px; font-size: 0.75rem; color: #9ca3af; display: flex; gap: 15px; justify-content: center;"><span>P - Primary</span><span style="color:var(--success);">? Operational</span></div>`;
+                        } else {
+                            // PostgreSQL Default
+                            topoHtml = `<div style="position: relative; display: flex; justify-content: center;">
+                            <svg width="350" height="150" viewBox="0 0 350 150"><defs>${arrow}</defs>
+                                <text x="45" y="15" fill="#9ca3af" font-size="10" text-anchor="middle">Load Balancers</text>
+                                <rect x="15" y="25" width="60" height="100" fill="none" stroke="#d1d5db" stroke-dasharray="4" rx="4"></rect>
+                                <g transform="translate(25,52)">${hex} ${cG}/><text x="20" y="27" fill="white" font-size="12" font-weight="bold" text-anchor="middle">HA</text></g>
+                                <line x1="75" y1="75" x2="105" y2="75" stroke="#d1d5db" stroke-width="1.5"></line>
+                                <text x="145" y="15" fill="#9ca3af" font-size="10" text-anchor="middle">Pgbouncers</text>
+                                <rect x="105" y="25" width="80" height="100" fill="none" stroke="#d1d5db" stroke-dasharray="4" rx="4"></rect>
+                                <g transform="translate(125,30)">${hex} ${cG}/><text x="20" y="27" fill="white" font-size="12" font-weight="bold" text-anchor="middle">PB</text></g>
+                                <g transform="translate(125,75)">${hex} ${cG}/><text x="20" y="27" fill="white" font-size="12" font-weight="bold" text-anchor="middle">PB</text></g>
+                                <line x1="185" y1="75" x2="215" y2="75" stroke="#d1d5db" stroke-width="1.5"></line>
+                                <text x="280" y="15" fill="#9ca3af" font-size="10" text-anchor="middle">DB Nodes</text>
+                                <rect x="215" y="25" width="130" height="100" fill="none" stroke="#d1d5db" stroke-dasharray="4" rx="4"></rect>
+                                <g transform="translate(225,52)">${hex} ${cG}/><text x="20" y="27" fill="white" font-size="12" font-weight="bold" text-anchor="middle">P</text></g>
+                                <g transform="translate(290,30)">${hex} ${cG}/><text x="20" y="27" fill="white" font-size="12" font-weight="bold" text-anchor="middle">R</text></g>
+                                <g transform="translate(290,75)">${hex} ${cG}/><text x="20" y="27" fill="white" font-size="12" font-weight="bold" text-anchor="middle">R</text></g>
+                                <line x1="265" y1="75" x2="285" y2="60" stroke="#d1d5db" stroke-width="1.5" marker-end="url(#arrow)"></line>
+                                <line x1="265" y1="75" x2="285" y2="90" stroke="#d1d5db" stroke-width="1.5" marker-end="url(#arrow)"></line>
+                            </svg></div>
+                            <div style="margin-top: 10px; font-size: 0.75rem; color: #9ca3af; display: flex; gap: 15px; justify-content: center;"><span>P - Primary</span><span>R - Replica</span><span>PB - PgBouncer</span><span>HA - HAProxy</span><span style="color:var(--success);">? Operational</span></div>`;
+                        }
+                        
+                        topoContainer.innerHTML = topoHtml;
+
+                        const rect = tr.getBoundingClientRect(); 
+                        ct.style.display = 'block'; 
+                        let topPos = rect.bottom + 5; 
+                        if (topPos + 350 > window.innerHeight) topPos = rect.top - 350; 
+                        ct.style.top = topPos + 'px'; 
+                        ct.style.left = (rect.left + 50) + 'px'; 
+                    } 
+                };
                 tr.onmouseleave = (e) => { tr.style.backgroundColor = 'transparent'; const ct = document.getElementById('cluster-hover-tooltip'); if (ct) ct.style.display = 'none'; };
 
                 tr.innerHTML = `
