@@ -16,6 +16,84 @@ async function apiFetch(url, options = {}) {
     return fetch(url, options);
 }
 document.addEventListener('DOMContentLoaded', () => {
+
+    // --- LOGIN CANVAS ANIMATION (ANTIGRAVITY STYLE) ---
+    const canvas = document.getElementById('login-canvas');
+    if (canvas) {
+        const ctx = canvas.getContext('2d');
+        let width, height;
+        let particles = [];
+        
+        // Google colors: Blue, Red, Yellow, Green, Purple
+        const colors = ['#4285F4', '#EA4335', '#FBBC04', '#34A853', '#8b5cf6'];
+        
+        function resize() {
+            width = canvas.width = window.innerWidth;
+            height = canvas.height = window.innerHeight;
+        }
+        window.addEventListener('resize', resize);
+        resize();
+        
+        class Particle {
+            constructor() {
+                this.reset(true);
+            }
+            reset(initial = false) {
+                this.x = width / 2;
+                this.y = height / 2;
+                this.angle = Math.random() * Math.PI * 2;
+                this.speed = Math.random() * 0.4 + 0.1;
+                this.swirl = (Math.random() - 0.5) * 0.02;
+                this.radius = initial ? Math.random() * (Math.max(width, height) / 2) : Math.random() * 20;
+                this.color = colors[Math.floor(Math.random() * colors.length)];
+                this.size = Math.random() * 2.5 + 1;
+                this.life = initial ? Math.random() * 200 : 0;
+                this.maxLife = Math.random() * 300 + 150;
+            }
+            update() {
+                this.angle += this.swirl;
+                this.radius += this.speed;
+                this.x = width / 2 + Math.cos(this.angle) * this.radius;
+                this.y = height / 2 + Math.sin(this.angle) * this.radius;
+                this.life++;
+                if (this.life > this.maxLife || this.x < 0 || this.x > width || this.y < 0 || this.y > height) {
+                    this.reset();
+                }
+            }
+            draw() {
+                ctx.beginPath();
+                ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2);
+                ctx.fillStyle = this.color;
+                let alpha = 1;
+                if (this.life < 50) alpha = this.life / 50;
+                else if (this.life > this.maxLife - 50) alpha = (this.maxLife - this.life) / 50;
+                ctx.globalAlpha = alpha * 0.7;
+                ctx.fill();
+                ctx.globalAlpha = 1;
+            }
+        }
+        
+        for (let i = 0; i < 250; i++) {
+            particles.push(new Particle());
+            // Fast forward initial particles slightly so it's not starting from absolute center
+            particles[i].x = width / 2 + Math.cos(particles[i].angle) * particles[i].radius;
+            particles[i].y = height / 2 + Math.sin(particles[i].angle) * particles[i].radius;
+        }
+        
+        function animate() {
+            if (document.getElementById('login-screen').style.display === 'none') {
+                return; // Stop animating when login is hidden
+            }
+            ctx.clearRect(0, 0, width, height);
+            particles.forEach(p => {
+                p.update();
+                p.draw();
+            });
+            requestAnimationFrame(animate);
+        }
+        animate();
+    }
+
     // DOM Elements
     const modalAddProj = document.getElementById('modal-add-project');
     const modalAddNode = document.getElementById('modal-add-node');
