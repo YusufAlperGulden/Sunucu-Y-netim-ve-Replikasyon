@@ -186,6 +186,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     // --- API CALLS ---
+    
     async function fetchProjects() {
         try {
             const response = await apiFetch('/api/projects');
@@ -195,7 +196,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 return;
             }
             const data = await response.json();
-                       if (data.length === 0) {
+            if (data.length === 0) {
                 document.getElementById('cc-projects-tbody').innerHTML = '<tr><td colspan="6" style="text-align:center; padding: 20px;">No clusters found. Click + Add Project to start.</td></tr>';
                 document.getElementById('cc-total-clusters').innerText = '0 Clusters';
                 return;
@@ -208,11 +209,39 @@ document.addEventListener('DOMContentLoaded', () => {
             if (clustersList) clustersList.innerHTML = '';
             
             let operationalCount = 0;
+            let allNodes = [];
 
             data.forEach(proj => {
-                // Determine operational status
                 let isOperational = proj.nodesCount > 0 && proj.sync_status !== 'FAILED';
                 if (isOperational) operationalCount++;
+                
+                if (proj.nodes) {
+                    proj.nodes.forEach(n => {
+                        let status = "Operational";
+                        let color = "var(--success)";
+                        let vendorType = 'postgres';
+                        let nameLower = proj.name.toLowerCase();
+                        if (nameLower.includes('maria')) vendorType = 'mariadb';
+                        if (nameLower.includes('percona mysql')) vendorType = 'percona_mysql';
+                        if (nameLower.includes('percona') && !nameLower.includes('mysql')) vendorType = 'percona';
+                        if (nameLower.includes('mongo')) vendorType = 'mongo';
+                        if (nameLower.includes('timescale')) vendorType = 'timescale';
+                        
+                        if ( (vendorType === 'mariadb' || vendorType === 'percona_mysql') && n === proj.nodes[0] ) {
+                            status = "Shut Down";
+                            color = "#3b82f6";
+                        }
+                        
+                        allNodes.push({
+                            ...n,
+                            clusterName: proj.name,
+                            clusterId: proj.id,
+                            status: status,
+                            color: color,
+                            vendorType: vendorType
+                        });
+                    });
+                }
                 
                 const statusColor = isOperational ? 'var(--success)' : 'var(--warning)';
                 const statusText = isOperational ? '● Operational' : '● Warning';
@@ -534,6 +563,108 @@ document.addEventListener('DOMContentLoaded', () => {
                     r.style.display = '';
                 }
             });
+
+
+            // Draw Honeycomb
+            const hcContainer = document.getElementById('nodes-honeycomb');
+            if (hcContainer) {
+                let hexHtml = '<svg width="100%" height="200" viewBox="0 0 240 200"><defs><polygon id="hex" points="50,0 93,25 93,75 50,100 7,75 7,25" stroke="var(--glass-bg)" stroke-width="4" /></defs>';
+                
+                const positions = [
+                    {x:10, y:20}, {x:96, y:20}, {x:53, y:95}, {x:139, y:95},
+                    {x:182, y:20}, {x:225, y:95}, {x:10, y:170}, {x:96, y:170}
+                ];
+                
+                let shutDownCount = 0;
+                
+                allNodes.forEach((node, idx) => {
+                    if (node.status === 'Shut Down') shutDownCount++;
+                    
+                    const pos = positions[idx % positions.length];
+                    
+                    let nodeType = 'PostgreSQL';
+                    if (node.vendorType === 'mariadb') nodeType = 'MariaDB';
+                    if (node.vendorType === 'percona_mysql') nodeType = 'Percona';
+                    if (node.vendorType === 'mongo') nodeType = 'MongoDB';
+                    if (node.vendorType === 'timescale') nodeType = 'TimescaleDB';
+                    
+                    let roleBadge = '';
+                    if (node.role && node.role.toLowerCase() === 'primary') roleBadge = '<span style="background: rgba(34,197,94,0.1); color: var(--success); border: 1px solid var(--success);">Writable</span>';
+                    else if (node.role && node.role.toLowerCase() === 'replica') roleBadge = '<span style="background: rgba(107,114,128,0.1); color: #6b7280; border: 1px solid #d1d5db;">Readonly</span>';
+                    
+                    hexHtml += `<g class="node-hex-hover" data-idx="${idx}" style="cursor:pointer;" transform="translate(${pos.x}, ${pos.y})"><use href="#hex" fill="${node.color}" /></g>`;
+                    
+                    window['nodeData_' + idx] = {
+                        hostname: node.name,
+                        port: node.role === 'ProxySQL' ? 6032 : (nodeType === 'PostgreSQL' ? 5432 : 3306),
+                        status: node.status,
+                        role: node.role ? (node.role.charAt(0).toUpperCase() + node.role.slice(1)) : 'None',
+                        type: nodeType,
+                        cluster: `${node.clusterName} (ID:${node.clusterId})`,
+                        badge: roleBadge,
+                        color: node.color
+                    };
+                });
+                hexHtml += '</svg>';
+                hcContainer.innerHTML = hexHtml;
+                
+                document.querySelectorAll('.node-hex-hover').forEach(el => {
+                    el.onmouseenter = (e) => {
+                        const ntt = document.getElementById('node-hover-tooltip');
+                        const data = window['nodeData_' + el.getAttribute('data-idx')];
+                        if (ntt && data) {
+                            const header = document.getElementById('ntt-header');
+                            const msgBox = document.getElementById('ntt-message');
+                            const stat = document.getElementById('ntt-status');
+                            
+                            document.getElementById('ntt-hostname').innerText = data.hostname;
+                            document.getElementById('ntt-port').innerText = data.port;
+                            document.getElementById('ntt-role').innerText = data.role;
+                            document.getElementById('ntt-type').innerText = data.type;
+                            document.getElementById('ntt-cluster').innerText = data.cluster;
+                            document.getElementById('ntt-badge').innerHTML = data.badge;
+                            
+                            if (data.status === 'Shut Down') {
+                                header.style.background = '#3b82f6';
+                                msgBox.style.display = 'flex';
+                                stat.innerHTML = '<span style="color:#3b82f6;">? Shut Down</span>';
+                                document.getElementById('ntt-repl-col').style.display = 'block';
+                            } else {
+                                header.style.background = 'var(--success)';
+                                msgBox.style.display = 'none';
+                                stat.innerHTML = '<span style="color:var(--success);">? Operational</span>';
+                                document.getElementById('ntt-repl-col').style.display = 'none';
+                            }
+                            
+                            ntt.style.display = 'block';
+                            const rect = el.getBoundingClientRect();
+                            let topPos = rect.top - 200;
+                            if (topPos < 0) topPos = rect.bottom + 10;
+                            ntt.style.top = topPos + 'px';
+                            ntt.style.left = Math.max(20, rect.left - 100) + 'px';
+                        }
+                    };
+                    el.onmouseleave = (e) => {
+                        const ntt = document.getElementById('node-hover-tooltip');
+                        if (ntt) ntt.style.display = 'none';
+                    };
+                });
+                
+                document.getElementById('cc-total-nodes').innerText = allNodes.length + ' Nodes';
+                const dnSlice = document.getElementById('nodes-donut-slice');
+                if (dnSlice) {
+                   if (allNodes.length === 0) dnSlice.style.strokeDashoffset = '439.8';
+                   else {
+                       const ratio = (allNodes.length - shutDownCount) / allNodes.length;
+                       dnSlice.style.strokeDashoffset = 439.8 * (1 - ratio);
+                   }
+                }
+                
+                const nodeStats = document.getElementById('nodes-donut-slice').parentNode.parentNode.nextElementSibling;
+                if (nodeStats) {
+                    nodeStats.innerHTML = `<span style="color: var(--success);">? ${allNodes.length - shutDownCount} Operational</span><span style="color: var(--primary);">? ${shutDownCount} Shut Down</span>`;
+                }
+            }
 
         } catch (error) {
             console.error("fetchProjects error:", error);
@@ -927,106 +1058,7 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     
-              // Draw Honeycomb
-              const hcContainer = document.getElementById('nodes-honeycomb');
-              if (hcContainer) {
-                  let hexHtml = '<svg width="100%" height="200" viewBox="0 0 240 200"><defs><polygon id="hex" points="50,0 93,25 93,75 50,100 7,75 7,25" stroke="var(--glass-bg)" stroke-width="4" /></defs>';
-                  
-                  const positions = [
-                      {x:10, y:20}, {x:96, y:20}, {x:53, y:95}, {x:139, y:95},
-                      {x:182, y:20}, {x:225, y:95}, {x:10, y:170}, {x:96, y:170}
-                  ];
-                  
-                  let shutDownCount = 0;
-                  
-                  allNodes.forEach((node, idx) => {
-                      if (node.status === 'Shut Down') shutDownCount++;
-                      
-                      const pos = positions[idx % positions.length];
-                      
-                      let nodeType = 'PostgreSQL';
-                      if (node.vendorType === 'mariadb') nodeType = 'MariaDB';
-                      if (node.vendorType === 'percona_mysql') nodeType = 'Percona';
-                      if (node.vendorType === 'mongo') nodeType = 'MongoDB';
-                      if (node.vendorType === 'timescale') nodeType = 'TimescaleDB';
-                      
-                      let roleBadge = '';
-                      if (node.role && node.role.toLowerCase() === 'primary') roleBadge = '<span style="background: rgba(34,197,94,0.1); color: var(--success); border: 1px solid var(--success);">Writable</span>';
-                      else if (node.role && node.role.toLowerCase() === 'replica') roleBadge = '<span style="background: rgba(107,114,128,0.1); color: #6b7280; border: 1px solid #d1d5db;">Readonly</span>';
-                      
-                      hexHtml += `<g class="node-hex-hover" data-idx="${idx}" style="cursor:pointer;" transform="translate(${pos.x}, ${pos.y})"><use href="#hex" fill="${node.color}" /></g>`;
-                      
-                      window['nodeData_' + idx] = {
-                          hostname: node.name,
-                          port: node.role === 'ProxySQL' ? 6032 : (nodeType === 'PostgreSQL' ? 5432 : 3306),
-                          status: node.status,
-                          role: node.role ? (node.role.charAt(0).toUpperCase() + node.role.slice(1)) : 'None',
-                          type: nodeType,
-                          cluster: `${node.clusterName} (ID:${node.clusterId})`,
-                          badge: roleBadge,
-                          color: node.color
-                      };
-                  });
-                  hexHtml += '</svg>';
-                  hcContainer.innerHTML = hexHtml;
-                  
-                  document.querySelectorAll('.node-hex-hover').forEach(el => {
-                      el.onmouseenter = (e) => {
-                          const ntt = document.getElementById('node-hover-tooltip');
-                          const data = window['nodeData_' + el.getAttribute('data-idx')];
-                          if (ntt && data) {
-                              const header = document.getElementById('ntt-header');
-                              const msgBox = document.getElementById('ntt-message');
-                              const stat = document.getElementById('ntt-status');
-                              
-                              document.getElementById('ntt-hostname').innerText = data.hostname;
-                              document.getElementById('ntt-port').innerText = data.port;
-                              document.getElementById('ntt-role').innerText = data.role;
-                              document.getElementById('ntt-type').innerText = data.type;
-                              document.getElementById('ntt-cluster').innerText = data.cluster;
-                              document.getElementById('ntt-badge').innerHTML = data.badge;
-                              
-                              if (data.status === 'Shut Down') {
-                                  header.style.background = '#3b82f6';
-                                  msgBox.style.display = 'flex';
-                                  stat.innerHTML = '<span style="color:#3b82f6;">? Shut Down</span>';
-                                  document.getElementById('ntt-repl-col').style.display = 'block';
-                              } else {
-                                  header.style.background = 'var(--success)';
-                                  msgBox.style.display = 'none';
-                                  stat.innerHTML = '<span style="color:var(--success);">? Operational</span>';
-                                  document.getElementById('ntt-repl-col').style.display = 'none';
-                              }
-                              
-                              ntt.style.display = 'block';
-                              const rect = el.getBoundingClientRect();
-                              let topPos = rect.top - 200;
-                              if (topPos < 0) topPos = rect.bottom + 10;
-                              ntt.style.top = topPos + 'px';
-                              ntt.style.left = Math.max(20, rect.left - 100) + 'px';
-                          }
-                      };
-                      el.onmouseleave = (e) => {
-                          const ntt = document.getElementById('node-hover-tooltip');
-                          if (ntt) ntt.style.display = 'none';
-                      };
-                  });
-                  
-                  document.getElementById('cc-total-nodes').innerText = allNodes.length + ' Nodes';
-                  const dnSlice = document.getElementById('nodes-donut-slice');
-                  if (dnSlice) {
-                     if (allNodes.length === 0) dnSlice.style.strokeDashoffset = '439.8';
-                     else {
-                         const ratio = (allNodes.length - shutDownCount) / allNodes.length;
-                         dnSlice.style.strokeDashoffset = 439.8 * (1 - ratio);
-                     }
-                  }
-                  
-                  const nodeStats = document.getElementById('nodes-donut-slice').parentNode.parentNode.nextElementSibling;
-                  if (nodeStats) {
-                      nodeStats.innerHTML = `<span style="color: var(--success);">? ${allNodes.length - shutDownCount} Operational</span><span style="color: var(--primary);">? ${shutDownCount} Shut Down</span>`;
-                  }
-              }
+              
 
 
     // Form: Add Project
