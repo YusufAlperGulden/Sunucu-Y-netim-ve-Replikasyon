@@ -49,7 +49,7 @@ body {
 .app-container {
     display: flex;
     height: 100vh;
-    padding-top: 30px; /* Offset for drag region */
+    padding-top: 0; /* Removed offset for web view */
 }
 
 .sidebar {
@@ -58,6 +58,7 @@ body {
     display: flex;
     flex-direction: column;
     border: none;
+    border-radius: 0;
     background-color: #0b0621; /* ClusterControl dark sidebar */
     color: #ffffff;
     -webkit-app-region: no-drag;
