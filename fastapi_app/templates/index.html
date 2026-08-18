@@ -97,7 +97,7 @@
                 </a>
             </nav>
             <div style="margin-top: auto; padding-bottom: 20px;">
-                <a href="#" style="display: flex; align-items: center; padding: 12px 24px; color: #ffffff; text-decoration: none; font-size: 0.9rem; font-weight: 500; transition: all 0.2s;">
+                <a href="#" class="sidebar-link" data-view="changelog-view" style="display: flex; align-items: center; padding: 12px 24px; color: #ffffff; text-decoration: none; font-size: 0.9rem; font-weight: 500; transition: all 0.2s;">
                     <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-right: 12px; vertical-align: middle;"><line x1="8" y1="6" x2="21" y2="6"></line><line x1="8" y1="12" x2="21" y2="12"></line><line x1="8" y1="18" x2="21" y2="18"></line><line x1="3" y1="6" x2="3.01" y2="6"></line><line x1="3" y1="12" x2="3.01" y2="12"></line><line x1="3" y1="18" x2="3.01" y2="18"></line></svg>
                     <span class="sidebar-text">Changelog</span>
                 </a>
@@ -1037,6 +1037,88 @@
               </div>
           </div>
       </section>
+
+        
+        <!-- CHANGELOG VIEW -->
+        <section id="changelog-view" class="view-section" style="display: none;">
+            <div style="padding: 24px;">
+                <div class="glass-panel" style="padding: 20px 24px; margin-bottom: 24px; display: flex; justify-content: space-between; align-items: center; border: 1px solid var(--border); background: white;">
+                    <div style="display: flex; align-items: center;">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#4b5563" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-right: 16px;">
+                            <line x1="8" y1="6" x2="21" y2="6"></line><line x1="8" y1="12" x2="21" y2="12"></line><line x1="8" y1="18" x2="21" y2="18"></line><line x1="3" y1="6" x2="3.01" y2="6"></line><line x1="3" y1="12" x2="3.01" y2="12"></line><line x1="3" y1="18" x2="3.01" y2="18"></line>
+                        </svg>
+                        <h2 style="font-size: 1.25rem; font-weight: 500; color: var(--text-main); margin: 0;">Changelog</h2>
+                    </div>
+                </div>
+
+                <div class="glass-panel" style="background: white; border: 1px solid var(--border); border-radius: 12px; box-shadow: 0 1px 3px rgba(0,0,0,0.05); padding: 32px;">
+                    <!-- v1.4.2 -->
+                    <div style="position: relative; padding-left: 32px; margin-bottom: 48px;">
+                        <div style="position: absolute; left: 0; top: 0; bottom: -48px; width: 2px; background: #e5e7eb;"></div>
+                        <div style="position: absolute; left: -5px; top: 4px; width: 12px; height: 12px; border-radius: 50%; background: var(--primary); border: 2px solid white; box-shadow: 0 0 0 2px var(--primary);"></div>
+                        
+                        <div style="display: flex; align-items: baseline; gap: 12px; margin-bottom: 16px;">
+                            <h3 style="font-size: 1.5rem; font-weight: 600; color: var(--text-main); margin: 0;">v1.4.2</h3>
+                            <span style="color: var(--text-muted); font-size: 0.9rem;">Today</span>
+                            <span style="background: #dcfce7; color: #16a34a; font-size: 0.75rem; font-weight: 600; padding: 2px 8px; border-radius: 12px;">Latest</span>
+                        </div>
+
+                        <ul style="list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 12px;">
+                            <li style="display: flex; gap: 12px; font-size: 0.95rem; color: var(--text-secondary); line-height: 1.5;">
+                                <span style="background: #e0e7ff; color: #4f46e5; font-size: 0.7rem; font-weight: 700; padding: 2px 6px; border-radius: 4px; height: fit-content; text-transform: uppercase;">Feature</span>
+                                <span>Sayfalardan ba&#287;&#305;ms&#305;z her zaman ekranda kalan Global Top Bar ve h&#305;zl&#305; "Deploy a Cluster" butonu eklendi.</span>
+                            </li>
+                            <li style="display: flex; gap: 12px; font-size: 0.95rem; color: var(--text-secondary); line-height: 1.5;">
+                                <span style="background: #e0e7ff; color: #4f46e5; font-size: 0.7rem; font-weight: 700; padding: 2px 6px; border-radius: 4px; height: fit-content; text-transform: uppercase;">Feature</span>
+                                <span>Sol men&#252;ye (Sidebar) k&#252;melere (Ara&#231; Plaka Takip Sistemi &amp; E-mail Okuma) an&#305;nda eri&#351;im sa&#287;layan a&#231;&#305;l&#305;r-kapan&#305;r "Clusters" alt men&#252;s&#252; eklendi.</span>
+                            </li>
+                            <li style="display: flex; gap: 12px; font-size: 0.95rem; color: var(--text-secondary); line-height: 1.5;">
+                                <span style="background: #f3f4f6; color: #4b5563; font-size: 0.7rem; font-weight: 700; padding: 2px 6px; border-radius: 4px; height: fit-content; text-transform: uppercase;">Improvement</span>
+                                <span>Geli&#351;mi&#351; Ayarlar (Settings) men&#252;s&#252; 7 farkl&#305; sekmeye (Profile, Cloud Storage, vb.) b&#246;l&#252;nerek daha d&#252;zenli hale getirildi.</span>
+                            </li>
+                            <li style="display: flex; gap: 12px; font-size: 0.95rem; color: var(--text-secondary); line-height: 1.5;">
+                                <span style="background: #f3f4f6; color: #4b5563; font-size: 0.7rem; font-weight: 700; padding: 2px 6px; border-radius: 4px; height: fit-content; text-transform: uppercase;">Improvement</span>
+                                <span>Men&#252;lerde dola&#351;&#305;rken Cluster detaylar&#305;n&#305;n (tooltip) an&#305;nda a&#231;&#305;l&#305;p ekran&#305; kaplamas&#305;n&#305; &#246;nlemek i&#231;in 0.2 saniyelik hover gecikmesi eklendi.</span>
+                            </li>
+                            <li style="display: flex; gap: 12px; font-size: 0.95rem; color: var(--text-secondary); line-height: 1.5;">
+                                <span style="background: #fee2e2; color: #dc2626; font-size: 0.7rem; font-weight: 700; padding: 2px 6px; border-radius: 4px; height: fit-content; text-transform: uppercase;">Fix</span>
+                                <span>"Nodes" sayfas&#305;ndaki Donut grafi&#287;inin animasyonlar&#305;n&#305;n &#231;al&#305;&#351;mamas&#305; ve merkezine toplam node say&#305;s&#305;n&#305; yazmamas&#305; sorunu giderildi.</span>
+                            </li>
+                            <li style="display: flex; gap: 12px; font-size: 0.95rem; color: var(--text-secondary); line-height: 1.5;">
+                                <span style="background: #fee2e2; color: #dc2626; font-size: 0.7rem; font-weight: 700; padding: 2px 6px; border-radius: 4px; height: fit-content; text-transform: uppercase;">Fix</span>
+                                <span>Sunucu listesindeki veritaban&#305; s&#252;r&#252;m metriklerinin canl&#305; PostgreSQL s&#252;r&#252;m&#252;yle (18.4) senkronize olmamas&#305; sorunu giderildi.</span>
+                            </li>
+                        </ul>
+                    </div>
+
+                    <!-- v1.4.1 -->
+                    <div style="position: relative; padding-left: 32px;">
+                        <div style="position: absolute; left: 0; top: 0; bottom: 0; width: 2px; background: #e5e7eb;"></div>
+                        <div style="position: absolute; left: -4px; top: 6px; width: 10px; height: 10px; border-radius: 50%; background: #9ca3af; border: 2px solid white;"></div>
+                        
+                        <div style="display: flex; align-items: baseline; gap: 12px; margin-bottom: 16px;">
+                            <h3 style="font-size: 1.3rem; font-weight: 500; color: #4b5563; margin: 0;">v1.4.1</h3>
+                            <span style="color: var(--text-muted); font-size: 0.9rem;">Yesterday</span>
+                        </div>
+
+                        <ul style="list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 12px;">
+                            <li style="display: flex; gap: 12px; font-size: 0.95rem; color: var(--text-secondary); line-height: 1.5;">
+                                <span style="background: #e0e7ff; color: #4f46e5; font-size: 0.7rem; font-weight: 700; padding: 2px 6px; border-radius: 4px; height: fit-content; text-transform: uppercase;">Feature</span>
+                                <span>Veritaban&#305; gecikme (lag) ve senkronizasyon metriklerini g&#246;steren detayl&#305; "Sunucu Y&#246;netim Dashboard" eklendi.</span>
+                            </li>
+                            <li style="display: flex; gap: 12px; font-size: 0.95rem; color: var(--text-secondary); line-height: 1.5;">
+                                <span style="background: #f3f4f6; color: #4b5563; font-size: 0.7rem; font-weight: 700; padding: 2px 6px; border-radius: 4px; height: fit-content; text-transform: uppercase;">Improvement</span>
+                                <span>Uygulama giri&#351; (Login) ekran&#305; kurumsal tasar&#305;ma uygun hale getirildi.</span>
+                            </li>
+                            <li style="display: flex; gap: 12px; font-size: 0.95rem; color: var(--text-secondary); line-height: 1.5;">
+                                <span style="background: #fee2e2; color: #dc2626; font-size: 0.7rem; font-weight: 700; padding: 2px 6px; border-radius: 4px; height: fit-content; text-transform: uppercase;">Fix</span>
+                                <span>Uzun sayfalarda kayd&#305;rma &#231;ubu&#287;unun (scrollbar) men&#252;lerle &#231;ak&#305;&#351;mas&#305; sorunu d&#252;zeltildi.</span>
+                            </li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </section>
 
         </main>
         </div>
