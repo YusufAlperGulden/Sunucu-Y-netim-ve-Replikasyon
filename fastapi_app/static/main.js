@@ -242,6 +242,7 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     let dashboardInterval = null;
+    let clusterHoverTimeout = null;
     function startDashboardInterval() {
         fetchDashboardMetrics();
         let updateIntervalSec = parseInt(localStorage.getItem('dashboard_update_interval_sec')) || 1;
@@ -386,6 +387,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 // Hover effect
                                 tr.onmouseenter = (e) => { 
                     tr.style.backgroundColor = 'rgba(0,0,0,0.02)'; 
+                    clearTimeout(clusterHoverTimeout);
+                    clusterHoverTimeout = setTimeout(() => {
                     const ct = document.getElementById('cluster-hover-tooltip'); 
                     if (ct) { 
                         document.getElementById('tt-cluster-id').innerText = proj.id; 
@@ -524,13 +527,33 @@ document.addEventListener('DOMContentLoaded', () => {
 
                         const rect = tr.getBoundingClientRect(); 
                         ct.style.display = 'block'; 
+                        ct.style.opacity = '0';
+                        ct.style.transform = 'translateY(10px)';
+                        
+                        setTimeout(() => {
+                            ct.style.opacity = '1';
+                            ct.style.transform = 'translateY(0)';
+                        }, 10);
+                        
                         let topPos = rect.bottom + 5; 
                         if (topPos + 350 > window.innerHeight) topPos = rect.top - 350; 
                         ct.style.top = topPos + 'px'; 
                         ct.style.left = (rect.left + 50) + 'px'; 
                     } 
+                    }, 200);
                 };
-                tr.onmouseleave = (e) => { tr.style.backgroundColor = 'transparent'; const ct = document.getElementById('cluster-hover-tooltip'); if (ct) ct.style.display = 'none'; };
+                tr.onmouseleave = (e) => { 
+                    tr.style.backgroundColor = 'transparent'; 
+                    clearTimeout(clusterHoverTimeout);
+                    const ct = document.getElementById('cluster-hover-tooltip'); 
+                    if (ct) { 
+                        ct.style.opacity = '0'; 
+                        ct.style.transform = 'translateY(10px)';
+                        setTimeout(() => {
+                            if(ct.style.opacity === '0') ct.style.display = 'none';
+                        }, 200);
+                    } 
+                };
 
                 tr.innerHTML = `
                     <td style="padding: 12px 10px 12px 0; color: var(--text-muted);">${proj.id}</td>

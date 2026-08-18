@@ -1080,7 +1080,7 @@
 
 <div id="custom-tooltip" style="display: none; position: absolute; background: white; padding: 6px 12px; border-radius: 4px; box-shadow: 0 4px 12px rgba(0,0,0,0.15); font-size: 0.85rem; color: #374151; pointer-events: none; z-index: 9999;"></div>
 
-<div id="node-hover-tooltip" style="display: none; position: fixed; background: white; border-radius: 8px; box-shadow: 0 10px 25px rgba(0,0,0,0.2); width: 380px; z-index: 10001; overflow: hidden; font-family: 'Inter', sans-serif;">
+<div id="node-hover-tooltip" style="display: none; position: fixed; background: white; border-radius: 8px; box-shadow: 0 10px 25px rgba(0,0,0,0.2); width: 380px; z-index: 10001; overflow: hidden; font-family: 'Inter', sans-serif; transition: opacity 0.2s ease, transform 0.2s ease; opacity: 0; transform: translateY(10px);">
     <div id="ntt-header" style="background: var(--success); color: white; padding: 12px 20px; display: flex; align-items: center; gap: 8px; font-weight: 600;">
         <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="4" width="20" height="6" rx="1" ry="1"></rect><rect x="2" y="14" width="20" height="6" rx="1" ry="1"></rect><line x1="6" y1="7" x2="6.01" y2="7"></line><line x1="10" y1="7" x2="18" y2="7"></line><line x1="6" y1="17" x2="6.01" y2="17"></line><line x1="10" y1="17" x2="18" y2="17"></line></svg>
         Node information
@@ -1210,7 +1210,7 @@
   </body>
 </html>
 
-<div id="cluster-hover-tooltip" style="display: none; position: fixed; background: white; border-radius: 8px; box-shadow: 0 10px 25px rgba(0,0,0,0.2); width: 400px; z-index: 10000; overflow: hidden; font-family: 'Inter', sans-serif;">
+<div id="cluster-hover-tooltip" style="display: none; position: fixed; background: white; border-radius: 8px; box-shadow: 0 10px 25px rgba(0,0,0,0.2); width: 400px; z-index: 10000; overflow: hidden; font-family: 'Inter', sans-serif; transition: opacity 0.2s ease, transform 0.2s ease; opacity: 0; transform: translateY(10px);">
     <div style="background: var(--success); color: white; padding: 12px 20px; display: flex; align-items: center; gap: 8px; font-weight: 600;">
         <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="10" y="3" width="4" height="4" rx="1"></rect><rect x="3" y="17" width="4" height="4" rx="1"></rect><rect x="10" y="17" width="4" height="4" rx="1"></rect><rect x="17" y="17" width="4" height="4" rx="1"></rect><line x1="12" y1="7" x2="12" y2="12"></line><line x1="5" y1="12" x2="19" y2="12"></line><line x1="5" y1="12" x2="5" y2="17"></line><line x1="12" y1="12" x2="12" y2="17"></line><line x1="19" y1="12" x2="19" y2="17"></line></svg>
         Cluster information
