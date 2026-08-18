@@ -173,7 +173,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     // --- VIEW MANAGEMENT ---
-    const sidebarLinks = document.querySelectorAll('.sidebar-nav a');
+    const sidebarLinks = document.querySelectorAll('.sidebar-nav > a, .sidebar-nav > div > a, a[data-view="changelog-view"]');
     const viewSections = document.querySelectorAll('.view-section');
     
     sidebarLinks.forEach(link => {
