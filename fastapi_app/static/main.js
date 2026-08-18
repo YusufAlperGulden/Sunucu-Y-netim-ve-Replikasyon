@@ -36,48 +36,79 @@ document.addEventListener('DOMContentLoaded', () => {
         
         class Particle {
             constructor() {
-                this.reset(true);
-            }
-            reset(initial = false) {
-                this.x = width / 2;
-                this.y = height / 2;
-                this.angle = Math.random() * Math.PI * 2;
-                this.speed = Math.random() * 0.15 + 0.05;
-                this.swirl = (Math.random() - 0.5) * 0.005;
-                this.radius = initial ? Math.random() * (Math.max(width, height) / 2) : Math.random() * 20;
-                this.color = colors[Math.floor(Math.random() * colors.length)];
                 this.size = Math.random() * 80 + 30;
-                this.life = initial ? Math.random() * 200 : 0;
-                this.maxLife = Math.random() * 300 + 150;
+                this.color = colors[Math.floor(Math.random() * colors.length)];
+                
+                // Start them randomly around the edges
+                if (Math.random() > 0.5) {
+                    this.x = Math.random() > 0.5 ? -this.size : width + this.size;
+                    this.y = Math.random() * height;
+                } else {
+                    this.x = Math.random() * width;
+                    this.y = Math.random() > 0.5 ? -this.size : height + this.size;
+                }
+                
+                this.vx = (Math.random() - 0.5) * 1.0;
+                this.vy = (Math.random() - 0.5) * 1.0;
+                
+                if (Math.abs(this.vx) < 0.2) this.vx = 0.5 * Math.sign(this.vx || 1);
+                if (Math.abs(this.vy) < 0.2) this.vy = 0.5 * Math.sign(this.vy || 1);
             }
             update() {
-                this.angle += this.swirl;
-                this.radius += this.speed;
-                this.x = width / 2 + Math.cos(this.angle) * this.radius;
-                this.y = height / 2 + Math.sin(this.angle) * this.radius;
-                this.life++;
-                if (this.life > this.maxLife || this.x < 0 || this.x > width || this.y < 0 || this.y > height) {
-                    this.reset();
+                this.x += this.vx;
+                this.y += this.vy;
+                
+                // Exclusion zone for the Title and Login Box
+                // Approximate size: 850px wide, 550px tall, centered
+                const boxW = 850;
+                const boxH = 550;
+                const boxX = width / 2 - boxW / 2;
+                const boxY = height / 2 - boxH / 2;
+                
+                let testX = this.x;
+                let testY = this.y;
+                
+                if (this.x < boxX) testX = boxX;
+                else if (this.x > boxX + boxW) testX = boxX + boxW;
+                
+                if (this.y < boxY) testY = boxY;
+                else if (this.y > boxY + boxH) testY = boxY + boxH;
+                
+                let distX = this.x - testX;
+                let distY = this.y - testY;
+                let distance = Math.sqrt((distX*distX) + (distY*distY));
+                
+                if (distance <= this.size) {
+                    // Collision! Bounce out smoothly
+                    if (Math.abs(distX) > Math.abs(distY)) {
+                        this.vx *= -1;
+                        this.x += Math.sign(distX) * 2;
+                    } else {
+                        this.vy *= -1;
+                        this.y += Math.sign(distY) * 2;
+                    }
                 }
+                
+                // Screen edges collision
+                if (this.x - this.size > width) { this.x = width - this.size; this.vx *= -1; }
+                if (this.x + this.size < 0) { this.x = -this.size; this.vx *= -1; }
+                if (this.y - this.size > height) { this.y = height - this.size; this.vy *= -1; }
+                if (this.y + this.size < 0) { this.y = -this.size; this.vy *= -1; }
             }
             draw() {
                 ctx.beginPath();
                 ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2);
                 ctx.fillStyle = this.color;
-                let alpha = 1;
-                if (this.life < 50) alpha = this.life / 50;
-                else if (this.life > this.maxLife - 50) alpha = (this.maxLife - this.life) / 50;
-                ctx.globalAlpha = alpha * 0.7;
+                ctx.globalAlpha = 0.5;
                 ctx.fill();
                 ctx.globalAlpha = 1;
             }
         }
         
-        for (let i = 0; i < 250; i++) {
+        for (let i = 0; i < 50; i++) {
             particles.push(new Particle());
-            // Fast forward initial particles slightly so it's not starting from absolute center
-            particles[i].x = width / 2 + Math.cos(particles[i].angle) * particles[i].radius;
-            particles[i].y = height / 2 + Math.sin(particles[i].angle) * particles[i].radius;
+            // Fast forward a little bit
+            for(let j=0; j<Math.random()*100; j++) particles[i].update();
         }
         
         function animate() {
