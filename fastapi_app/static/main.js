@@ -637,7 +637,7 @@ document.addEventListener('DOMContentLoaded', () => {
             
             // Update Donut Chart
             document.getElementById('cc-total-clusters').innerText = `${data.length} Clusters`;
-            document.getElementById('cc-donut-center-text').innerText = operationalCount;
+            // center text removed
             
             const radius = 80;
             const circumference = 2 * Math.PI * radius; // ~502.6
@@ -645,10 +645,26 @@ document.addEventListener('DOMContentLoaded', () => {
             const offset = circumference - (ratio * circumference);
             
             const donutCircle = document.getElementById('cc-donut-progress');
-            if (donutCircle) {
+if (donutCircle) {
                 donutCircle.style.strokeDashoffset = offset;
                 donutCircle.style.stroke = ratio === 1 ? 'var(--success)' : (ratio > 0 ? 'var(--warning)' : 'var(--danger)');
-                document.getElementById('cc-donut-center-text').style.color = donutCircle.style.stroke;
+                
+                // Add hover logic
+                const donutTooltip = document.getElementById('donut-hover-tooltip');
+                const donutText = document.getElementById('donut-hover-text');
+                if (donutTooltip && donutText) {
+                    donutCircle.addEventListener('mouseenter', (e) => {
+                        donutText.innerText = `${operationalCount} Operational`;
+                        donutTooltip.style.display = 'block';
+                    });
+                    donutCircle.addEventListener('mousemove', (e) => {
+                        donutTooltip.style.left = (e.clientX + 10) + 'px';
+                        donutTooltip.style.top = (e.clientY + 10) + 'px';
+                    });
+                    donutCircle.addEventListener('mouseleave', () => {
+                        donutTooltip.style.display = 'none';
+                    });
+                }
             }
             
             // Update Legend
