@@ -75,9 +75,9 @@
                 <a href="#" class="sidebar-link" data-view="activity-view">
                       <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-right: 12px; vertical-align: middle;"><path d="M19 3H5C3.9 3 3 3.9 3 5v14c0 1.1.9 2 2 2h7"></path><path d="M3 16l4-4 4 4"></path><path d="M8 11l3-3 3 3"></path><path d="M22 17c0 0-1.5-2.5-4-2.5S14 17 14 17s1.5 2.5 4 2.5S22 17 22 17z"></path><circle cx="18" cy="17" r="1"></circle></svg> <span class="sidebar-text">Activity center</span>
                   </a>
-                <a href="#">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-right: 12px; vertical-align: middle;"><rect x="4" y="2" width="16" height="20" rx="2" ry="2"></rect><line x1="8" y1="8" x2="16" y2="8"></line><line x1="8" y1="12" x2="16" y2="12"></line><line x1="8" y1="16" x2="12" y2="16"></line></svg> <span class="sidebar-text">Operational reports</span>
-                </a>
+                <a href="#" class="sidebar-link" data-view="reports-view">
+                      <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-right: 12px; vertical-align: middle;"><rect x="4" y="2" width="16" height="20" rx="2" ry="2"></rect><line x1="8" y1="8" x2="16" y2="8"></line><line x1="8" y1="12" x2="16" y2="12"></line><line x1="8" y1="16" x2="12" y2="16"></line></svg> <span class="sidebar-text">Operational reports</span>
+                  </a>
                 <a href="#">
                     <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-right: 12px; vertical-align: middle;"><path d="M11.5 15H7a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M21.378 10.626a1 1 0 1 0-3.004-3.004l-4.01 4.012a2 2 0 0 0-.506.854l-.837 2.87a.5.5 0 0 0 .62.62l2.87-.837a2 2 0 0 0 .854-.506z"></path></svg> <span class="sidebar-text">User management</span>
                 </a>
@@ -296,6 +296,79 @@
                 </div>
             </div>
         </section>
+
+      
+      <!-- OPERATIONAL REPORTS VIEW -->
+      <section id="reports-view" class="view-section" style="display: none;">
+          <div style="padding: 24px;">
+              <div class="glass-panel" style="padding: 16px 24px; margin-bottom: 24px; display: flex; align-items: center; border: 1px solid var(--border); background: white;">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#4b5563" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-right: 16px;"><rect x="4" y="2" width="16" height="20" rx="2" ry="2"></rect><line x1="8" y1="8" x2="16" y2="8"></line><line x1="8" y1="12" x2="16" y2="12"></line><line x1="8" y1="16" x2="12" y2="16"></line></svg>
+                  <h2 style="font-size: 1.25rem; font-weight: 500; color: var(--text-main); margin: 0;">Operational reports</h2>
+              </div>
+              
+              <div class="glass-panel" style="background: white; border: 1px solid var(--border); overflow: hidden; border-radius: 12px; box-shadow: 0 1px 3px rgba(0,0,0,0.05);">
+                  <div style="display: flex; gap: 32px; border-bottom: 1px solid var(--border); padding: 0 24px; position: relative;">
+                      <div id="tab-btn-reports" class="reports-tab active" style="padding: 16px 0; font-weight: 500; font-size: 0.95rem; color: var(--primary); border-bottom: 2px solid var(--primary); cursor: pointer;">Reports</div>
+                      <div id="tab-btn-schedules" class="reports-tab" style="padding: 16px 0; font-weight: 500; font-size: 0.95rem; color: #4b5563; cursor: pointer; border-bottom: 2px solid transparent;">Schedules</div>
+                  </div>
+                  
+                  <div id="content-reports" style="overflow-x: auto; min-height: 400px; display: flex; flex-direction: column;">
+                      <div style="padding: 16px 24px; display: flex; justify-content: flex-end; border-bottom: 1px solid var(--border);">
+                          <button id="btn-create-report" style="background: #3b0764; color: white; border: none; border-radius: 6px; padding: 8px 16px; font-weight: 500; font-size: 0.9rem; cursor: pointer; display: flex; align-items: center; gap: 8px;">
+                              <svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" stroke-width="2" fill="none"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg> Create report
+                          </button>
+                      </div>
+                      <table style="width: 100%; border-collapse: collapse; min-width: 800px; margin-bottom: auto;">
+                          <thead>
+                              <tr style="border-bottom: 1px solid var(--border); background: #fafafa;">
+                                  <th style="text-align: left; padding: 16px 24px; font-size: 0.8rem; font-weight: 600; color: #374151;">Created</th>
+                                  <th style="text-align: left; padding: 16px 24px; font-size: 0.8rem; font-weight: 600; color: #374151;">File name</th>
+                                  <th style="text-align: left; padding: 16px 24px; font-size: 0.8rem; font-weight: 600; color: #374151;">Report type</th>
+                                  <th style="text-align: left; padding: 16px 24px; font-size: 0.8rem; font-weight: 600; color: #374151; display: flex; align-items: center; gap: 4px;">Cluster <svg viewBox="0 0 24 24" width="14" height="14" stroke="#9ca3af" stroke-width="2" fill="none"><polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"></polygon></svg></th>
+                                  <th style="text-align: left; padding: 16px 24px; font-size: 0.8rem; font-weight: 600; color: #374151;">Created by</th>
+                                  <th style="text-align: left; padding: 16px 24px; font-size: 0.8rem; font-weight: 600; color: #374151;">Data range</th>
+                                  <th style="text-align: left; padding: 16px 24px; font-size: 0.8rem; font-weight: 600; color: #374151;">Recipients</th>
+                                  <th style="text-align: right; padding: 16px 24px; font-size: 0.8rem; font-weight: 600; color: #374151;">Actions</th>
+                              </tr>
+                          </thead>
+                          <tbody id="reports-table-body">
+                              <tr id="reports-empty-state">
+                                  <td colspan="8" style="padding: 60px 20px; text-align: center;">
+                                      <svg width="72" height="72" viewBox="0 0 24 24" fill="#e5e7eb" stroke="none" style="margin-bottom: 24px;">
+                                          <path d="M10 4H4c-1.1 0-1.99.9-1.99 2L2 18c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V8c0-1.1-.9-2-2-2h-8l-2-2z"/>
+                                      </svg>
+                                  </td>
+                              </tr>
+                          </tbody>
+                      </table>
+                  </div>
+      
+                  <div id="content-schedules" style="overflow-x: auto; min-height: 400px; display: none; flex-direction: column;">
+                      <table style="width: 100%; border-collapse: collapse; min-width: 800px; margin-bottom: auto;">
+                          <thead>
+                              <tr style="border-bottom: 1px solid var(--border); background: #fafafa;">
+                                  <th style="text-align: left; padding: 16px 24px; font-size: 0.8rem; font-weight: 600; color: #374151;">Schedule</th>
+                                  <th style="text-align: left; padding: 16px 24px; font-size: 0.8rem; font-weight: 600; color: #374151;">Report type</th>
+                                  <th style="text-align: left; padding: 16px 24px; font-size: 0.8rem; font-weight: 600; color: #374151;">Cluster</th>
+                                  <th style="text-align: left; padding: 16px 24px; font-size: 0.8rem; font-weight: 600; color: #374151;">Data range</th>
+                                  <th style="text-align: left; padding: 16px 24px; font-size: 0.8rem; font-weight: 600; color: #374151;">Recipients</th>
+                                  <th style="text-align: right; padding: 16px 24px; font-size: 0.8rem; font-weight: 600; color: #374151;">Actions</th>
+                              </tr>
+                          </thead>
+                          <tbody>
+                              <tr>
+                                  <td colspan="6" style="padding: 60px 20px; text-align: center;">
+                                      <svg width="72" height="72" viewBox="0 0 24 24" fill="#e5e7eb" stroke="none" style="margin-bottom: 24px;">
+                                          <path d="M10 4H4c-1.1 0-1.99.9-1.99 2L2 18c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V8c0-1.1-.9-2-2-2h-8l-2-2z"/>
+                                      </svg>
+                                  </td>
+                              </tr>
+                          </tbody>
+                      </table>
+                  </div>
+              </div>
+          </div>
+      </section>
 
       <!-- SETTINGS VIEW -->
             <div id="settings-view" class="view-section" style="display: none;">
@@ -885,7 +958,69 @@
     </div>
 </div>
 
-</body>
+
+    <!-- Generate New Report Modal -->
+    <div class="modal-overlay" id="modal-generate-report" style="display: none; align-items: center; justify-content: center; z-index: 20000; background: rgba(0,0,0,0.5);">
+        <div style="background: white; border-radius: 16px; width: 450px; box-shadow: 0 10px 25px rgba(0,0,0,0.1); overflow: hidden;">
+            <div style="display: flex; justify-content: space-between; align-items: center; padding: 16px 24px; border-bottom: 1px solid var(--border);">
+                <h3 style="margin: 0; font-size: 1.1rem; font-weight: 600; color: var(--text-main);">Generate new report</h3>
+                <button id="btn-close-report-modal" style="background: transparent; border: 1px solid var(--border); border-radius: 6px; width: 30px; height: 30px; display: flex; align-items: center; justify-content: center; cursor: pointer; color: #6b7280;">
+                    <svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" stroke-width="2" fill="none"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+                </button>
+            </div>
+            <div style="padding: 24px;">
+                <div style="margin-bottom: 20px;">
+                    <label style="display: block; font-size: 0.85rem; font-weight: 500; color: #374151; margin-bottom: 8px;"><span style="color: #ef4444;">*</span> Cluster</label>
+                    <select id="report-cluster-select" style="width: 100%; padding: 10px 12px; border: 1px solid #8b5cf6; border-radius: 6px; font-size: 0.9rem; color: #111827; outline: none; box-shadow: 0 0 0 3px rgba(139,92,246,0.1); background: white;">
+                        <option value="" disabled selected>Select cluster</option>
+                        <option value="MariaDB (ID:21)">MariaDB (ID:21)</option>
+                        <option value="MongoDB Replicaset (ID:30)">MongoDB Replicaset (ID:30)</option>
+                        <option value="MSSQL (ID:27)">MSSQL (ID:27)</option>
+                        <option value="Percona MySQL Replication (ID:28)">Percona MySQL Replication (ID:28)</option>
+                        <option value="Percona XtraDB Cluster (ID:23)">Percona XtraDB Cluster (ID:23)</option>
+                        <option value="PostgreSQL (ID:15)">PostgreSQL (ID:15)</option>
+                        <option value="Timescale (ID:29)">Timescale (ID:29)</option>
+                    </select>
+                </div>
+                
+                <div style="margin-bottom: 20px;">
+                    <label style="display: block; font-size: 0.85rem; font-weight: 500; color: #374151; margin-bottom: 8px;"><span style="color: #ef4444;">*</span> Type</label>
+                    <select id="report-type-select" style="width: 100%; padding: 10px 12px; border: 1px solid var(--border); border-radius: 6px; font-size: 0.9rem; color: #111827; outline: none; background: white;">
+                        <option value="" disabled selected>Select report type</option>
+                        <option value="System Report">System Report</option>
+                        <option value="Database Availability Report">Database Availability Report</option>
+                        <option value="Backup Report">Backup Report</option>
+                        <option value="Upgrade Report">Upgrade Report</option>
+                        <option value="Schema Change Report">Schema Change Report</option>
+                        <option value="Database Growth Report">Database Growth Report</option>
+                    </select>
+                </div>
+                
+                <div style="margin-bottom: 20px;">
+                    <label style="display: block; font-size: 0.85rem; font-weight: 500; color: #374151; margin-bottom: 8px;"><span style="color: #ef4444;">*</span> Data range</label>
+                    <div style="display: flex; border: 1px solid var(--border); border-radius: 6px; overflow: hidden;">
+                        <div style="padding: 10px 16px; background: #f9fafb; border-right: 1px solid var(--border); font-size: 0.9rem; color: #4b5563;">Days</div>
+                        <input type="number" id="report-data-range" value="7" style="flex: 1; border: none; padding: 10px 12px; font-size: 0.9rem; color: #111827; outline: none; background: white;" />
+                    </div>
+                </div>
+                
+                <div style="margin-bottom: 24px;">
+                    <label style="display: block; font-size: 0.85rem; font-weight: 500; color: #374151; margin-bottom: 8px;">Recipients</label>
+                    <div style="position: relative;">
+                        <input type="text" id="report-recipients" value="yusufalper@gmail.com" placeholder="Enter email recipients" style="width: 100%; padding: 10px 12px; border: 1px solid var(--border); border-radius: 6px; font-size: 0.9rem; color: #111827; outline: none; background: white;" />
+                        <svg viewBox="0 0 24 24" width="14" height="14" stroke="#9ca3af" stroke-width="2" fill="none" style="position: absolute; right: 12px; top: 12px;"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+                    </div>
+                </div>
+                
+                <div style="display: flex; justify-content: flex-end; gap: 12px;">
+                    <button id="btn-cancel-report" style="background: white; border: 1px solid var(--border); color: #374151; font-weight: 500; font-size: 0.9rem; padding: 8px 16px; border-radius: 6px; cursor: pointer;">Cancel</button>
+                    <button id="btn-submit-report" style="background: #3b0764; color: white; border: none; font-weight: 500; font-size: 0.9rem; padding: 8px 16px; border-radius: 6px; cursor: pointer;">Create</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+  </body>
 </html>
 
 <div id="cluster-hover-tooltip" style="display: none; position: fixed; background: white; border-radius: 8px; box-shadow: 0 10px 25px rgba(0,0,0,0.2); width: 400px; z-index: 10000; overflow: hidden; font-family: 'Inter', sans-serif;">

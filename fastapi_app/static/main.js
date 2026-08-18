@@ -1591,3 +1591,103 @@ document.addEventListener('DOMContentLoaded', () => {
     if(btnJobs) btnJobs.addEventListener('click', () => switchActivityTab('jobs'));
     if(btnAudit) btnAudit.addEventListener('click', () => switchActivityTab('audit'));
 });
+
+
+// --- OPERATIONAL REPORTS TABS & MODAL ---
+document.addEventListener('DOMContentLoaded', () => {
+    const btnTabReports = document.getElementById('tab-btn-reports');
+    const btnTabSchedules = document.getElementById('tab-btn-schedules');
+    const contentReports = document.getElementById('content-reports');
+    const contentSchedules = document.getElementById('content-schedules');
+    
+    function switchReportTab(tab) {
+        [btnTabReports, btnTabSchedules].forEach(btn => {
+            if(btn) {
+                btn.classList.remove('active');
+                btn.style.color = '#4b5563';
+                btn.style.borderBottom = '2px solid transparent';
+            }
+        });
+        [contentReports, contentSchedules].forEach(content => {
+            if(content) content.style.display = 'none';
+        });
+        
+        if (tab === 'reports') {
+            if(btnTabReports) { btnTabReports.style.color = 'var(--primary)'; btnTabReports.style.borderBottom = '2px solid var(--primary)'; }
+            if(contentReports) contentReports.style.display = 'flex';
+        } else if (tab === 'schedules') {
+            if(btnTabSchedules) { btnTabSchedules.style.color = 'var(--primary)'; btnTabSchedules.style.borderBottom = '2px solid var(--primary)'; }
+            if(contentSchedules) contentSchedules.style.display = 'flex';
+        }
+    }
+
+    if(btnTabReports) btnTabReports.addEventListener('click', () => switchReportTab('reports'));
+    if(btnTabSchedules) btnTabSchedules.addEventListener('click', () => switchReportTab('schedules'));
+
+    // Modal Logic
+    const btnCreateReport = document.getElementById('btn-create-report');
+    const modalGenerateReport = document.getElementById('modal-generate-report');
+    const btnCloseReportModal = document.getElementById('btn-close-report-modal');
+    const btnCancelReport = document.getElementById('btn-cancel-report');
+    const btnSubmitReport = document.getElementById('btn-submit-report');
+    
+    if (btnCreateReport) {
+        btnCreateReport.addEventListener('click', () => {
+            modalGenerateReport.style.display = 'flex';
+        });
+    }
+    
+    function closeReportModal() {
+        modalGenerateReport.style.display = 'none';
+    }
+    
+    if (btnCloseReportModal) btnCloseReportModal.addEventListener('click', closeReportModal);
+    if (btnCancelReport) btnCancelReport.addEventListener('click', closeReportModal);
+    
+    if (btnSubmitReport) {
+        btnSubmitReport.addEventListener('click', () => {
+            const cluster = document.getElementById('report-cluster-select').value;
+            const type = document.getElementById('report-type-select').value;
+            const range = document.getElementById('report-data-range').value;
+            const recipients = document.getElementById('report-recipients').value;
+            
+            if (!cluster || !type) {
+                alert('Please select both Cluster and Type.');
+                return;
+            }
+            
+            // Create a mock report in the table
+            const tbody = document.getElementById('reports-table-body');
+            const emptyState = document.getElementById('reports-empty-state');
+            if (emptyState) emptyState.style.display = 'none';
+            
+            const tr = document.createElement('tr');
+            tr.style.borderBottom = '1px solid var(--glass-border)';
+            
+            const now = new Date();
+            const dateStr = now.toISOString().replace('T', ' ').substring(0, 19) + ' +03';
+            const fileName = `report-${Date.now()}.pdf`;
+            
+            tr.innerHTML = `
+                <td style="padding: 16px 24px; font-size: 0.85rem; color: #111827;">${dateStr}</td>
+                <td style="padding: 16px 24px; font-size: 0.85rem; color: #3b82f6; text-decoration: underline; cursor: pointer;">${fileName}</td>
+                <td style="padding: 16px 24px; font-size: 0.85rem; color: #374151;">${type}</td>
+                <td style="padding: 16px 24px; font-size: 0.85rem; color: #374151; display: flex; align-items: center; gap: 8px;">
+                    <svg viewBox="0 0 24 24" width="16" height="16" fill="#111827"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8z"/></svg> ${cluster}
+                </td>
+                <td style="padding: 16px 24px; font-size: 0.85rem; color: #374151;">admin@sunucu.local</td>
+                <td style="padding: 16px 24px; font-size: 0.85rem; color: #374151;">${range} days</td>
+                <td style="padding: 16px 24px; font-size: 0.85rem; color: #374151;">${recipients}</td>
+                <td style="padding: 16px 24px; text-align: right;"><button style="background: white; border: 1px solid var(--border); border-radius: 4px; padding: 4px 8px; cursor: pointer; color: #4b5563;">...</button></td>
+            `;
+            
+            if (tbody.firstChild) {
+                tbody.insertBefore(tr, tbody.firstChild);
+            } else {
+                tbody.appendChild(tr);
+            }
+            
+            closeReportModal();
+        });
+    }
+});
