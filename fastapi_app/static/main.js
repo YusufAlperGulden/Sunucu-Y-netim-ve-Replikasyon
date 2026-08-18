@@ -166,79 +166,119 @@ document.addEventListener('DOMContentLoaded', () => {
                 return;
             }
             const data = await response.json();
-            
-            if (data.length === 0) {
-                projectsContainer.innerHTML = '<div class="loading-state">No projects found. Click + Add Project to start.</div>';
+                       if (data.length === 0) {
+                document.getElementById('cc-projects-tbody').innerHTML = '<tr><td colspan="6" style="text-align:center; padding: 20px;">No clusters found. Click + Add Project to start.</td></tr>';
+                document.getElementById('cc-total-clusters').innerText = '0 Clusters';
                 return;
             }
 
-            projectsContainer.innerHTML = '';
+            const tbody = document.getElementById('cc-projects-tbody');
+            tbody.innerHTML = '';
+            
+            let operationalCount = 0;
+
             data.forEach(proj => {
-                const card = document.createElement('div');
-                card.className = 'project-card glass-panel';
-                card.style.cursor = 'pointer';
-                card.innerHTML = `
-                    <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 10px;">
-                        <h3 style="margin: 0; padding-right: 10px; word-break: break-all;">${escapeHTML(proj.name)}</h3>
-                        <div style="display: flex; gap: 8px; flex-shrink: 0;">
-                            <button class="icon-btn edit-proj-btn" style="position: static; padding: 6px; background: rgba(255,255,255,0.05); border-radius: 4px; border: 1px solid var(--border);" title="Edit Project">
-                                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
-                            </button>
-                            <button class="icon-btn delete-proj-btn" style="position: static; padding: 6px; background: rgba(255,255,255,0.05); border-radius: 4px; border: 1px solid var(--border);" title="Delete Project">
-                                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color: var(--danger)"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path><line x1="10" y1="11" x2="10" y2="17"></line><line x1="14" y1="11" x2="14" y2="17"></line></svg>
-                            </button>
+                // Determine operational status
+                let isOperational = proj.nodesCount > 0 && proj.sync_status !== 'FAILED';
+                if (isOperational) operationalCount++;
+                
+                const statusColor = isOperational ? 'var(--success)' : 'var(--warning)';
+                const statusText = isOperational ? '● Operational' : '● Warning';
+
+                const tr = document.createElement('tr');
+                tr.style.borderBottom = '1px solid rgba(255,255,255,0.05)';
+                tr.style.cursor = 'pointer';
+                
+                // Hover effect
+                tr.onmouseover = () => tr.style.backgroundColor = 'rgba(255,255,255,0.02)';
+                tr.onmouseout = () => tr.style.backgroundColor = 'transparent';
+
+                tr.innerHTML = `
+                    <td style="padding: 12px 10px 12px 0; color: var(--text-muted);">${proj.id}</td>
+                    <td style="padding: 12px 10px; font-weight: 500;">
+                        <div style="display: flex; align-items: center; gap: 8px;">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--primary)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="2" width="20" height="8" rx="2" ry="2"></rect><rect x="2" y="14" width="20" height="8" rx="2" ry="2"></rect><line x1="6" y1="6" x2="6.01" y2="6"></line><line x1="6" y1="18" x2="6.01" y2="18"></line></svg>
+                            ${escapeHTML(proj.name)}
                         </div>
-                    </div>
-                    <p>${escapeHTML(proj.description || 'No description provided')}</p>
-                    <div style="font-size: 0.8rem; color: var(--text-muted); margin-top: 15px;">Nodes: ${proj.nodesCount || 0}</div>
+                    </td>
+                    <td style="padding: 12px 10px; color: var(--success);">On <span style="color:var(--border);">|</span> On</td>
+                    <td style="padding: 12px 10px;">${proj.nodesCount || 0}</td>
+                    <td style="padding: 12px 10px; color: ${statusColor};">${statusText}</td>
+                    <td style="padding: 12px 10px; text-align: right;">
+                        <button class="icon-btn edit-proj-btn" style="padding: 4px; color: var(--text-secondary);" title="Edit">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
+                        </button>
+                        <button class="icon-btn delete-proj-btn" style="padding: 4px; color: var(--danger);" title="Delete">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
+                        </button>
+                    </td>
                 `;
-                card.addEventListener('click', async (e) => {
-                    // Ignore clicks on action buttons
+
+                // Row click -> Detail view
+                tr.addEventListener('click', async (e) => {
                     if(e.target.closest('button')) return;
-                    
                     try {
                         const res = await apiFetch(`/api/projects/${proj.id}`);
-                        if (!res.ok) {
-                            const errTxt = await res.text();
-                            alert("Failed to load project details: " + errTxt);
-                            return;
-                        }
-                        const detailData = await res.json();
-                        showDetailView(detailData);
+                        if (!res.ok) throw new Error(await res.text());
+                        showDetailView(await res.json());
                         refreshCurrentProject();
-                    } catch (err) {
-                        alert("Error loading project: " + err);
-                    }
+                    } catch (err) { alert("Error loading project: " + err); }
                 });
-                
-                // Add button listeners
-                const editBtn = card.querySelector('.edit-proj-btn');
-                editBtn.addEventListener('click', (e) => {
+
+                // Edit Button
+                tr.querySelector('.edit-proj-btn').addEventListener('click', (e) => {
                     e.stopPropagation();
                     document.getElementById('edit-proj-id').value = proj.id;
                     document.getElementById('edit-proj-name').value = proj.name;
                     document.getElementById('edit-proj-desc').value = proj.description || '';
-                    modalEditProj.style.display = 'flex';
+                    document.getElementById('modal-edit-project').style.display = 'flex';
                 });
-                
-                const delBtn = card.querySelector('.delete-proj-btn');
-                delBtn.addEventListener('click', async (e) => {
+
+                // Delete Button
+                tr.querySelector('.delete-proj-btn').addEventListener('click', async (e) => {
                     e.stopPropagation();
-                    if(confirm("Are you sure you want to delete this project? All associated nodes will be deleted permanently.")) {
+                    if(confirm("Are you sure you want to delete this project?")) {
                         try {
                             const res = await apiFetch(`/api/projects/${proj.id}`, { method: 'DELETE' });
                             if(res.ok) fetchProjects();
                             else alert("Failed to delete project");
-                        } catch(err) {
-                            alert("Error deleting project");
-                        }
+                        } catch(err) { alert("Error deleting project"); }
                     }
                 });
-                
-                projectsContainer.appendChild(card);
+
+                tbody.appendChild(tr);
             });
+            
+            // Update Donut Chart
+            document.getElementById('cc-total-clusters').innerText = `${data.length} Clusters`;
+            document.getElementById('cc-donut-center-text').innerText = operationalCount;
+            
+            const radius = 80;
+            const circumference = 2 * Math.PI * radius; // ~502.6
+            const ratio = data.length > 0 ? (operationalCount / data.length) : 0;
+            const offset = circumference - (ratio * circumference);
+            
+            const donutCircle = document.getElementById('cc-donut-progress');
+            if (donutCircle) {
+                donutCircle.style.strokeDashoffset = offset;
+                donutCircle.style.stroke = ratio === 1 ? 'var(--success)' : (ratio > 0 ? 'var(--warning)' : 'var(--danger)');
+                document.getElementById('cc-donut-center-text').style.color = donutCircle.style.stroke;
+            }
+            
+            // Update Legend
+            const warningCount = data.length - operationalCount;
+            document.getElementById('cc-donut-legend').innerHTML = `
+                <div style="display: flex; justify-content: space-between; font-size: 0.9rem;">
+                    <span style="color: var(--success);">● ${operationalCount} Operational</span>
+                </div>
+                ${warningCount > 0 ? `<div style="display: flex; justify-content: space-between; font-size: 0.9rem;">
+                    <span style="color: var(--warning);">● ${warningCount} Warning</span>
+                </div>` : ''}
+            `;
         } catch (error) {
-            projectsContainer.innerHTML = `<div class="loading-state" style="color: var(--danger)">Error loading projects. Exception: ${escapeHTML(error.toString())}</div>`;
+            console.error("fetchProjects error:", error);
+            const errDiv = document.getElementById('projects-container');
+            if (errDiv) errDiv.innerHTML = `<div class="loading-state" style="color: var(--danger)">Error loading projects. Exception: ${escapeHTML(error.toString())}</div>`;
         }
     }
 
