@@ -384,57 +384,263 @@
                     
                     <!-- Horizontal Tab Bar -->
                     <div style="display: flex; gap: 24px; padding: 0 24px; border-bottom: 1px solid var(--glass-border); font-size: 0.9rem; overflow-x: auto;">
-                        <div style="padding: 16px 0; color: #3a1c94; font-weight: 500; border-bottom: 2px solid #3a1c94; cursor: pointer;">Profile</div>
-                        <div style="padding: 16px 0; color: var(--text-main); cursor: pointer;">Cloud storage credentials</div>
-                        <div style="padding: 16px 0; color: var(--text-main); cursor: pointer;">Notification services</div>
-                        <div style="padding: 16px 0; color: var(--text-main); cursor: pointer;">Certificate management</div>
-                        <div style="padding: 16px 0; color: var(--text-main); cursor: pointer;">License</div>
-                        <div style="padding: 16px 0; color: var(--text-main); cursor: pointer;">Addons</div>
-                        <div style="padding: 16px 0; color: var(--text-main); cursor: pointer;">Diagnostics</div>
+                        <div class="settings-tab" onclick="switchSettingsTab('profile')" id="tab-profile" style="padding: 16px 0; color: #3a1c94; font-weight: 500; border-bottom: 2px solid #3a1c94; cursor: pointer;">Profile</div>
+                        <div class="settings-tab" onclick="switchSettingsTab('cloud')" id="tab-cloud" style="padding: 16px 0; color: var(--text-main); cursor: pointer;">Cloud storage credentials</div>
+                        <div class="settings-tab" onclick="switchSettingsTab('notifications')" id="tab-notifications" style="padding: 16px 0; color: var(--text-main); cursor: pointer;">Notification services</div>
+                        <div class="settings-tab" onclick="switchSettingsTab('certificates')" id="tab-certificates" style="padding: 16px 0; color: var(--text-main); cursor: pointer;">Certificate management</div>
+                        <div class="settings-tab" onclick="switchSettingsTab('license')" id="tab-license" style="padding: 16px 0; color: var(--text-main); cursor: pointer;">License</div>
+                        <div class="settings-tab" onclick="switchSettingsTab('addons')" id="tab-addons" style="padding: 16px 0; color: var(--text-main); cursor: pointer;">Addons</div>
+                        <div class="settings-tab" onclick="switchSettingsTab('diagnostics')" id="tab-diagnostics" style="padding: 16px 0; color: var(--text-main); cursor: pointer;">Diagnostics</div>
                     </div>
 
-                    <!-- Centered Profile Content -->
-                    <div style="flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 40px;">
-                        
-                        <!-- Avatar -->
-                        <div style="width: 90px; height: 90px; border-radius: 50%; background: #ffebeb; color: #e50000; display: flex; align-items: center; justify-content: center; font-size: 2.2rem; font-weight: 400; margin-bottom: 20px;">
-                            SK
-                        </div>
-
-                        <!-- Name & Email -->
+                    <!-- Profile Content -->
+                    <div id="settings-content-profile" class="settings-content-pane" style="flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 40px;">
+                        <div style="width: 90px; height: 90px; border-radius: 50%; background: #ffebeb; color: #e50000; display: flex; align-items: center; justify-content: center; font-size: 2.2rem; font-weight: 400; margin-bottom: 20px;">SK</div>
                         <div style="font-size: 2rem; font-weight: 500; color: var(--text-main); margin-bottom: 4px;">Stajyer Kullanıcı</div>
                         <div style="font-size: 1rem; color: var(--text-muted); margin-bottom: 30px;">stajyer@tp.com</div>
-
-                        <!-- Details Grid -->
                         <div style="display: flex; flex-direction: column; gap: 12px; font-size: 0.95rem; margin-bottom: 40px; color: var(--text-secondary);">
-                            <div style="display: flex; gap: 8px; justify-content: center;">
-                                <span style="color: var(--text-muted); width: 80px; text-align: right;">Time zone:</span>
-                                <span style="width: 180px;">UTC</span>
-                            </div>
-                            <div style="display: flex; gap: 8px; justify-content: center;">
-                                <span style="color: var(--text-muted); width: 80px; text-align: right;">Username:</span>
-                                <span style="width: 180px; font-weight: 500;">stajyer@tp.com</span>
-                            </div>
-                            <div style="display: flex; gap: 8px; justify-content: center;">
-                                <span style="color: var(--text-muted); width: 80px; text-align: right;">Team:</span>
-                                <span style="width: 180px;">admins</span>
-                            </div>
-                            <div style="display: flex; gap: 8px; justify-content: center;">
-                                <span style="color: var(--text-muted); width: 80px; text-align: right;">Origin:</span>
-                                <span style="width: 180px;">cmon</span>
-                            </div>
+                            <div style="display: flex; gap: 8px; justify-content: center;"><span style="color: var(--text-muted); width: 80px; text-align: right;">Time zone:</span><span style="width: 180px;">UTC</span></div>
+                            <div style="display: flex; gap: 8px; justify-content: center;"><span style="color: var(--text-muted); width: 80px; text-align: right;">Username:</span><span style="width: 180px; font-weight: 500;">stajyer@tp.com</span></div>
+                            <div style="display: flex; gap: 8px; justify-content: center;"><span style="color: var(--text-muted); width: 80px; text-align: right;">Team:</span><span style="width: 180px;">admins</span></div>
+                            <div style="display: flex; gap: 8px; justify-content: center;"><span style="color: var(--text-muted); width: 80px; text-align: right;">Origin:</span><span style="width: 180px;">cmon</span></div>
                         </div>
-
-                        <!-- Buttons -->
                         <div style="display: flex; flex-direction: column; align-items: center; gap: 16px;">
-                            <button style="background: #3a1c94; color: white; border: none; border-radius: 6px; padding: 10px 24px; font-size: 0.95rem; cursor: pointer; transition: opacity 0.2s;" onmouseover="this.style.opacity=0.9" onmouseout="this.style.opacity=1">Settings</button>
+                            <button style="background: #3a1c94; color: white; border: none; border-radius: 6px; padding: 10px 24px; font-size: 0.95rem; cursor: pointer;">Settings</button>
                             <a href="#" style="color: #3a1c94; text-decoration: none; font-size: 0.95rem;">Change password</a>
                         </div>
                     </div>
+
+                    <!-- Cloud Storage Content -->
+                    <div id="settings-content-cloud" class="settings-content-pane" style="display: none; padding: 24px; flex-direction: column;">
+                        <div style="display: flex; justify-content: flex-end; margin-bottom: 24px;">
+                            <button style="background: #3a1c94; color: white; border: none; border-radius: 4px; padding: 8px 16px; font-size: 0.9rem; cursor: pointer; display: flex; align-items: center; gap: 8px;">
+                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="16"></line><line x1="8" y1="12" x2="16" y2="12"></line></svg> Add cloud storage credentials
+                            </button>
+                        </div>
+                        <div style="background: #f9fafb; display: grid; grid-template-columns: 80px 1fr 1fr 2fr; padding: 12px 16px; font-weight: 600; font-size: 0.85rem; color: #4b5563; border-bottom: 1px solid #e5e7eb;">
+                            <div>ID</div><div>Name</div><div>Provider</div><div>Comment</div>
+                        </div>
+                        <div style="display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 60px 0; color: #6b7280; font-size: 0.9rem;">
+                            <svg width="64" height="64" viewBox="0 0 24 24" fill="#e5e7eb" stroke="#d1d5db" stroke-width="1" style="margin-bottom: 16px;"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path></svg>
+                            You haven't created credentials yet. When you do, it'll show up here.
+                        </div>
+                    </div>
+
+                    <!-- Notification Services Content -->
+                    <div id="settings-content-notifications" class="settings-content-pane" style="display: none; padding: 24px; flex-direction: column;">
+                        <div style="display: flex; justify-content: flex-end; margin-bottom: 24px;">
+                            <button style="background: #3a1c94; color: white; border: none; border-radius: 4px; padding: 8px 16px; font-size: 0.9rem; cursor: pointer; display: flex; align-items: center; gap: 8px;">
+                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="16"></line><line x1="8" y1="12" x2="16" y2="12"></line></svg> Add new integration
+                            </button>
+                        </div>
+                        <div style="background: #f9fafb; display: grid; grid-template-columns: 1.5fr 1fr 1fr 1.5fr 1fr; padding: 12px 16px; font-weight: 600; font-size: 0.85rem; color: #4b5563; border-bottom: 1px solid #e5e7eb;">
+                            <div>Name</div><div>Service</div><div>Active</div><div>Send Alarms From</div><div>Trigger events</div>
+                        </div>
+                        <div style="display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 60px 0; color: #6b7280; font-size: 0.9rem;">
+                            <svg width="64" height="64" viewBox="0 0 24 24" fill="#e5e7eb" stroke="#d1d5db" stroke-width="1" style="margin-bottom: 16px;"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path></svg>
+                            You haven't created integration
+                        </div>
+                    </div>
+
+                    <!-- Certificate Management Content -->
+                    <div id="settings-content-certificates" class="settings-content-pane" style="display: none; padding: 24px;">
+                        <div style="display: flex; height: 400px; border: 1px solid #e5e7eb; border-radius: 4px; overflow: hidden;">
+                            <!-- Sidebar -->
+                            <div style="width: 250px; background: #f9fafb; border-right: 1px solid #e5e7eb; display: flex; flex-direction: column;">
+                                <div style="padding: 12px; border-bottom: 1px solid #e5e7eb; display: flex; gap: 8px;">
+                                    <button style="background: white; border: 1px solid #d1d5db; border-radius: 4px; padding: 4px 8px; font-size: 0.8rem; display: flex; align-items: center; gap: 4px; cursor: pointer;">
+                                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="16"></line><line x1="8" y1="12" x2="16" y2="12"></line></svg> Create folder
+                                    </button>
+                                    <button style="background: white; border: 1px solid #d1d5db; border-radius: 4px; padding: 4px 8px; font-size: 0.8rem; cursor: pointer;">
+                                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="1 4 1 10 7 10"></polyline><polyline points="23 20 23 14 17 14"></polyline><path d="M20.49 9A9 9 0 0 0 5.64 5.64L1 10m22 4l-4.64 4.36A9 9 0 0 1 3.51 15"></path></svg>
+                                    </button>
+                                </div>
+                                <div style="padding: 8px 0; overflow-y: auto; font-size: 0.85rem;">
+                                    <div style="padding: 6px 12px; display: flex; align-items: center; gap: 6px; cursor: pointer;"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"></polyline></svg><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path></svg> galera</div>
+                                    <div style="padding: 6px 12px; display: flex; align-items: center; gap: 6px; cursor: pointer;"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"></polyline></svg><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path></svg> group_replication</div>
+                                    <div style="padding: 6px 12px; display: flex; align-items: center; gap: 6px; cursor: pointer;"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"></polyline></svg><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path></svg> mssql_ao_async</div>
+                                    <div style="padding: 6px 12px; display: flex; align-items: center; gap: 6px; cursor: pointer;"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"></polyline></svg><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path></svg> mssql_single</div>
+                                    <div style="padding: 6px 12px; display: flex; align-items: center; gap: 6px; cursor: pointer;"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"></polyline></svg><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path></svg> postgresql_single</div>
+                                    <div style="padding: 6px 12px; display: flex; align-items: center; gap: 6px; cursor: pointer;"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"></polyline></svg><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path></svg> redis_sharded</div>
+                                    <div style="padding: 6px 12px; display: flex; align-items: center; gap: 6px; cursor: pointer;"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"></polyline></svg><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path></svg> replication</div>
+                                    <div style="padding: 6px 12px; display: flex; align-items: center; gap: 6px; cursor: pointer;"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"></polyline></svg><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path></svg> valkey_sharded</div>
+                                </div>
+                            </div>
+                            <!-- Main Content -->
+                            <div style="flex: 1; display: flex; flex-direction: column;">
+                                <div style="padding: 12px 16px; border-bottom: 1px solid #e5e7eb; display: flex; justify-content: flex-end; gap: 8px;">
+                                    <button style="background: #3a1c94; color: white; border: none; border-radius: 4px; padding: 6px 12px; font-size: 0.8rem; cursor: pointer; display: flex; align-items: center; gap: 6px;"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="1 4 1 10 7 10"></polyline><polyline points="23 20 23 14 17 14"></polyline><path d="M20.49 9A9 9 0 0 0 5.64 5.64L1 10m22 4l-4.64 4.36A9 9 0 0 1 3.51 15"></path></svg> Refresh</button>
+                                    <button style="background: white; border: 1px solid #d1d5db; border-radius: 4px; padding: 6px 12px; font-size: 0.8rem; cursor: pointer;">More...</button>
+                                </div>
+                                <div style="background: #f9fafb; display: grid; grid-template-columns: 1fr 1fr 1fr 1fr 1.5fr 1fr; padding: 12px 16px; font-weight: 600; font-size: 0.8rem; color: #4b5563; border-bottom: 1px solid #e5e7eb;">
+                                    <div>Key</div><div>Expiration date</div><div>Created</div><div>In Use</div><div>Common name</div><div>Actions</div>
+                                </div>
+                                <div style="flex: 1; display: flex; align-items: center; justify-content: center;">
+                                    <svg width="64" height="64" viewBox="0 0 24 24" fill="#e5e7eb" stroke="#d1d5db" stroke-width="1"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path></svg>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- License Content -->
+                    <div id="settings-content-license" class="settings-content-pane" style="display: none; padding: 40px; text-align: center; color: var(--text-muted);">
+                        License information will appear here.
+                    </div>
+
+                    <!-- Addons Content -->
+                    <div id="settings-content-addons" class="settings-content-pane" style="display: none; padding: 24px;">
+                        <div style="display: flex; gap: 24px;">
+                            <!-- Ops-Center -->
+                            <div style="flex: 1; border: 1px solid #e5e7eb; border-radius: 8px; padding: 20px; background: white;">
+                                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+                                    <div style="display: flex; align-items: center; gap: 8px; font-weight: 600; font-size: 1.1rem; color: #111827;">
+                                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>
+                                        Ops-Center
+                                    </div>
+                                    <div style="width: 40px; height: 20px; background: #d1d5db; border-radius: 10px; position: relative;">
+                                        <div style="width: 16px; height: 16px; background: white; border-radius: 50%; position: absolute; top: 2px; left: 2px;"></div>
+                                    </div>
+                                </div>
+                                <p style="font-size: 0.85rem; color: #6b7280; line-height: 1.5; margin-bottom: 20px;">Manage several ClusterControl controllers from one console. Ops-Center gives you a single pane of glass to monitor and operate every controller, cluster and node.</p>
+                                <div style="font-size: 0.75rem; font-weight: 600; color: #9ca3af; margin-bottom: 12px; letter-spacing: 0.5px;">WHEN TO ENABLE IT</div>
+                                <ul style="font-size: 0.85rem; color: #4b5563; padding-left: 20px; margin-bottom: 24px; line-height: 1.5;">
+                                    <li style="margin-bottom: 8px;">You run more than one ClusterControl controller — for example separate prod, staging or per-region installations — and want to manage them from one place.</li>
+                                    <li style="margin-bottom: 8px;">Your fleet grows beyond ~1000 nodes and you need to scale out horizontally across several CMON controllers.</li>
+                                    <li>You want centralized monitoring with the ability to switch between controllers for targeted operations.</li>
+                                </ul>
+                                <div style="display: flex; justify-content: space-between; align-items: center; font-size: 0.85rem;">
+                                    <span style="color: #6b7280;">Single-controller mode - local</span>
+                                    <a href="#" style="color: #3a1c94; text-decoration: none; font-weight: 500;">Learn more</a>
+                                </div>
+                            </div>
+                            
+                            <!-- Kubernetes -->
+                            <div style="flex: 1; border: 1px solid #e5e7eb; border-radius: 8px; padding: 20px; background: white;">
+                                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+                                    <div style="display: flex; align-items: center; gap: 8px; font-weight: 600; font-size: 1.1rem; color: #111827;">
+                                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2L2 7l10 5 10-5-10-5z"></path><path d="M2 17l10 5 10-5"></path><path d="M2 12l10 5 10-5"></path></svg>
+                                        Kubernetes
+                                    </div>
+                                    <div style="width: 40px; height: 20px; background: #d1d5db; border-radius: 10px; position: relative;">
+                                        <div style="width: 16px; height: 16px; background: white; border-radius: 50%; position: absolute; top: 2px; left: 2px;"></div>
+                                    </div>
+                                </div>
+                                <p style="font-size: 0.85rem; color: #6b7280; line-height: 1.5; margin-bottom: 20px;">Deploy and manage Kubernetes-based database clusters using database operators, alongside your traditional clusters.</p>
+                                <div style="font-size: 0.75rem; font-weight: 600; color: #9ca3af; margin-bottom: 12px; letter-spacing: 0.5px;">WHEN TO ENABLE IT</div>
+                                <ul style="font-size: 0.85rem; color: #4b5563; padding-left: 20px; margin-bottom: 24px; line-height: 1.5;">
+                                    <li style="margin-bottom: 8px;">Your infrastructure runs on Kubernetes and you want to operate databases as native cluster resources.</li>
+                                    <li style="margin-bottom: 8px;">You want database operators to automate deployment, scaling and recovery on K8s.</li>
+                                    <li>You need to manage Kubernetes-based database clusters from the same console as the rest of your fleet.</li>
+                                </ul>
+                                <div style="display: flex; justify-content: space-between; align-items: center; font-size: 0.85rem;">
+                                    <span style="color: #6b7280;">Not enabled</span>
+                                    <a href="#" style="color: #3a1c94; text-decoration: none; font-weight: 500;">Learn more</a>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Diagnostics Content -->
+                    <div id="settings-content-diagnostics" class="settings-content-pane" style="display: none; padding: 40px; display: flex; flex-direction: column; align-items: center; color: #111827;">
+                        <h2 style="font-size: 1.5rem; margin-bottom: 16px; font-weight: 500;">UI audit data collection</h2>
+                        <p style="text-align: center; max-width: 600px; font-size: 0.9rem; color: #4b5563; line-height: 1.5; margin-bottom: 16px;">
+                            Enable 'UI Audit Data Collection' to record and capture the necessary data while reproducing an issue in the user interface. Once the issue has been replicated, download the audit data for analysis.
+                        </p>
+                        <p style="text-align: center; max-width: 600px; font-size: 0.9rem; color: #4b5563; line-height: 1.5; margin-bottom: 16px;">
+                            Remember to switch off the setting afterward to stop audit data collection.
+                        </p>
+                        <p style="text-align: center; max-width: 600px; font-size: 0.9rem; color: #4b5563; font-weight: 600; margin-bottom: 32px;">
+                            Please, note that we are not collecting any personal data during this process.
+                        </p>
+                        
+                        <div style="display: flex; align-items: center; gap: 16px; margin-bottom: 40px;">
+                            <span style="font-size: 0.9rem;">UI audit data collection</span>
+                            <div style="width: 40px; height: 20px; background: #d1d5db; border-radius: 10px; position: relative;">
+                                <div style="width: 16px; height: 16px; background: white; border-radius: 50%; position: absolute; top: 2px; left: 2px;"></div>
+                            </div>
+                            <button style="background: white; color: #9ca3af; border: 1px solid #e5e7eb; border-radius: 4px; padding: 6px 16px; font-size: 0.85rem; cursor: not-allowed; display: flex; align-items: center; gap: 8px;">
+                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg> download audit data
+                            </button>
+                        </div>
+                        
+                        <!-- Embedded Project Configuration from second view -->
+                        <div style="border-top: 1px solid #e5e7eb; padding-top: 40px; width: 100%; max-width: 600px; text-align: left;">
+                            <h3 style="font-size: 1.2rem; margin-bottom: 8px; color: #111827;">Project Configuration</h3>
+                            <p style="color: #6b7280; font-size: 0.85rem; margin-bottom: 24px;">Buradan projelere özel senkronizasyon ve metrik ayarlarını değiştirebilirsiniz.</p>
+                            
+                            <div style="margin-bottom: 16px;">
+                                <label style="display: block; font-size: 0.85rem; font-weight: 500; margin-bottom: 6px; color: #374151;">Select Project</label>
+                                <select id="setting-project-select" style="background: white; border: 1px solid #d1d5db; color: #111827; padding: 10px; border-radius: 4px; width: 100%; font-size: 0.9rem;">
+                                    <option value="">Proje seçin...</option>
+                                </select>
+                            </div>
+
+                            <div id="project-settings-container" style="display: none; margin-top: 24px;">
+                                <div style="margin-bottom: 16px;">
+                                    <label style="display: block; font-size: 0.85rem; font-weight: 500; margin-bottom: 6px; color: #374151;">Max WAL Lag Threshold (MB)</label>
+                                    <input type="number" id="setting-wal-lag" value="500" min="50" max="10000" style="background: white; border: 1px solid #d1d5db; color: #111827; padding: 10px; border-radius: 4px; width: 100%; font-size: 0.9rem;">
+                                    <small style="color: #6b7280; display: block; margin-top: 6px; font-size: 0.75rem;">Eğer ana sunucu bu MB değerinden fazla WAL dosyası biriktirirse, yedek ile arasındaki bağ acil olarak koparılır.</small>
+                                </div>
+                                
+                                <div style="margin-bottom: 16px;">
+                                    <label style="display: block; font-size: 0.85rem; font-weight: 500; margin-bottom: 6px; color: #374151;">Target Metric Table (Optional)</label>
+                                    <input type="text" id="setting-metric-table" placeholder="e.g. vehicles, email_records" style="background: white; border: 1px solid #d1d5db; color: #111827; padding: 10px; border-radius: 4px; width: 100%; font-size: 0.9rem;">
+                                    <small style="color: #6b7280; display: block; margin-top: 6px; font-size: 0.75rem;">Eğer belirtilirse Dashboard sadece bu tablodaki net (exact) veri sayısını okur. Boş bırakırsanız metrik sayılmaz.</small>
+                                </div>
+                                
+                                <div style="margin-bottom: 16px;">
+                                    <label style="display: block; font-size: 0.85rem; font-weight: 500; margin-bottom: 6px; color: #374151;">Replication Tables (Optional)</label>
+                                    <input type="text" id="setting-replication-tables" placeholder="e.g. vehicles, users" style="background: white; border: 1px solid #d1d5db; color: #111827; padding: 10px; border-radius: 4px; width: 100%; font-size: 0.9rem;">
+                                    <small style="color: #6b7280; display: block; margin-top: 6px; font-size: 0.75rem;">Virgülle ayrılarak girilen tablolar yayınlanır (Publication). Boş bırakılırsa FOR ALL TABLES çalıştırılır (Superuser gerektirir).</small>
+                                </div>
+                                
+                                <div style="margin-bottom: 16px; border-top: 1px solid #e5e7eb; padding-top: 16px;">
+                                    <label style="display: block; font-size: 0.85rem; font-weight: 500; margin-bottom: 6px; color: #374151;">Global Dashboard Update Interval (Seconds)</label>
+                                    <input type="number" id="setting-update-interval" value="1" min="1" max="60" style="background: white; border: 1px solid #d1d5db; color: #111827; padding: 10px; border-radius: 4px; width: 100%; font-size: 0.9rem;">
+                                    <small style="color: #6b7280; display: block; margin-top: 6px; font-size: 0.75rem;">Dashboard üzerindeki canlı metriklerin kaç saniyede bir güncelleneceğini belirler (Varsayılan: 1).</small>
+                                </div>
+                                
+                                <button class="btn-primary" id="btn-save-settings" style="margin-top: 16px; background: #3a1c94; color: white; border: none; padding: 10px 20px; border-radius: 4px; font-size: 0.9rem; cursor: pointer;">Save Settings</button>
+                            </div>
+                        </div>
+                    </div>
                 </div>
+                
+                <script>
+                    function switchSettingsTab(tabName) {
+                        // Reset all tabs
+                        document.querySelectorAll('.settings-tab').forEach(t => {
+                            t.style.color = 'var(--text-main)';
+                            t.style.borderBottom = 'none';
+                            t.style.fontWeight = 'normal';
+                        });
+                        // Hide all contents
+                        document.querySelectorAll('.settings-content-pane').forEach(c => {
+                            c.style.display = 'none';
+                        });
+                        
+                        // Active selected tab
+                        const activeTab = document.getElementById('tab-' + tabName);
+                        if (activeTab) {
+                            activeTab.style.color = '#3a1c94';
+                            activeTab.style.borderBottom = '2px solid #3a1c94';
+                            activeTab.style.fontWeight = '500';
+                        }
+                        
+                        // Show selected content
+                        const activeContent = document.getElementById('settings-content-' + tabName);
+                        if (activeContent) {
+                            // If it's diagnostics, it uses flex layout initially but was hidden
+                            if(tabName === 'profile' || tabName === 'cloud' || tabName === 'notifications' || tabName === 'diagnostics') {
+                                activeContent.style.display = 'flex';
+                            } else {
+                                activeContent.style.display = 'block';
+                            }
+                        }
+                    }
+                </script>
             </div>
-            
-                        <!-- NODES VIEW -->
+          <!-- NODES VIEW -->
             <div id="nodes-view" class="view-section" style="display: none;">
                 <div style="padding: 24px;">
                     <div class="glass-panel" style="padding: 16px 24px; margin-bottom: 24px; display: flex; align-items: center; border: 1px solid var(--border); background: white;">
@@ -566,7 +772,7 @@
             <!-- PROJECTS VIEW (HOME) -->
             <div id="projects-view" class="view-section">
                 <header class="top-header">
-                    <h1>Home</h1>
+                    <h1 style="display: flex; align-items: center; gap: 12px;"><svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path><polyline points="9 22 9 12 15 12 15 22"></polyline></svg> Home</h1>
                 </header>
 
                 <div id="projects-container" style="display: flex; flex-direction: column; background: var(--glass-bg); border-radius: 8px; border: 1px solid var(--border); box-shadow: 0 4px 6px rgba(0,0,0,0.05);">
@@ -746,53 +952,7 @@
             
 
             <!-- SETTINGS VIEW -->
-            <div id="settings-view" class="view-section" style="display: none;">
-                <header class="top-header">
-                    <h1>Settings</h1>
-                </header>
-                
-                <div class="glass-panel" style="padding: 24px; max-width: 600px;">
-                    <h3>Project Configuration</h3>
-                    <p style="color: var(--text-muted); font-size: 0.9rem; margin-bottom: 24px;">Buradan projelere özel senkronizasyon ve metrik ayarlarını değiştirebilirsiniz.</p>
-                    
-                    <div class="input-group">
-                        <label>Select Project</label>
-                        <select id="setting-project-select" style="background: rgba(0,0,0,0.5); border: 1px solid var(--border); color: var(--text); padding: 12px; border-radius: 8px; width: 100%;">
-                            <option value="">Proje seçin...</option>
-                        </select>
-                    </div>
-
-                    <div id="project-settings-container" style="display: none; margin-top: 24px;">
-                        <div class="input-group">
-                            <label>Max WAL Lag Threshold (MB)</label>
-                            <input type="number" id="setting-wal-lag" value="500" min="50" max="10000">
-                            <small style="color: var(--text-muted); display: block; margin-top: 8px;">Eğer ana sunucu bu MB değerinden fazla WAL dosyası biriktirirse, yedek ile arasındaki bağ acil olarak koparılır.</small>
-                        </div>
-                        
-                        <div class="input-group" style="margin-top: 20px;">
-                            <label>Target Metric Table (Optional)</label>
-                            <input type="text" id="setting-metric-table" placeholder="e.g. vehicles, email_records">
-                            <small style="color: var(--text-muted); display: block; margin-top: 8px;">Eğer belirtilirse Dashboard sadece bu tablodaki net (exact) veri sayısını okur. Boş bırakırsanız metrik sayılmaz.</small>
-                        </div>
-                        
-                        <div class="input-group" style="margin-top: 20px;">
-                            <label>Replication Tables (Optional)</label>
-                            <input type="text" id="setting-replication-tables" placeholder="e.g. vehicles, users">
-                            <small style="color: var(--text-muted); display: block; margin-top: 8px;">Virgülle ayrılarak girilen tablolar yayınlanır (Publication). Boş bırakılırsa FOR ALL TABLES çalıştırılır (Superuser gerektirir).</small>
-                        </div>
-                        
-                        <div class="input-group" style="margin-top: 20px; border-top: 1px solid var(--border); padding-top: 20px;">
-                            <label>Global Dashboard Update Interval (Seconds)</label>
-                            <input type="number" id="setting-update-interval" value="1" min="1" max="60">
-                            <small style="color: var(--text-muted); display: block; margin-top: 8px;">Dashboard üzerindeki canlı metriklerin kaç saniyede bir güncelleneceğini belirler (Varsayılan: 1).</small>
-                        </div>
-                        
-                        <button class="btn-primary" id="btn-save-settings" style="margin-top: 24px;">Save Settings</button>
-                    </div>
-                </div>
-            </div>
-
-        
+               
       <!-- USERS VIEW -->
       <section id="users-view" class="view-section" style="display: none;">
           <div style="padding: 24px;">
