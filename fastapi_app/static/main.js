@@ -68,6 +68,13 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
+    const btnDeployCluster = document.getElementById('btn-deploy-cluster');
+    if (btnDeployCluster) {
+        btnDeployCluster.addEventListener('click', () => {
+            modalAddProj.style.display = 'flex';
+        });
+    }
+
     if (btnOpenNodeModal) {
         btnOpenNodeModal.addEventListener('click', () => {
             modalAddNode.style.display = 'flex';
@@ -194,6 +201,9 @@ document.addEventListener('DOMContentLoaded', () => {
             const tbody = document.getElementById('cc-projects-tbody');
             tbody.innerHTML = '';
             
+            const clustersList = document.getElementById('cc-clusters-list');
+            if (clustersList) clustersList.innerHTML = '';
+            
             let operationalCount = 0;
 
             data.forEach(proj => {
@@ -254,18 +264,86 @@ document.addEventListener('DOMContentLoaded', () => {
                     document.getElementById('modal-edit-project').style.display = 'flex';
                 });
 
-                // Delete Button
-                tr.querySelector('.delete-proj-btn').addEventListener('click', async (e) => {
-                    e.stopPropagation();
-                    if(confirm("Are you sure you want to delete this project?")) {
-                        try {
-                            const res = await apiFetch(`/api/projects/${proj.id}`, { method: 'DELETE' });
-                            if(res.ok) fetchProjects();
-                            else alert("Failed to delete project");
-                        } catch(err) { alert("Error deleting project"); }
-                    }
+                // Also build the Clusters view horizontal card
+                const clusterCard = document.createElement('div');
+                clusterCard.className = 'glass-panel';
+                clusterCard.style.padding = '20px';
+                clusterCard.style.display = 'flex';
+                clusterCard.style.alignItems = 'center';
+                clusterCard.style.justifyContent = 'space-between';
+                clusterCard.style.border = '1px solid var(--glass-border)';
+                clusterCard.style.boxShadow = '0 2px 4px rgba(0,0,0,0.02)';
+                clusterCard.style.cursor = 'pointer';
+                clusterCard.onmouseover = () => clusterCard.style.boxShadow = '0 4px 8px rgba(0,0,0,0.05)';
+                clusterCard.onmouseout = () => clusterCard.style.boxShadow = '0 2px 4px rgba(0,0,0,0.02)';
+                
+                clusterCard.innerHTML = `
+                    <div style="flex: 1; display: flex; align-items: center; gap: 16px;">
+                        <div style="background: rgba(0,0,0,0.05); padding: 12px; border-radius: 8px;">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="var(--primary)" stroke-width="2"><rect x="2" y="2" width="20" height="8" rx="2" ry="2"></rect><rect x="2" y="14" width="20" height="8" rx="2" ry="2"></rect><line x1="6" y1="6" x2="6.01" y2="6"></line><line x1="6" y1="18" x2="6.01" y2="18"></line></svg>
+                        </div>
+                        <div>
+                            <h3 style="margin: 0; font-size: 1.1rem; color: var(--text-main);">${escapeHTML(proj.name)}</h3>
+                            <div style="font-size: 0.85rem; color: var(--text-muted); margin: 4px 0;">ID: ${proj.id} | Managed Server</div>
+                            <div style="color: ${statusColor}; font-size: 0.85rem; font-weight: 500;">${statusText}</div>
+                        </div>
+                    </div>
+                    
+                    <div style="flex: 1; border-left: 1px solid var(--glass-border); padding-left: 20px;">
+                        <div style="font-size: 0.85rem; font-weight: 600; color: var(--text-main); margin-bottom: 8px;">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align: middle;"><rect x="2" y="3" width="20" height="14" rx="2" ry="2"></rect><line x1="8" y1="21" x2="16" y2="21"></line><line x1="12" y1="17" x2="12" y2="21"></line></svg>
+                            Nodes (${proj.nodesCount || 0})
+                        </div>
+                        <div style="font-size: 0.85rem; color: var(--text-muted);">
+                            Primary: <span style="color: var(--success);">✔</span> &nbsp;&nbsp; Replica: <span style="color: var(--success);">✔</span>
+                        </div>
+                    </div>
+
+                    <div style="flex: 1; border-left: 1px solid var(--glass-border); padding-left: 20px;">
+                        <div style="font-size: 0.85rem; font-weight: 600; color: var(--text-main); margin-bottom: 8px;">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align: middle;"><path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.92-10.24l-3.27 3.27"></path></svg>
+                            Auto-recovery
+                        </div>
+                        <div style="font-size: 0.85rem; color: var(--text-muted); display: flex; flex-direction: column; gap: 4px;">
+                            <div>Cluster: <span style="background: var(--primary); color: white; padding: 2px 8px; border-radius: 12px; font-size: 0.7rem; font-weight: bold; margin-left: 8px;">On</span></div>
+                            <div>Node: <span style="background: var(--primary); color: white; padding: 2px 8px; border-radius: 12px; font-size: 0.7rem; font-weight: bold; margin-left: 16px;">On</span></div>
+                        </div>
+                    </div>
+
+                    <div style="flex: 1; border-left: 1px solid var(--glass-border); padding-left: 20px; display: flex; align-items: center; justify-content: space-between;">
+                        <div>
+                            <div style="font-size: 0.85rem; font-weight: 600; color: var(--text-main); margin-bottom: 8px;">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align: middle;"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"></polyline></svg>
+                                Load
+                            </div>
+                            <svg width="60" height="20" viewBox="0 0 60 20">
+                                <polyline points="0,15 10,12 20,18 30,5 40,8 50,2 60,10" fill="none" stroke="var(--primary)" stroke-width="1.5" style="opacity: 0.5"></polyline>
+                                <polygon points="0,20 0,15 10,12 20,18 30,5 40,8 50,2 60,10 60,20" fill="var(--primary)" style="opacity: 0.1"></polygon>
+                            </svg>
+                        </div>
+                        <button class="icon-btn edit-proj-btn" style="border: 1px solid var(--glass-border); border-radius: 4px; padding: 4px 8px;">...</button>
+                    </div>
+                `;
+
+                clusterCard.addEventListener('click', async (e) => {
+                    if(e.target.closest('button')) return;
+                    try {
+                        const res = await apiFetch(`/api/projects/${proj.id}`);
+                        if (!res.ok) throw new Error(await res.text());
+                        showDetailView(await res.json());
+                        refreshCurrentProject();
+                    } catch (err) { alert("Error loading project: " + err); }
                 });
 
+                clusterCard.querySelector('.edit-proj-btn').addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    document.getElementById('edit-proj-id').value = proj.id;
+                    document.getElementById('edit-proj-name').value = proj.name;
+                    document.getElementById('edit-proj-desc').value = proj.description || '';
+                    document.getElementById('modal-edit-project').style.display = 'flex';
+                });
+
+                document.getElementById('cc-clusters-list').appendChild(clusterCard);
                 tbody.appendChild(tr);
             });
             
