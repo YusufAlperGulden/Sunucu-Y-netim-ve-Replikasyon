@@ -177,7 +177,7 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    const btnDeployCluster = document.getElementById('btn-deploy-cluster');
+    const btnDeployCluster = document.getElementById('btn-deploy-cluster-global');
     if (btnDeployCluster) {
         btnDeployCluster.addEventListener('click', () => {
             modalAddProj.style.display = 'flex';
@@ -393,7 +393,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     if (ct) { 
                         document.getElementById('tt-cluster-id').innerText = proj.id; 
                         document.getElementById('tt-cluster-name').innerText = proj.name; 
-                        let vendor = 'PostgreSQL Streaming v16'; 
+                        let vendor = 'PostgreSQL Streaming v18.4'; 
                         let vendorType = 'postgres';
                         let nameLower = proj.name.toLowerCase();
                         if (nameLower.includes('maria')) { vendor = 'MariaDB Replication v11.8'; vendorType = 'mariadb'; }
@@ -1967,10 +1967,10 @@ document.addEventListener('DOMContentLoaded', () => {
 // --- NODES PAGE MANAGEMENT ---
 document.addEventListener('DOMContentLoaded', () => {
     const nodesPageData = [
-        { host: 'plaka-master-node', port: '5432', ip: '192.168.1.10', status: 'Operational', type: 'PostgreSQL', role: 'Primary', badge: {text: 'Writable', color: '#16a34a', bg: '#dcfce7'}, cluster: 'Araç Plaka Takip Sistemi', clusterLogo: '<ellipse cx="12" cy="5" rx="9" ry="3"></ellipse><path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3"></path><path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5"></path>', clusterColor: '#3b82f6', version: '16.2', seen: 'in 1 minute' },
-        { host: 'plaka-replica-node', port: '5432', ip: '192.168.1.11', status: 'Operational', type: 'PostgreSQL', role: 'Replica', badge: {text: 'Readonly', color: '#4b5563', bg: '#f3f4f6'}, cluster: 'Araç Plaka Takip Sistemi', clusterLogo: '<ellipse cx="12" cy="5" rx="9" ry="3"></ellipse><path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3"></path><path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5"></path>', clusterColor: '#3b82f6', version: '16.2', seen: 'in 1 minute' },
-        { host: 'email-master-node', port: '3306', ip: '10.0.0.50', status: 'Operational', type: 'MariaDB', role: 'Primary', badge: {text: 'Writable', color: '#16a34a', bg: '#dcfce7'}, cluster: 'E-mail Okuma Programı', clusterLogo: '<path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline>', clusterColor: '#1f2937', version: '11.4', seen: 'in 2 minutes' },
-        { host: 'email-replica-node', port: '3306', ip: '10.0.0.51', status: 'Operational', type: 'MariaDB', role: 'Replica', badge: {text: 'Readonly', color: '#4b5563', bg: '#f3f4f6'}, cluster: 'E-mail Okuma Programı', clusterLogo: '<path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline>', clusterColor: '#1f2937', version: '11.4', seen: 'in 2 minutes' }
+        { host: 'plaka-master-node', port: '5432', ip: '192.168.1.10', status: 'Operational', type: 'PostgreSQL', role: 'Primary', badge: {text: 'Writable', color: '#16a34a', bg: '#dcfce7'}, cluster: 'Araç Plaka Takip Sistemi', clusterLogo: '<ellipse cx="12" cy="5" rx="9" ry="3"></ellipse><path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3"></path><path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5"></path>', clusterColor: '#3b82f6', version: '18.4', seen: 'in 1 minute' },
+        { host: 'plaka-replica-node', port: '5432', ip: '192.168.1.11', status: 'Operational', type: 'PostgreSQL', role: 'Replica', badge: {text: 'Readonly', color: '#4b5563', bg: '#f3f4f6'}, cluster: 'Araç Plaka Takip Sistemi', clusterLogo: '<ellipse cx="12" cy="5" rx="9" ry="3"></ellipse><path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3"></path><path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5"></path>', clusterColor: '#3b82f6', version: '18.4', seen: 'in 1 minute' },
+        { host: 'email-master-node', port: '3306', ip: '10.0.0.50', status: 'Operational', type: 'MariaDB', role: 'Primary', badge: {text: 'Writable', color: '#16a34a', bg: '#dcfce7'}, cluster: 'E-mail Okuma Programı', clusterLogo: '<path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline>', clusterColor: '#1f2937', version: '11.8', seen: 'in 2 minutes' },
+        { host: 'email-replica-node', port: '3306', ip: '10.0.0.51', status: 'Operational', type: 'MariaDB', role: 'Replica', badge: {text: 'Readonly', color: '#4b5563', bg: '#f3f4f6'}, cluster: 'E-mail Okuma Programı', clusterLogo: '<path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline>', clusterColor: '#1f2937', version: '11.8', seen: 'in 2 minutes' }
     ];
 
 
