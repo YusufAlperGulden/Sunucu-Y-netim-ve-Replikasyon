@@ -96,8 +96,16 @@
 
                     <!-- Right Pane: Table -->
                     <div style="flex: 2; padding-left: 20px; display: flex; flex-direction: column;">
-                        <div style="display: flex; justify-content: space-between; margin-bottom: 20px;">
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
                             <h3 style="margin:0; font-size: 1rem; color: #fff;">Clusters</h3>
+                            <div style="font-size: 0.9rem; color: var(--text-muted); display: flex; align-items: center; gap: 8px;">
+                                Filter by status:
+                                <select id="cc-status-filter" style="background: rgba(255,255,255,0.05); color: #fff; border: 1px solid var(--border); padding: 4px 8px; border-radius: 4px; outline: none; cursor: pointer;">
+                                    <option value="All" style="background: #1e1e1e;">All</option>
+                                    <option value="Operational" style="background: #1e1e1e;">Operational</option>
+                                    <option value="Warning" style="background: #1e1e1e;">Warning</option>
+                                </select>
+                            </div>
                         </div>
                         
                         <table style="width: 100%; border-collapse: collapse; text-align: left; font-size: 0.9rem;">

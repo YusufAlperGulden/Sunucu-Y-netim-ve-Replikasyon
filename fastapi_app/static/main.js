@@ -42,6 +42,25 @@ document.addEventListener('DOMContentLoaded', () => {
 
     let currentProjectId = null;
 
+    const statusFilter = document.getElementById('cc-status-filter');
+    if (statusFilter) {
+        statusFilter.addEventListener('change', (e) => {
+            const filterValue = e.target.value;
+            const rows = document.querySelectorAll('#cc-projects-tbody tr');
+            rows.forEach(row => {
+                if(filterValue === 'All') {
+                    row.style.display = '';
+                } else {
+                    if(row.getAttribute('data-status') === filterValue) {
+                        row.style.display = '';
+                    } else {
+                        row.style.display = 'none';
+                    }
+                }
+            });
+        });
+    }
+
     // --- MODAL EVENT LISTENERS ---
     if (btnAddProj) {
         btnAddProj.addEventListener('click', () => {
@@ -186,6 +205,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 const statusText = isOperational ? '● Operational' : '● Warning';
 
                 const tr = document.createElement('tr');
+                tr.setAttribute('data-status', isOperational ? 'Operational' : 'Warning');
                 tr.style.borderBottom = '1px solid rgba(255,255,255,0.05)';
                 tr.style.cursor = 'pointer';
                 
@@ -275,6 +295,18 @@ document.addEventListener('DOMContentLoaded', () => {
                     <span style="color: var(--warning);">● ${warningCount} Warning</span>
                 </div>` : ''}
             `;
+            
+            // Apply current filter
+            const filterVal = document.getElementById('cc-status-filter')?.value || 'All';
+            const rows = tbody.querySelectorAll('tr');
+            rows.forEach(r => {
+                if (filterVal !== 'All' && r.getAttribute('data-status') !== filterVal) {
+                    r.style.display = 'none';
+                } else {
+                    r.style.display = '';
+                }
+            });
+
         } catch (error) {
             console.error("fetchProjects error:", error);
             const errDiv = document.getElementById('projects-container');
