@@ -427,7 +427,7 @@ document.addEventListener('DOMContentLoaded', () => {
                                 <line x1="215" y1="75" x2="225" y2="75" stroke="#d1d5db" stroke-width="1.5"></line>
                                 <line x1="265" y1="75" x2="270" y2="90" stroke="#d1d5db" stroke-width="1.5" marker-end="url(#arrow)"></line>
                             </svg></div>
-                            <div style="margin-top: 10px; font-size: 0.75rem; color: #9ca3af; display: flex; gap: 15px; justify-content: center;"><span>R - Replica</span><span>P - Primary</span><span>HA - HAProxy</span><span style="color:#3b82f6;">? Shut Down</span></div>`;
+                            <div style="margin-top: 10px; font-size: 0.75rem; color: #9ca3af; display: flex; gap: 15px; justify-content: center;"><span>R - Replica</span><span>P - Primary</span><span>HA - HAProxy</span><span style="color:#3b82f6;">&#8226; Shut Down</span></div>`;
                         } else if (vendorType === 'mongo') {
                             topoHtml = `<div style="position: relative; display: flex; justify-content: center;">
                             <svg width="350" height="150" viewBox="0 0 350 150"><defs>${arrow}</defs>
@@ -441,7 +441,7 @@ document.addEventListener('DOMContentLoaded', () => {
                                 <line x1="170" y1="78" x2="180" y2="63" stroke="#d1d5db" stroke-width="1.5" marker-end="url(#arrow)"></line>
                                 <line x1="170" y1="78" x2="180" y2="103" stroke="#d1d5db" stroke-width="1.5" marker-end="url(#arrow)"></line>
                             </svg></div>
-                            <div style="margin-top: 10px; font-size: 0.75rem; color: #9ca3af; display: flex; gap: 15px; justify-content: center;"><span>S - Secondary</span><span>P - Primary</span><span style="color:var(--success);">? Operational</span></div>`;
+                            <div style="margin-top: 10px; font-size: 0.75rem; color: #9ca3af; display: flex; gap: 15px; justify-content: center;"><span>S - Secondary</span><span>P - Primary</span><span style="color:var(--success);">&#8226; Operational</span></div>`;
                         } else if (vendorType === 'timescale') {
                             topoHtml = `<div style="position: relative; display: flex; justify-content: center;">
                             <svg width="200" height="120" viewBox="0 0 200 120"><defs>${arrow}</defs>
@@ -451,7 +451,7 @@ document.addEventListener('DOMContentLoaded', () => {
                                 <line x1="80" y1="58" x2="100" y2="33" stroke="#d1d5db" stroke-width="1.5" marker-end="url(#arrow)"></line>
                                 <line x1="80" y1="58" x2="100" y2="83" stroke="#d1d5db" stroke-width="1.5" marker-end="url(#arrow)"></line>
                             </svg></div>
-                            <div style="margin-top: 10px; font-size: 0.75rem; color: #9ca3af; display: flex; gap: 15px; justify-content: center;"><span>P - Primary</span><span>R - Replica</span><span style="color:var(--success);">? Operational</span></div>`;
+                            <div style="margin-top: 10px; font-size: 0.75rem; color: #9ca3af; display: flex; gap: 15px; justify-content: center;"><span>P - Primary</span><span>R - Replica</span><span style="color:var(--success);">&#8226; Operational</span></div>`;
                         } else if (vendorType === 'percona_mysql') {
                             topoHtml = `<div style="position: relative; display: flex; justify-content: center;">
                             <svg width="350" height="150" viewBox="0 0 350 150"><defs>${arrow}</defs>
@@ -466,13 +466,13 @@ document.addEventListener('DOMContentLoaded', () => {
                                 <g transform="translate(210,35)">${hex} ${cG}/><text x="20" y="27" fill="white" font-size="12" font-weight="bold" text-anchor="middle">R</text></g>
                                 <line x1="185" y1="58" x2="210" y2="58" stroke="#d1d5db" stroke-width="1.5" marker-end="url(#arrow)"></line>
                             </svg></div>
-                            <div style="margin-top: 10px; font-size: 0.75rem; color: #9ca3af; display: flex; gap: 15px; justify-content: center;"><span>P - Primary</span><span>R - Replica</span><span>PS - ProxySQL</span><span style="color:var(--success);">? Operational</span></div>`;
+                            <div style="margin-top: 10px; font-size: 0.75rem; color: #9ca3af; display: flex; gap: 15px; justify-content: center;"><span>P - Primary</span><span>R - Replica</span><span>PS - ProxySQL</span><span style="color:var(--success);">&#8226; Operational</span></div>`;
                         } else if (vendorType === 'mssql') {
                             topoHtml = `<div style="position: relative; display: flex; justify-content: center;">
                             <svg width="200" height="120" viewBox="0 0 200 120">
                                 <g transform="translate(80,35)">${hex} ${cG}/><text x="20" y="27" fill="white" font-size="12" font-weight="bold" text-anchor="middle">P</text></g>
                             </svg></div>
-                            <div style="margin-top: 10px; font-size: 0.75rem; color: #9ca3af; display: flex; gap: 15px; justify-content: center;"><span>P - Primary</span><span style="color:var(--success);">? Operational</span></div>`;
+                            <div style="margin-top: 10px; font-size: 0.75rem; color: #9ca3af; display: flex; gap: 15px; justify-content: center;"><span>P - Primary</span><span style="color:var(--success);">&#8226; Operational</span></div>`;
                         } else {
                             // PostgreSQL Default
                             topoHtml = `<div style="position: relative; display: flex; justify-content: center;">
@@ -494,7 +494,7 @@ document.addEventListener('DOMContentLoaded', () => {
                                 <line x1="265" y1="75" x2="285" y2="60" stroke="#d1d5db" stroke-width="1.5" marker-end="url(#arrow)"></line>
                                 <line x1="265" y1="75" x2="285" y2="90" stroke="#d1d5db" stroke-width="1.5" marker-end="url(#arrow)"></line>
                             </svg></div>
-                            <div style="margin-top: 10px; font-size: 0.75rem; color: #9ca3af; display: flex; gap: 15px; justify-content: center;"><span>P - Primary</span><span>R - Replica</span><span>PB - PgBouncer</span><span>HA - HAProxy</span><span style="color:var(--success);">? Operational</span></div>`;
+                            <div style="margin-top: 10px; font-size: 0.75rem; color: #9ca3af; display: flex; gap: 15px; justify-content: center;"><span>P - Primary</span><span>R - Replica</span><span>PB - PgBouncer</span><span>HA - HAProxy</span><span style="color:var(--success);">&#8226; Operational</span></div>`;
                         }
                         
                         topoContainer.innerHTML = topoHtml;
@@ -672,10 +672,10 @@ if (donutCircle) {
             const warningCount = data.length - operationalCount;
             document.getElementById('cc-donut-legend').innerHTML = `
                 <div style="display: flex; justify-content: space-between; font-size: 0.9rem;">
-                    <span style="color: var(--success);">● ${operationalCount} Operational</span>
+                    <span style="color: var(--success);">&#8226; ${operationalCount} Operational</span>
                 </div>
                 ${warningCount > 0 ? `<div style="display: flex; justify-content: space-between; font-size: 0.9rem;">
-                    <span style="color: var(--warning);">● ${warningCount} Warning</span>
+                    <span style="color: var(--warning);">&#8226; ${warningCount} Warning</span>
                 </div>` : ''}
             `;
             
@@ -771,12 +771,12 @@ if (donutCircle) {
                                 if (data.status === 'Shut Down') {
                                     header.style.background = '#3b82f6';
                                     msgBox.style.display = 'flex';
-                                    stat.innerHTML = '<span style="color:#3b82f6;">? Shut Down</span>';
+                                    stat.innerHTML = '<span style="color:#3b82f6;">&#8226; Shut Down</span>';
                                     document.getElementById('ntt-repl-col').style.display = 'block';
                                 } else {
                                     header.style.background = 'var(--success)';
                                     msgBox.style.display = 'none';
-                                    stat.innerHTML = '<span style="color:var(--success);">? Operational</span>';
+                                    stat.innerHTML = '<span style="color:var(--success);">&#8226; Operational</span>';
                                     document.getElementById('ntt-repl-col').style.display = 'none';
                                 }
                                 
@@ -822,18 +822,38 @@ if (donutCircle) {
                 });
                 
                 document.getElementById('cc-total-nodes').innerText = allNodes.length + ' Nodes';
+                
+                const dnCenter = document.getElementById('nodes-donut-center-num');
+                if (dnCenter) dnCenter.innerText = allNodes.length;
+
                 const dnSlice = document.getElementById('nodes-donut-slice');
                 if (dnSlice) {
                    if (allNodes.length === 0) dnSlice.style.strokeDashoffset = '439.8';
                    else {
                        const ratio = (allNodes.length - shutDownCount) / allNodes.length;
                        dnSlice.style.strokeDashoffset = 439.8 * (1 - ratio);
+                       
+                       const donutTooltip = document.getElementById('donut-hover-tooltip');
+                       const donutText = document.getElementById('donut-hover-text');
+                       if (donutTooltip && donutText) {
+                           dnSlice.addEventListener('mouseenter', (e) => {
+                               donutText.innerText = `${allNodes.length - shutDownCount} Operational`;
+                               donutTooltip.style.display = 'block';
+                           });
+                           dnSlice.addEventListener('mousemove', (e) => {
+                               donutTooltip.style.left = (e.clientX + 10) + 'px';
+                               donutTooltip.style.top = (e.clientY + 10) + 'px';
+                           });
+                           dnSlice.addEventListener('mouseleave', () => {
+                               donutTooltip.style.display = 'none';
+                           });
+                       }
                    }
                 }
                 
                 const nodeStats = document.getElementById('nodes-donut-slice').parentNode.parentNode.nextElementSibling;
                 if (nodeStats) {
-                    nodeStats.innerHTML = `<span style="color: var(--success);">? ${allNodes.length - shutDownCount} Operational</span><span style="color: var(--primary);">? ${shutDownCount} Shut Down</span>`;
+                    nodeStats.innerHTML = `<span style="color: var(--success);">&#8226; ${allNodes.length - shutDownCount} Operational</span><span style="color: var(--primary);">&#8226; ${shutDownCount} Shut Down</span>`;
                 }
             }
 
@@ -1624,20 +1644,7 @@ document.getElementById('btn-toggle-sidebar').addEventListener('click', () => {
 });
 
 
-// Nodes Donut Tooltip
-const nodesSvg = document.getElementById('nodes-donut-svg');
-const tooltip = document.getElementById('custom-tooltip');
-if (nodesSvg && tooltip) {
-    nodesSvg.addEventListener('mousemove', (e) => {
-        tooltip.style.display = 'block';
-        tooltip.innerHTML = '4 Operational';
-        tooltip.style.left = (e.pageX + 10) + 'px';
-        tooltip.style.top = (e.pageY + 10) + 'px';
-    });
-    nodesSvg.addEventListener('mouseleave', () => {
-        tooltip.style.display = 'none';
-    });
-}
+
 
 
 // --- ACTIVITY CENTER TABS ---
