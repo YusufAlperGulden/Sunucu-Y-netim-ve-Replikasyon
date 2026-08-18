@@ -57,37 +57,7 @@ document.addEventListener('DOMContentLoaded', () => {
             update() {
                 this.x += this.vx;
                 this.y += this.vy;
-                
-                // Exclusion zone for the Title and Login Box
-                // Approximate size: 850px wide, 550px tall, centered
-                const boxW = 500;
-                const boxH = 500;
-                const boxX = width / 2 - boxW / 2;
-                const boxY = height / 2 - boxH / 2;
-                
-                let testX = this.x;
-                let testY = this.y;
-                
-                if (this.x < boxX) testX = boxX;
-                else if (this.x > boxX + boxW) testX = boxX + boxW;
-                
-                if (this.y < boxY) testY = boxY;
-                else if (this.y > boxY + boxH) testY = boxY + boxH;
-                
-                let distX = this.x - testX;
-                let distY = this.y - testY;
-                let distance = Math.sqrt((distX*distX) + (distY*distY));
-                
-                if (distance <= this.size) {
-                    // Collision! Bounce out smoothly
-                    if (Math.abs(distX) > Math.abs(distY)) {
-                        this.vx *= -1;
-                        this.x += Math.sign(distX) * 2;
-                    } else {
-                        this.vy *= -1;
-                        this.y += Math.sign(distY) * 2;
-                    }
-                }
+
                 
                 // Screen edges collision
                 if (this.x - this.size > width) { this.x = width - this.size; this.vx *= -1; }
