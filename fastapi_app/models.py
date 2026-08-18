@@ -21,7 +21,7 @@ else:
         DATABASE_URL, 
         connect_args={
             "connect_timeout": 10,
-            "options": "-c statement_timeout=30000 -c lock_timeout=10000"
+            
         }
     )
 
