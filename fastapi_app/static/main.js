@@ -42,11 +42,11 @@ document.addEventListener('DOMContentLoaded', () => {
                 this.x = width / 2;
                 this.y = height / 2;
                 this.angle = Math.random() * Math.PI * 2;
-                this.speed = Math.random() * 0.4 + 0.1;
-                this.swirl = (Math.random() - 0.5) * 0.02;
+                this.speed = Math.random() * 0.15 + 0.05;
+                this.swirl = (Math.random() - 0.5) * 0.005;
                 this.radius = initial ? Math.random() * (Math.max(width, height) / 2) : Math.random() * 20;
                 this.color = colors[Math.floor(Math.random() * colors.length)];
-                this.size = Math.random() * 20 + 8;
+                this.size = Math.random() * 80 + 30;
                 this.life = initial ? Math.random() * 200 : 0;
                 this.maxLife = Math.random() * 300 + 150;
             }
