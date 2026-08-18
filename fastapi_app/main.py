@@ -77,7 +77,7 @@ async def read_root(request: Request):
 @app.get("/api/projects", dependencies=[Depends(verify_credentials)])
 def get_projects(db: Session = Depends(get_db)):
     projects = db.query(Project).all()
-    return [{"id": p.id, "name": p.name, "description": p.description, "nodesCount": len(p.nodes)} for p in projects]
+    return [{"id": p.id, "name": p.name, "description": p.description, "nodesCount": len(p.nodes), "nodes": [{"id": n.id, "name": n.name, "role": n.role} for n in p.nodes]} for p in projects]
 
 @app.post("/api/projects", dependencies=[Depends(verify_credentials)])
 def add_project(project: ProjectCreate, db: Session = Depends(get_db)):

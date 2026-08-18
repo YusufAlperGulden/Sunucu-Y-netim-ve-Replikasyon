@@ -1456,7 +1456,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const attemptLogin = async () => {
         const u = loginUsername.value.trim();
         const p = loginPassword.value.trim();
-        const token = btoa(u + ':' + p);
+        const token = btoa(unescape(encodeURIComponent(u + ':' + p)));
         try {
             const res = await fetch('/api/auth/verify', {
                 headers: { 'Authorization': 'Basic ' + token }
