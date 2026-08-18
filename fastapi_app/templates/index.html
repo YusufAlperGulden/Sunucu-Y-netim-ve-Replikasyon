@@ -438,31 +438,31 @@
                         
                         <!-- Status Cards -->
                         <div style="display: flex; border: 1px solid var(--border); border-radius: 8px; overflow: hidden; margin-bottom: 16px;">
-                            <div style="flex: 1; padding: 16px 20px; border-right: 1px solid var(--border); border-bottom: 2px solid var(--primary); background: #f9fafb; cursor: pointer;">
+                            <div class="node-status-card" onclick="filterNodes('Operational', this)" style="flex: 1; padding: 16px 20px; border-right: 1px solid var(--border); border-bottom: 2px solid var(--primary); background: #f9fafb; cursor: pointer;">
                                 <div style="color: #6b7280; font-size: 0.85rem; margin-bottom: 8px;">Operational</div>
                                 <div style="color: var(--success); font-size: 1.5rem; font-weight: 500;">34</div>
                             </div>
-                            <div style="flex: 1; padding: 16px 20px; border-right: 1px solid var(--border); cursor: pointer;">
+                            <div class="node-status-card" onclick="filterNodes('Failed', this)" style="flex: 1; padding: 16px 20px; border-right: 1px solid var(--border); cursor: pointer;">
                                 <div style="color: #6b7280; font-size: 0.85rem; margin-bottom: 8px;">Failed</div>
                                 <div style="color: var(--text-main); font-size: 1.5rem; font-weight: 500;">0</div>
                             </div>
-                            <div style="flex: 1; padding: 16px 20px; border-right: 1px solid var(--border); cursor: pointer;">
+                            <div class="node-status-card" onclick="filterNodes('Offline', this)" style="flex: 1; padding: 16px 20px; border-right: 1px solid var(--border); cursor: pointer;">
                                 <div style="color: #6b7280; font-size: 0.85rem; margin-bottom: 8px;">Offline</div>
                                 <div style="color: var(--text-main); font-size: 1.5rem; font-weight: 500;">0</div>
                             </div>
-                            <div style="flex: 1; padding: 16px 20px; border-right: 1px solid var(--border); cursor: pointer;">
+                            <div class="node-status-card" onclick="filterNodes('Shut Down', this)" style="flex: 1; padding: 16px 20px; border-right: 1px solid var(--border); cursor: pointer;">
                                 <div style="color: #6b7280; font-size: 0.85rem; margin-bottom: 8px;">Shut Down</div>
                                 <div style="color: var(--primary); font-size: 1.5rem; font-weight: 500;">2</div>
                             </div>
-                            <div style="flex: 1; padding: 16px 20px; border-right: 1px solid var(--border); cursor: pointer;">
+                            <div class="node-status-card" onclick="filterNodes('Recovering', this)" style="flex: 1; padding: 16px 20px; border-right: 1px solid var(--border); cursor: pointer;">
                                 <div style="color: #6b7280; font-size: 0.85rem; margin-bottom: 8px;">Recovering</div>
                                 <div style="color: var(--text-main); font-size: 1.5rem; font-weight: 500;">0</div>
                             </div>
-                            <div style="flex: 1; padding: 16px 20px; border-right: 1px solid var(--border); cursor: pointer;">
+                            <div class="node-status-card" onclick="filterNodes('Unknown State', this)" style="flex: 1; padding: 16px 20px; border-right: 1px solid var(--border); cursor: pointer;">
                                 <div style="color: #6b7280; font-size: 0.85rem; margin-bottom: 8px;">Unknown State</div>
                                 <div style="color: var(--text-main); font-size: 1.5rem; font-weight: 500;">0</div>
                             </div>
-                            <div style="flex: 1; padding: 16px 20px; cursor: pointer;">
+                            <div class="node-status-card" onclick="filterNodes('All', this)" style="flex: 1; padding: 16px 20px; cursor: pointer;">
                                 <div style="color: #6b7280; font-size: 0.85rem; margin-bottom: 8px;">All</div>
                                 <div style="color: var(--text-main); font-size: 1.5rem; font-weight: 500;">36</div>
                             </div>
@@ -490,6 +490,7 @@
                                         <th style="padding: 12px 16px; font-weight: 600; font-size: 0.8rem; color: var(--text-main); white-space: nowrap;">Cluster <span style="color: #a0aec0; margin-left:4px; font-size:0.6rem;">&#9650;&#9660;</span></th>
                                         <th style="padding: 12px 16px; font-weight: 600; font-size: 0.8rem; color: var(--text-main); white-space: nowrap;">Version</th>
                                         <th style="padding: 12px 16px; font-weight: 600; font-size: 0.8rem; color: var(--text-main); white-space: nowrap;">Last seen <span style="color: #a0aec0; margin-left:4px; font-size:0.6rem;">&#9650;&#9660;</span></th>
+                                        <th style="padding: 12px 16px; font-weight: 600; font-size: 0.8rem; color: var(--text-main); white-space: nowrap; text-align: center;">Actions</th>
                                     </tr>
                                 </thead>
                                 <tbody id="nodes-page-tbody">
