@@ -1927,12 +1927,65 @@ document.addEventListener('DOMContentLoaded', () => {
         renderNodesPage();
     };
 
+let currentSortCol = null;
+    let currentSortDir = null; // 'asc', 'desc', null
+
+    window.sortNodes = function(col) {
+        if (currentSortCol !== col) {
+            currentSortCol = col;
+            currentSortDir = 'asc';
+        } else {
+            if (currentSortDir === 'asc') currentSortDir = 'desc';
+            else if (currentSortDir === 'desc') currentSortDir = null;
+            else currentSortDir = 'asc';
+        }
+        
+        // Reset all tooltips and arrows
+        ['host', 'port', 'status', 'type', 'role', 'cluster', 'seen'].forEach(c => {
+            const arr = document.getElementById('nodes-sort-arrows-' + c);
+            const txt = document.getElementById('nodes-sort-text-' + c);
+            if(arr) arr.innerHTML = '&#9650;&#9660;';
+            if(txt) txt.innerText = 'Click to sort ascending';
+        });
+        
+        // Update current
+        if (currentSortDir) {
+            const arr = document.getElementById('nodes-sort-arrows-' + col);
+            const txt = document.getElementById('nodes-sort-text-' + col);
+            if (currentSortDir === 'asc') {
+                if(arr) arr.innerHTML = '&#9650;';
+                if(txt) txt.innerText = 'Click to sort descending';
+            } else {
+                if(arr) arr.innerHTML = '&#9660;';
+                if(txt) txt.innerText = 'Click to Cancel Sorting';
+            }
+        }
+        
+        renderNodesPage();
+    };
+
     function renderNodesPage() {
         const tbody = document.getElementById('nodes-page-tbody');
         if(!tbody) return;
         tbody.innerHTML = '';
         
-        const filteredData = nodesPageData.filter(n => currentFilter === 'All' || n.status === currentFilter);
+        let filteredData = nodesPageData.filter(n => currentFilter === 'All' || n.status === currentFilter);
+        
+        if (currentSortDir) {
+            filteredData.sort((a, b) => {
+                let valA = a[currentSortCol];
+                let valB = b[currentSortCol];
+                
+                // For nested fields like cluster, sort by name
+                if (currentSortCol === 'cluster') {
+                    // Extract text before (ID:xx) if needed, but string comparison works fine
+                }
+                
+                if (valA < valB) return currentSortDir === 'asc' ? -1 : 1;
+                if (valA > valB) return currentSortDir === 'asc' ? 1 : -1;
+                return 0;
+            });
+        }
         
         if (filteredData.length === 0) {
             tbody.innerHTML = `<tr><td colspan="10" style="text-align: center; padding: 40px; color: #9ca3af; font-size: 0.9rem;">There are no matches</td></tr>`;

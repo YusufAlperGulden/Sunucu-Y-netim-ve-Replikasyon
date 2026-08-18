@@ -481,17 +481,59 @@
                             <table style="width: 100%; border-collapse: collapse; text-align: left;">
                                 <thead>
                                     <tr style="border-bottom: 1px solid var(--glass-border); background: white;">
-                                        <th style="padding: 12px 16px; font-weight: 600; font-size: 0.8rem; color: var(--text-main); white-space: nowrap;">Hostname <span style="color: #a0aec0; margin-left:4px; font-size:0.6rem;">&#9650;&#9660;</span></th>
-                                        <th style="padding: 12px 16px; font-weight: 600; font-size: 0.8rem; color: var(--text-main); white-space: nowrap;">Port <span style="color: #a0aec0; margin-left:4px; font-size:0.6rem;">&#9650;&#9660;</span></th>
-                                        <th style="padding: 12px 16px; font-weight: 600; font-size: 0.8rem; color: var(--text-main); white-space: nowrap;">IP</th>
-                                        <th style="padding: 12px 16px; font-weight: 600; font-size: 0.8rem; color: var(--text-main); white-space: nowrap;">Status <span style="color: #a0aec0; margin-left:4px; font-size:0.6rem;">&#9660;</span></th>
-                                        <th style="padding: 12px 16px; font-weight: 600; font-size: 0.8rem; color: var(--text-main); white-space: nowrap;">Type <span style="color: #a0aec0; margin-left:4px; font-size:0.6rem;">&#9660;</span></th>
-                                        <th style="padding: 12px 16px; font-weight: 600; font-size: 0.8rem; color: var(--text-main); white-space: nowrap;">Role <span style="color: #a0aec0; margin-left:4px; font-size:0.6rem;">&#9650;&#9660;</span></th>
-                                        <th style="padding: 12px 16px; font-weight: 600; font-size: 0.8rem; color: var(--text-main); white-space: nowrap;">Cluster <span style="color: #a0aec0; margin-left:4px; font-size:0.6rem;">&#9650;&#9660;</span></th>
-                                        <th style="padding: 12px 16px; font-weight: 600; font-size: 0.8rem; color: var(--text-main); white-space: nowrap;">Version</th>
-                                        <th style="padding: 12px 16px; font-weight: 600; font-size: 0.8rem; color: var(--text-main); white-space: nowrap;">Last seen <span style="color: #a0aec0; margin-left:4px; font-size:0.6rem;">&#9650;&#9660;</span></th>
-                                        <th style="padding: 12px 16px; font-weight: 600; font-size: 0.8rem; color: var(--text-main); white-space: nowrap; text-align: center;">Actions</th>
-                                    </tr>
+    <th style="padding: 12px 16px; font-weight: 600; font-size: 0.8rem; color: var(--text-main); white-space: nowrap; position: relative; cursor: pointer; user-select: none;" onmouseenter="document.getElementById('nodes-sort-tooltip-host').style.display='block'" onmouseleave="document.getElementById('nodes-sort-tooltip-host').style.display='none'" onclick="sortNodes('host')">
+    Hostname <span style="color: #a0aec0; margin-left:4px; font-size:0.6rem;" id="nodes-sort-arrows-host">&#9650;&#9660;</span>
+    <div id="nodes-sort-tooltip-host" style="display: none; position: absolute; background: #111827; color: white; padding: 6px 10px; border-radius: 6px; font-size: 0.75rem; white-space: nowrap; top: -25px; left: 16px; z-index: 100; font-weight: 400;">
+        <span id="nodes-sort-text-host">Click to sort ascending</span>
+        <div style="position: absolute; bottom: -4px; left: 16px; width: 0; height: 0; border-left: 4px solid transparent; border-right: 4px solid transparent; border-top: 4px solid #111827;"></div>
+    </div>
+</th>
+    <th style="padding: 12px 16px; font-weight: 600; font-size: 0.8rem; color: var(--text-main); white-space: nowrap; position: relative; cursor: pointer; user-select: none;" onmouseenter="document.getElementById('nodes-sort-tooltip-port').style.display='block'" onmouseleave="document.getElementById('nodes-sort-tooltip-port').style.display='none'" onclick="sortNodes('port')">
+    Port <span style="color: #a0aec0; margin-left:4px; font-size:0.6rem;" id="nodes-sort-arrows-port">&#9650;&#9660;</span>
+    <div id="nodes-sort-tooltip-port" style="display: none; position: absolute; background: #111827; color: white; padding: 6px 10px; border-radius: 6px; font-size: 0.75rem; white-space: nowrap; top: -25px; left: 16px; z-index: 100; font-weight: 400;">
+        <span id="nodes-sort-text-port">Click to sort ascending</span>
+        <div style="position: absolute; bottom: -4px; left: 16px; width: 0; height: 0; border-left: 4px solid transparent; border-right: 4px solid transparent; border-top: 4px solid #111827;"></div>
+    </div>
+</th>
+    <th style="padding: 12px 16px; font-weight: 600; font-size: 0.8rem; color: var(--text-main); white-space: nowrap;">IP</th>
+    <th style="padding: 12px 16px; font-weight: 600; font-size: 0.8rem; color: var(--text-main); white-space: nowrap; position: relative; cursor: pointer; user-select: none;" onmouseenter="document.getElementById('nodes-sort-tooltip-status').style.display='block'" onmouseleave="document.getElementById('nodes-sort-tooltip-status').style.display='none'" onclick="sortNodes('status')">
+    Status <span style="color: #a0aec0; margin-left:4px; font-size:0.6rem;" id="nodes-sort-arrows-status">&#9650;&#9660;</span>
+    <div id="nodes-sort-tooltip-status" style="display: none; position: absolute; background: #111827; color: white; padding: 6px 10px; border-radius: 6px; font-size: 0.75rem; white-space: nowrap; top: -25px; left: 16px; z-index: 100; font-weight: 400;">
+        <span id="nodes-sort-text-status">Click to sort ascending</span>
+        <div style="position: absolute; bottom: -4px; left: 16px; width: 0; height: 0; border-left: 4px solid transparent; border-right: 4px solid transparent; border-top: 4px solid #111827;"></div>
+    </div>
+</th>
+    <th style="padding: 12px 16px; font-weight: 600; font-size: 0.8rem; color: var(--text-main); white-space: nowrap; position: relative; cursor: pointer; user-select: none;" onmouseenter="document.getElementById('nodes-sort-tooltip-type').style.display='block'" onmouseleave="document.getElementById('nodes-sort-tooltip-type').style.display='none'" onclick="sortNodes('type')">
+    Type <span style="color: #a0aec0; margin-left:4px; font-size:0.6rem;" id="nodes-sort-arrows-type">&#9650;&#9660;</span>
+    <div id="nodes-sort-tooltip-type" style="display: none; position: absolute; background: #111827; color: white; padding: 6px 10px; border-radius: 6px; font-size: 0.75rem; white-space: nowrap; top: -25px; left: 16px; z-index: 100; font-weight: 400;">
+        <span id="nodes-sort-text-type">Click to sort ascending</span>
+        <div style="position: absolute; bottom: -4px; left: 16px; width: 0; height: 0; border-left: 4px solid transparent; border-right: 4px solid transparent; border-top: 4px solid #111827;"></div>
+    </div>
+</th>
+    <th style="padding: 12px 16px; font-weight: 600; font-size: 0.8rem; color: var(--text-main); white-space: nowrap; position: relative; cursor: pointer; user-select: none;" onmouseenter="document.getElementById('nodes-sort-tooltip-role').style.display='block'" onmouseleave="document.getElementById('nodes-sort-tooltip-role').style.display='none'" onclick="sortNodes('role')">
+    Role <span style="color: #a0aec0; margin-left:4px; font-size:0.6rem;" id="nodes-sort-arrows-role">&#9650;&#9660;</span>
+    <div id="nodes-sort-tooltip-role" style="display: none; position: absolute; background: #111827; color: white; padding: 6px 10px; border-radius: 6px; font-size: 0.75rem; white-space: nowrap; top: -25px; left: 16px; z-index: 100; font-weight: 400;">
+        <span id="nodes-sort-text-role">Click to sort ascending</span>
+        <div style="position: absolute; bottom: -4px; left: 16px; width: 0; height: 0; border-left: 4px solid transparent; border-right: 4px solid transparent; border-top: 4px solid #111827;"></div>
+    </div>
+</th>
+    <th style="padding: 12px 16px; font-weight: 600; font-size: 0.8rem; color: var(--text-main); white-space: nowrap; position: relative; cursor: pointer; user-select: none;" onmouseenter="document.getElementById('nodes-sort-tooltip-cluster').style.display='block'" onmouseleave="document.getElementById('nodes-sort-tooltip-cluster').style.display='none'" onclick="sortNodes('cluster')">
+    Cluster <span style="color: #a0aec0; margin-left:4px; font-size:0.6rem;" id="nodes-sort-arrows-cluster">&#9650;&#9660;</span>
+    <div id="nodes-sort-tooltip-cluster" style="display: none; position: absolute; background: #111827; color: white; padding: 6px 10px; border-radius: 6px; font-size: 0.75rem; white-space: nowrap; top: -25px; left: 16px; z-index: 100; font-weight: 400;">
+        <span id="nodes-sort-text-cluster">Click to sort ascending</span>
+        <div style="position: absolute; bottom: -4px; left: 16px; width: 0; height: 0; border-left: 4px solid transparent; border-right: 4px solid transparent; border-top: 4px solid #111827;"></div>
+    </div>
+</th>
+    <th style="padding: 12px 16px; font-weight: 600; font-size: 0.8rem; color: var(--text-main); white-space: nowrap;">Version</th>
+    <th style="padding: 12px 16px; font-weight: 600; font-size: 0.8rem; color: var(--text-main); white-space: nowrap; position: relative; cursor: pointer; user-select: none;" onmouseenter="document.getElementById('nodes-sort-tooltip-seen').style.display='block'" onmouseleave="document.getElementById('nodes-sort-tooltip-seen').style.display='none'" onclick="sortNodes('seen')">
+    Last seen <span style="color: #a0aec0; margin-left:4px; font-size:0.6rem;" id="nodes-sort-arrows-seen">&#9650;&#9660;</span>
+    <div id="nodes-sort-tooltip-seen" style="display: none; position: absolute; background: #111827; color: white; padding: 6px 10px; border-radius: 6px; font-size: 0.75rem; white-space: nowrap; top: -25px; left: 16px; z-index: 100; font-weight: 400;">
+        <span id="nodes-sort-text-seen">Click to sort ascending</span>
+        <div style="position: absolute; bottom: -4px; left: 16px; width: 0; height: 0; border-left: 4px solid transparent; border-right: 4px solid transparent; border-top: 4px solid #111827;"></div>
+    </div>
+</th>
+    <th style="padding: 12px 16px; font-weight: 600; font-size: 0.8rem; color: var(--text-main); white-space: nowrap; text-align: center;">Actions</th>
+</tr>
                                 </thead>
                                 <tbody id="nodes-page-tbody">
                                     <!-- Injected via JS -->
