@@ -637,7 +637,7 @@ document.addEventListener('DOMContentLoaded', () => {
             
             // Update Donut Chart
             document.getElementById('cc-total-clusters').innerText = `${data.length} Clusters`;
-            // center text removed
+            document.getElementById('cc-donut-center-text').innerText = operationalCount;
             
             const radius = 80;
             const circumference = 2 * Math.PI * radius; // ~502.6
@@ -652,6 +652,7 @@ if (donutCircle) {
                 // Add hover logic
                 const donutTooltip = document.getElementById('donut-hover-tooltip');
                 const donutText = document.getElementById('donut-hover-text');
+                document.getElementById('cc-donut-center-text').style.color = donutCircle.style.stroke;
                 if (donutTooltip && donutText) {
                     donutCircle.addEventListener('mouseenter', (e) => {
                         donutText.innerText = `${operationalCount} Operational`;
