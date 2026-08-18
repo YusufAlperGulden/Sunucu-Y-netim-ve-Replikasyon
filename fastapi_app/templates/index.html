@@ -574,7 +574,7 @@
                                 <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 17H2a3 3 0 0 0 3-3V9a7 7 0 0 1 14 0v5a3 3 0 0 0 3 3zm-8.27 4a2 2 0 0 1-3.46 0"></path></svg>
                                 Recent alarms
                             </div>
-                            <a href="#" style="color: var(--primary); text-decoration: none; font-size: 0.9rem; font-weight: 500;">View alarms</a>
+                            <a href="#" onclick="document.querySelector('a[data-view=\'activity-view\']').click(); document.getElementById('tab-btn-alarms').click(); return false;" style="color: var(--primary); text-decoration: none; font-size: 0.9rem; font-weight: 500;">View alarms</a>
                         </div>
                         
                         <div style="flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 40px; color: var(--text-muted); font-size: 0.95rem;">
