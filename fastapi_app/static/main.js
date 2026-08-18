@@ -42,6 +42,31 @@ document.addEventListener('DOMContentLoaded', () => {
 
     let currentProjectId = null;
 
+    // --- MODAL EVENT LISTENERS ---
+    if (btnAddProj) {
+        btnAddProj.addEventListener('click', () => {
+            modalAddProj.style.display = 'flex';
+        });
+    }
+
+    if (btnOpenNodeModal) {
+        btnOpenNodeModal.addEventListener('click', () => {
+            modalAddNode.style.display = 'flex';
+        });
+    }
+
+    if (btnCloseProjModal) {
+        btnCloseProjModal.addEventListener('click', () => {
+            modalAddProj.style.display = 'none';
+        });
+    }
+
+    if (btnCloseNodeModal) {
+        btnCloseNodeModal.addEventListener('click', () => {
+            modalAddNode.style.display = 'none';
+        });
+    }
+
     // --- VIEW MANAGEMENT ---
     const sidebarLinks = document.querySelectorAll('.sidebar-nav a');
     const viewSections = document.querySelectorAll('.view-section');
