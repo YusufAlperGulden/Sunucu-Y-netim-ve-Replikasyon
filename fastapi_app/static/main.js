@@ -206,16 +206,16 @@ document.addEventListener('DOMContentLoaded', () => {
 
                 const tr = document.createElement('tr');
                 tr.setAttribute('data-status', isOperational ? 'Operational' : 'Warning');
-                tr.style.borderBottom = '1px solid rgba(255,255,255,0.05)';
+                tr.style.borderBottom = '1px solid var(--glass-border)';
                 tr.style.cursor = 'pointer';
                 
                 // Hover effect
-                tr.onmouseover = () => tr.style.backgroundColor = 'rgba(255,255,255,0.02)';
+                tr.onmouseover = () => tr.style.backgroundColor = 'rgba(0,0,0,0.02)';
                 tr.onmouseout = () => tr.style.backgroundColor = 'transparent';
 
                 tr.innerHTML = `
                     <td style="padding: 12px 10px 12px 0; color: var(--text-muted);">${proj.id}</td>
-                    <td style="padding: 12px 10px; font-weight: 500;">
+                    <td style="padding: 12px 10px; font-weight: 500; color: var(--text-main);">
                         <div style="display: flex; align-items: center; gap: 8px;">
                             <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--primary)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="2" width="20" height="8" rx="2" ry="2"></rect><rect x="2" y="14" width="20" height="8" rx="2" ry="2"></rect><line x1="6" y1="6" x2="6.01" y2="6"></line><line x1="6" y1="18" x2="6.01" y2="18"></line></svg>
                             ${escapeHTML(proj.name)}

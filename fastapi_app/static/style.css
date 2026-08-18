@@ -1,14 +1,15 @@
 :root {
-    --bg-dark: #0a0a0f;
-    --glass-bg: rgba(20, 20, 25, 0.6);
-    --glass-border: rgba(255, 255, 255, 0.08);
-    --primary: #1d4ed8;
-    --primary-hover: #1e40af;
-    --text-main: #ffffff;
-    --text-muted: #8b8b9e;
-    --danger: #ff4b4b;
-    --success: #15803d;
-    --warning: #ffb300;
+    --bg-dark: #f3f4f6;
+    --glass-bg: #ffffff;
+    --glass-border: #e5e7eb;
+    --primary: #5c20d0; /* ClusterControl purple-ish brand */
+    --primary-hover: #4a19a8;
+    --text-main: #111827;
+    --text-secondary: #4b5563;
+    --text-muted: #6b7280;
+    --danger: #ef4444;
+    --success: #65c728; /* ClusterControl bright green */
+    --warning: #f59e0b;
 }
 
 * {
@@ -21,11 +22,8 @@ body {
     font-family: 'Inter', sans-serif;
     background-color: var(--bg-dark);
     color: var(--text-main);
-    background-image: radial-gradient(circle at 15% 50%, rgba(0, 210, 255, 0.08), transparent 25%),
-                      radial-gradient(circle at 85% 30%, rgba(58, 123, 213, 0.08), transparent 25%);
-    background-attachment: fixed;
     min-height: 100vh;
-    overflow: hidden; /* App feels like native */
+    overflow: hidden; 
 }
 
 /* Electron Draggable Region */
@@ -56,13 +54,12 @@ body {
 
 .sidebar {
     width: 260px;
-    padding: 24px;
+    padding: 24px 0;
     display: flex;
     flex-direction: column;
-    border-radius: 0;
-    border-top: none;
-    border-bottom: none;
-    border-left: none;
+    border: none;
+    background-color: #0b0621; /* ClusterControl dark sidebar */
+    color: #ffffff;
     -webkit-app-region: no-drag;
 }
 
@@ -83,17 +80,17 @@ body {
 }
 
 .sidebar-nav a {
-    color: var(--text-muted);
+    color: #a0aec0;
     text-decoration: none;
-    padding: 12px 16px;
-    border-radius: 8px;
+    padding: 12px 24px;
     transition: all 0.2s ease;
     font-weight: 500;
 }
 
 .sidebar-nav a:hover, .sidebar-nav a.active {
-    background: rgba(255, 255, 255, 0.05);
-    color: var(--text-main);
+    background: #ffffff;
+    color: #0b0621;
+    border-left: 4px solid var(--primary);
 }
 
 .main-content {
