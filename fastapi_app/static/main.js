@@ -223,8 +223,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 tr.style.cursor = 'pointer';
                 
                 // Hover effect
-                tr.onmouseover = () => tr.style.backgroundColor = 'rgba(0,0,0,0.02)';
-                tr.onmouseout = () => tr.style.backgroundColor = 'transparent';
+                tr.onmouseenter = (e) => { tr.style.backgroundColor = 'rgba(0,0,0,0.02)'; const ct = document.getElementById('cluster-hover-tooltip'); if (ct) { document.getElementById('tt-cluster-id').innerText = proj.id; document.getElementById('tt-cluster-name').innerText = proj.name; let vendor = 'PostgreSQL Streaming v16'; if (proj.name.toLowerCase().includes('maria')) vendor = 'MariaDB 10.11'; else if (proj.name.toLowerCase().includes('percona')) vendor = 'Percona XtraDB Cluster 8.0'; document.getElementById('tt-cluster-vendor').innerText = vendor; const rect = tr.getBoundingClientRect(); ct.style.display = 'block'; let topPos = rect.bottom + 5; if (topPos + 300 > window.innerHeight) topPos = rect.top - 300; ct.style.top = topPos + 'px'; ct.style.left = (rect.left + 50) + 'px'; } };
+                tr.onmouseleave = (e) => { tr.style.backgroundColor = 'transparent'; const ct = document.getElementById('cluster-hover-tooltip'); if (ct) ct.style.display = 'none'; };
 
                 tr.innerHTML = `
                     <td style="padding: 12px 10px 12px 0; color: var(--text-muted);">${proj.id}</td>

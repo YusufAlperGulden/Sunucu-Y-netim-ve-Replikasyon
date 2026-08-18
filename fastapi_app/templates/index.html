@@ -654,3 +654,68 @@
 <div id="custom-tooltip" style="display: none; position: absolute; background: white; padding: 6px 12px; border-radius: 4px; box-shadow: 0 4px 12px rgba(0,0,0,0.15); font-size: 0.85rem; color: #374151; pointer-events: none; z-index: 9999;"></div>
 </body>
 </html>
+
+<div id="cluster-hover-tooltip" style="display: none; position: fixed; background: white; border-radius: 8px; box-shadow: 0 10px 25px rgba(0,0,0,0.2); width: 400px; z-index: 10000; overflow: hidden; font-family: 'Inter', sans-serif;">
+    <div style="background: var(--success); color: white; padding: 12px 20px; display: flex; align-items: center; gap: 8px; font-weight: 600;">
+        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="10" y="3" width="4" height="4" rx="1"></rect><rect x="3" y="17" width="4" height="4" rx="1"></rect><rect x="10" y="17" width="4" height="4" rx="1"></rect><rect x="17" y="17" width="4" height="4" rx="1"></rect><line x1="12" y1="7" x2="12" y2="12"></line><line x1="5" y1="12" x2="19" y2="12"></line><line x1="5" y1="12" x2="5" y2="17"></line><line x1="12" y1="12" x2="12" y2="17"></line><line x1="19" y1="12" x2="19" y2="17"></line></svg>
+        Cluster information
+    </div>
+    <div style="padding: 20px; color: #374151;">
+        <div style="display: flex; gap: 40px; margin-bottom: 20px;">
+            <div>
+                <div style="color: #6b7280; font-size: 0.85rem; margin-bottom: 4px;">ID</div>
+                <div style="font-weight: 500;" id="tt-cluster-id"></div>
+            </div>
+            <div>
+                <div style="color: #6b7280; font-size: 0.85rem; margin-bottom: 4px;">Name</div>
+                <div style="font-weight: 600;" id="tt-cluster-name"></div>
+            </div>
+        </div>
+        
+        <div style="display: flex; gap: 40px; margin-bottom: 20px;">
+            <div>
+                <div style="color: #6b7280; font-size: 0.85rem; margin-bottom: 4px;">Vendor and version</div>
+                <div style="display: flex; align-items: center; gap: 6px; font-weight: 500;">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--primary)" stroke-width="2"><ellipse cx="12" cy="5" rx="9" ry="3"></ellipse><path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3"></path><path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5"></path></svg>
+                    <span id="tt-cluster-vendor">PostgreSQL Streaming v16</span>
+                </div>
+            </div>
+            <div>
+                <div style="color: #6b7280; font-size: 0.85rem; margin-bottom: 4px;">Status</div>
+                <div style="color: var(--success); font-weight: 500;">? Operational</div>
+            </div>
+        </div>
+        
+        <div style="color: #6b7280; font-size: 0.85rem; margin-bottom: 12px;">Topology</div>
+        <div style="border: 1px dashed #d1d5db; border-radius: 8px; padding: 20px; position: relative; display: flex; align-items: center; justify-content: center; gap: 20px;">
+            <!-- Hardcoded Topology to match image -->
+            <div style="display: flex; flex-direction: column; align-items: center;">
+                <div style="font-size: 0.7rem; color: #9ca3af; margin-bottom: 8px;">Load Balancers</div>
+                <svg width="40" height="46" viewBox="0 0 40 46"><polygon points="20,0 40,11.5 40,34.5 20,46 0,34.5 0,11.5" fill="var(--success)" /><text x="20" y="27" fill="white" font-size="12" font-weight="bold" text-anchor="middle">HA</text></svg>
+            </div>
+            <div style="height: 1px; width: 20px; background: #d1d5db;"></div>
+            <div style="display: flex; flex-direction: column; align-items: center; gap: 10px;">
+                <div style="font-size: 0.7rem; color: #9ca3af; margin-bottom: 2px;">Pgbouncers</div>
+                <svg width="40" height="46" viewBox="0 0 40 46"><polygon points="20,0 40,11.5 40,34.5 20,46 0,34.5 0,11.5" fill="var(--success)" /><text x="20" y="27" fill="white" font-size="12" font-weight="bold" text-anchor="middle">PB</text></svg>
+                <svg width="40" height="46" viewBox="0 0 40 46"><polygon points="20,0 40,11.5 40,34.5 20,46 0,34.5 0,11.5" fill="var(--success)" /><text x="20" y="27" fill="white" font-size="12" font-weight="bold" text-anchor="middle">PB</text></svg>
+            </div>
+            <div style="height: 1px; width: 20px; background: #d1d5db;"></div>
+            <div style="display: flex; flex-direction: column; align-items: center; gap: 10px;">
+                <div style="font-size: 0.7rem; color: #9ca3af; margin-bottom: 2px;">DB Nodes</div>
+                <div style="display: flex; align-items: center; gap: 10px;">
+                    <svg width="40" height="46" viewBox="0 0 40 46"><polygon points="20,0 40,11.5 40,34.5 20,46 0,34.5 0,11.5" fill="var(--success)" /><text x="20" y="27" fill="white" font-size="12" font-weight="bold" text-anchor="middle">P</text></svg>
+                    <div style="display: flex; flex-direction: column; gap: 10px;">
+                        <svg width="40" height="46" viewBox="0 0 40 46"><polygon points="20,0 40,11.5 40,34.5 20,46 0,34.5 0,11.5" fill="var(--success)" /><text x="20" y="27" fill="white" font-size="12" font-weight="bold" text-anchor="middle">R</text></svg>
+                        <svg width="40" height="46" viewBox="0 0 40 46"><polygon points="20,0 40,11.5 40,34.5 20,46 0,34.5 0,11.5" fill="var(--success)" /><text x="20" y="27" fill="white" font-size="12" font-weight="bold" text-anchor="middle">R</text></svg>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div style="margin-top: 10px; font-size: 0.75rem; color: #9ca3af; display: flex; gap: 15px; justify-content: center;">
+            <span>P - Primary</span>
+            <span>R - Replica</span>
+            <span>PB - PgBouncer</span>
+            <span>HA - HAProxy</span>
+        </div>
+    </div>
+</div>
