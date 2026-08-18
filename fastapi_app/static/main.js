@@ -112,7 +112,10 @@ document.addEventListener('DOMContentLoaded', () => {
             
             // Show target view
             const targetId = link.getAttribute('data-view');
-            document.getElementById(targetId).style.display = 'block';
+            if (targetId) {
+                const view = document.getElementById(targetId);
+                if (view) view.style.display = 'block';
+            }
             
             // If projects view is shown, ensure detail view is hidden
             if(targetId === 'projects-view') {
