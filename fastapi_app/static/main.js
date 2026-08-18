@@ -237,13 +237,15 @@ document.addEventListener('DOMContentLoaded', () => {
                     <td style="padding: 12px 10px; color: var(--success);">On <span style="color:var(--border);">|</span> On</td>
                     <td style="padding: 12px 10px;">${proj.nodesCount || 0}</td>
                     <td style="padding: 12px 10px; color: ${statusColor};">${statusText}</td>
-                    <td style="padding: 12px 10px; text-align: right;">
-                        <button class="icon-btn edit-proj-btn" style="padding: 4px; color: var(--text-secondary);" title="Edit">
-                            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
-                        </button>
-                        <button class="icon-btn delete-proj-btn" style="padding: 4px; color: var(--danger);" title="Delete">
-                            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
-                        </button>
+                    <td style="padding: 12px 10px;">
+                        <div style="display: flex; justify-content: flex-end; gap: 8px;">
+                            <button class="edit-proj-btn" style="background: transparent; border: none; cursor: pointer; padding: 4px; color: var(--text-secondary);" title="Edit">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
+                            </button>
+                            <button class="delete-proj-btn" style="background: transparent; border: none; cursor: pointer; padding: 4px; color: var(--danger);" title="Delete">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
+                            </button>
+                        </div>
                     </td>
                 `;
 
