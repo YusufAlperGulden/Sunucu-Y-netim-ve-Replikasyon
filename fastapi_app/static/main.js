@@ -193,7 +193,7 @@ document.addEventListener('DOMContentLoaded', () => {
         let hash = window.location.hash.substring(1) || 'projects-view';
         
         // If hash is a changelog section anchor (e.g. v1-4-2), show changelog-view and scroll
-        const changelogAnchors = ['v1-4-7', 'v1-4-6', 'v1-4-5', 'v1-4-4', 'v1-4-3', 'v1-4-2', 'v1-4-1', 'release-cycle', 'whats-new'];
+        const changelogAnchors = ['v1-4-8', 'v1-4-7', 'v1-4-6', 'v1-4-5', 'v1-4-4', 'v1-4-3', 'v1-4-2', 'v1-4-1', 'release-cycle', 'whats-new'];
         if (changelogAnchors.includes(hash)) {
             document.querySelectorAll('.view-section').forEach(s => s.style.display = 'none');
             const cv = document.getElementById('changelog-view');
