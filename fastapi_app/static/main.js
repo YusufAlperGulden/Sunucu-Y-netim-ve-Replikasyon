@@ -2358,143 +2358,235 @@ const usersData = [
 
 
 // --- NODES PAGE MANAGEMENT ---
-document.addEventListener('DOMContentLoaded', () => {
-    
+window.nodesPageData = [];
+window.currentNodesFilter = 'All';
+window.currentSortCol = null;
+window.currentSortDir = null;
 
+window.renderNodesPage = function() {
+    const tbody = document.getElementById('nodes-page-tbody');
+    if (!tbody) return;
+    tbody.innerHTML = '';
 
-    let currentFilter = 'All';
+    const allData = window.nodesPageData || [];
 
-    window.filterNodes = function(status, el) {
-        currentFilter = status;
-        
-        // Update styling of all cards
-        const cards = document.querySelectorAll('.node-status-card');
-        cards.forEach(card => {
-            card.style.borderBottom = 'none';
-            card.style.background = 'transparent';
-        });
-        
-        // Style the clicked card
-        if (el) {
-            el.style.borderBottom = '2px solid var(--primary)';
-            el.style.background = '#f9fafb';
-        }
-        
-        renderNodesPage();
+    // Calculate and update stats counters
+    let stats = {
+        'Operational': 0,
+        'Failed': 0,
+        'Offline': 0,
+        'Shut Down': 0,
+        'Recovering': 0,
+        'Unknown State': 0
     };
 
-let currentSortCol = null;
-    let currentSortDir = null; // 'asc', 'desc', null
+    allData.forEach(n => {
+        const s = n.status || 'Operational';
+        if (stats[s] !== undefined) stats[s]++;
+        else stats['Unknown State']++;
+    });
 
-    window.sortNodes = function(col) {
-        if (currentSortCol !== col) {
-            currentSortCol = col;
-            currentSortDir = 'asc';
-        } else {
-            if (currentSortDir === 'asc') currentSortDir = 'desc';
-            else if (currentSortDir === 'desc') currentSortDir = null;
-            else currentSortDir = 'asc';
-        }
-        
-        // Reset all tooltips and arrows
-        ['host', 'port', 'status', 'type', 'role', 'cluster', 'seen'].forEach(c => {
-            const arr = document.getElementById('nodes-sort-arrows-' + c);
-            const txt = document.getElementById('nodes-sort-text-' + c);
-            if(arr) arr.innerHTML = '&#9650;&#9660;';
-            if(txt) txt.innerText = 'Click to sort ascending';
-        });
-        
-        // Update current
-        if (currentSortDir) {
-            const arr = document.getElementById('nodes-sort-arrows-' + col);
-            const txt = document.getElementById('nodes-sort-text-' + col);
-            if (currentSortDir === 'asc') {
-                if(arr) arr.innerHTML = '&#9650;';
-                if(txt) txt.innerText = 'Click to sort descending';
-            } else {
-                if(arr) arr.innerHTML = '&#9660;';
-                if(txt) txt.innerText = 'Click to Cancel Sorting';
-            }
-        }
-        
-        renderNodesPage();
-    };
+    const statOp = document.getElementById('stat-operational');
+    const statAll = document.getElementById('stat-all');
+    if (statOp) statOp.innerText = stats['Operational'];
+    if (statAll) statAll.innerText = allData.length;
+    ['failed', 'offline', 'shutdown', 'recovering', 'unknown'].forEach(k => {
+        const el = document.getElementById('stat-' + k);
+        let val = 0;
+        if (k === 'failed') val = stats['Failed'];
+        if (k === 'offline') val = stats['Offline'];
+        if (k === 'shutdown') val = stats['Shut Down'];
+        if (k === 'recovering') val = stats['Recovering'];
+        if (k === 'unknown') val = stats['Unknown State'];
+        if (el) el.innerText = val;
+    });
 
-    function renderNodesPage() {
-        const tbody = document.getElementById('nodes-page-tbody');
-        if(!tbody) return;
-        tbody.innerHTML = '';
-        
-        let filteredData = nodesPageData.filter(n => currentFilter === 'All' || n.status === currentFilter);
-        
-        if (currentSortDir) {
-            filteredData.sort((a, b) => {
-                let valA = a[currentSortCol];
-                let valB = b[currentSortCol];
-                
-                // For nested fields like cluster, sort by name
-                if (currentSortCol === 'cluster') {
-                    // Extract text before (ID:xx) if needed, but string comparison works fine
-                }
-                
-                if (valA < valB) return currentSortDir === 'asc' ? -1 : 1;
-                if (valA > valB) return currentSortDir === 'asc' ? 1 : -1;
-                return 0;
-            });
-        }
-        
-        if (filteredData.length === 0) {
-            tbody.innerHTML = `<tr><td colspan="10" style="text-align: center; padding: 40px; color: #9ca3af; font-size: 0.9rem;">There are no matches</td></tr>`;
-            return;
-        }
-        
-        filteredData.forEach((n, i) => {
-            const tr = document.createElement('tr');
-            tr.style.borderBottom = '1px solid var(--glass-border)';
-            tr.style.background = 'white';
-            
-            let statusColor = 'var(--success)';
-            let dotColor = 'var(--success)';
-            if (n.status === 'Shut Down') { statusColor = '#3b82f6'; dotColor = '#3b82f6'; }
-            if (n.status === 'Failed') { statusColor = '#ef4444'; dotColor = '#ef4444'; }
-            
-            let statusHtml = `<span style="color: ${statusColor}; display: inline-flex; align-items: center; gap: 6px;"><div style="width: 6px; height: 6px; border-radius: 50%; background: ${dotColor};"></div> ${n.status}</span>`;
-            
-            let typeColor = '#059669'; // Greenish
-            if (n.type === 'HAProxy') typeColor = '#8b5cf6'; // Purple
-            if (n.type === 'Prometheus') typeColor = '#eab308'; // Yellow
-            if (n.type === 'MongoDB') typeColor = '#059669'; // Greenish
-            
-            let roleHtml = `<span>${n.role}</span>`;
-            if (n.badge) {
-                roleHtml += ` <span style="font-size: 0.7rem; padding: 2px 6px; border-radius: 4px; background: ${n.badge.bg}; color: ${n.badge.color}; border: 1px solid ${n.badge.color}; margin-left: 6px;">${n.badge.text}</span>`;
-            }
-            
-            let logoColor = n.clusterColor || '#1f2937';
-            
-            tr.innerHTML = `
-                <td style="padding: 16px 16px; font-size: 0.85rem; color: var(--text-main); white-space: nowrap;">${n.host}</td>
-                <td style="padding: 16px 16px; font-size: 0.85rem; color: var(--text-main); white-space: nowrap;">${n.port}</td>
-                <td style="padding: 16px 16px; font-size: 0.85rem; color: var(--text-main); white-space: nowrap;">${n.ip}</td>
-                <td style="padding: 16px 16px; font-size: 0.85rem; white-space: nowrap;">${statusHtml}</td>
-                <td style="padding: 16px 16px; font-size: 0.85rem; color: ${typeColor}; white-space: nowrap;">${n.type}</td>
-                <td style="padding: 16px 16px; font-size: 0.85rem; color: var(--text-main); white-space: nowrap; display: flex; align-items: center;">${roleHtml}</td>
-                <td style="padding: 16px 16px; font-size: 0.85rem; color: var(--text-main); white-space: nowrap;">
-                    <div style="display: flex; align-items: center; gap: 8px;">
-                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="${logoColor}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">${n.clusterLogo}</svg>
-                        ${n.cluster}
-                    </div>
-                </td>
-                <td style="padding: 16px 16px; font-size: 0.85rem; color: var(--text-main); white-space: nowrap;">${n.version}</td>
-                <td style="padding: 16px 16px; font-size: 0.8rem; color: #6b7280; white-space: nowrap; text-align: right;">${n.seen}</td>
-                <td style="padding: 16px 16px; font-size: 0.85rem; text-align: center;"><button style="background: none; border: 1px solid var(--border); padding: 4px 8px; border-radius: 4px; cursor: pointer;">...</button></td>
-            `;
-            if (tbody) { tbody.appendChild(tr); }
+    // Filter by currentNodesFilter
+    let filteredData = allData.filter(n => window.currentNodesFilter === 'All' || n.status === window.currentNodesFilter);
+
+    // Sort if active
+    if (window.currentSortCol && window.currentSortDir) {
+        filteredData.sort((a, b) => {
+            let valA = (a[window.currentSortCol] || '').toString().toLowerCase();
+            let valB = (b[window.currentSortCol] || '').toString().toLowerCase();
+            if (valA < valB) return window.currentSortDir === 'asc' ? -1 : 1;
+            if (valA > valB) return window.currentSortDir === 'asc' ? 1 : -1;
+            return 0;
         });
     }
 
-    renderNodesPage();
-});
+    if (filteredData.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="10" style="text-align: center; padding: 40px; color: #9ca3af; font-size: 0.9rem;">There are no matches</td></tr>`;
+        return;
+    }
+
+    filteredData.forEach(n => {
+        const tr = document.createElement('tr');
+        tr.style.borderBottom = '1px solid #f3f4f6';
+        tr.style.background = 'white';
+
+        let statusColor = 'var(--success, #10b981)';
+        let dotColor = 'var(--success, #10b981)';
+        if (n.status === 'Shut Down') { statusColor = '#3b82f6'; dotColor = '#3b82f6'; }
+        if (n.status === 'Failed') { statusColor = '#ef4444'; dotColor = '#ef4444'; }
+        if (n.status === 'Offline') { statusColor = '#6b7280'; dotColor = '#6b7280'; }
+
+        let statusHtml = `<span style="color: ${statusColor}; display: inline-flex; align-items: center; gap: 6px;"><div style="width: 6px; height: 6px; border-radius: 50%; background: ${dotColor};"></div> ${escapeHTML(n.status)}</span>`;
+
+        let typeColor = '#059669';
+        if (n.type === 'HAProxy') typeColor = '#8b5cf6';
+        if (n.type === 'Prometheus') typeColor = '#eab308';
+        if (n.type === 'MongoDB') typeColor = '#059669';
+
+        let roleHtml = `<span>${escapeHTML(n.role)}</span>`;
+        if (n.badge) {
+            roleHtml += ` <span style="font-size: 0.7rem; padding: 2px 6px; border-radius: 4px; background: ${n.badge.bg}; color: ${n.badge.color}; border: 1px solid ${n.badge.color}; margin-left: 6px;">${n.badge.text}</span>`;
+        }
+
+        let logoColor = n.clusterColor || '#059669';
+        let logoSvg = n.clusterLogo || '<polygon points="12 2 2 7 12 12 22 7 12 2"></polygon>';
+
+        tr.innerHTML = `
+            <td style="padding: 16px; font-size: 0.85rem; color: var(--text-main); white-space: nowrap;">${escapeHTML(n.host)}</td>
+            <td style="padding: 16px; font-size: 0.85rem; color: var(--text-main); white-space: nowrap;">${escapeHTML(n.port)}</td>
+            <td style="padding: 16px; font-size: 0.85rem; color: #6b7280; white-space: nowrap;">${escapeHTML(n.ip)}</td>
+            <td style="padding: 16px; font-size: 0.85rem; white-space: nowrap;">${statusHtml}</td>
+            <td style="padding: 16px; font-size: 0.85rem; color: ${typeColor}; white-space: nowrap;">${escapeHTML(n.type)}</td>
+            <td style="padding: 16px; font-size: 0.85rem; color: var(--text-main); white-space: nowrap; display: flex; align-items: center;">${roleHtml}</td>
+            <td style="padding: 16px; font-size: 0.85rem; color: var(--text-main); white-space: nowrap;">
+                <div style="display: flex; align-items: center; gap: 8px;">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="${logoColor}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">${logoSvg}</svg>
+                    ${escapeHTML(n.cluster)}
+                </div>
+            </td>
+            <td style="padding: 16px; font-size: 0.85rem; color: var(--text-main); white-space: nowrap;">${n.version}</td>
+            <td style="padding: 16px; font-size: 0.8rem; color: #6b7280; white-space: nowrap;">${escapeHTML(n.seen)}</td>
+            <td style="padding: 16px; font-size: 0.85rem; text-align: center;"><button style="background: none; border: 1px solid var(--border); padding: 4px 8px; border-radius: 4px; cursor: pointer;">...</button></td>
+        `;
+        tbody.appendChild(tr);
+    });
+};
+
+window.filterNodes = function(status, el) {
+    window.currentNodesFilter = status;
+    const cards = document.querySelectorAll('.node-status-card');
+    cards.forEach(card => {
+        card.style.borderBottom = 'none';
+        card.style.background = 'transparent';
+    });
+    if (el) {
+        el.style.borderBottom = '2px solid var(--primary, #6366f1)';
+        el.style.background = '#f9fafb';
+    }
+    window.renderNodesPage();
+};
+
+window.sortNodes = function(col) {
+    if (window.currentSortCol !== col) {
+        window.currentSortCol = col;
+        window.currentSortDir = 'asc';
+    } else {
+        if (window.currentSortDir === 'asc') window.currentSortDir = 'desc';
+        else if (window.currentSortDir === 'desc') window.currentSortDir = null;
+        else window.currentSortDir = 'asc';
+    }
+
+    ['host', 'port', 'status', 'type', 'role', 'cluster', 'seen'].forEach(c => {
+        const arr = document.getElementById('nodes-sort-arrows-' + c);
+        const txt = document.getElementById('nodes-sort-text-' + c);
+        if (arr) arr.innerHTML = '&#9650;&#9660;';
+        if (txt) txt.innerText = 'Click to sort ascending';
+    });
+
+    if (window.currentSortDir) {
+        const arr = document.getElementById('nodes-sort-arrows-' + col);
+        const txt = document.getElementById('nodes-sort-text-' + col);
+        if (window.currentSortDir === 'asc') {
+            if (arr) arr.innerHTML = '&#9650;';
+            if (txt) txt.innerText = 'Click to sort descending';
+        } else {
+            if (arr) arr.innerHTML = '&#9660;';
+            if (txt) txt.innerText = 'Click to Cancel Sorting';
+        }
+    }
+    window.renderNodesPage();
+};
+
+window.fetchNodesPage = async function() {
+    const tbody = document.getElementById('nodes-page-tbody');
+    if (tbody) {
+        tbody.innerHTML = '<tr class="cc-loading-row"><td colspan="10"><div class="cc-loading-container"><div class="cc-spinner cc-spinner-lg"></div><span style="color:#9ca3af;font-size:0.85rem;">Loading nodes...</span></div></td></tr>';
+    }
+
+    try {
+        const res = await apiFetch('/api/projects');
+        if (!res.ok) {
+            if (tbody) tbody.innerHTML = '<tr><td colspan="10" style="text-align:center;padding:30px;color:#ef4444;">Failed to load clusters.</td></tr>';
+            return;
+        }
+        const projects = await res.json();
+
+        window.nodesPageData = [];
+        let nodeIndex = 0;
+
+        for (const proj of projects) {
+            for (const node of (proj.nodes || [])) {
+                nodeIndex++;
+                const isPrimary = (node.role || '').toLowerCase() === 'primary';
+                window.nodesPageData.push({
+                    id: node.id,
+                    host: node.name,
+                    port: '5432',
+                    ip: '10.0.20.' + (18 + nodeIndex),
+                    status: 'Operational',
+                    type: 'PostgreSQL',
+                    role: node.role ? (node.role.charAt(0).toUpperCase() + node.role.slice(1)) : 'Unknown',
+                    badge: isPrimary ? { text: 'Writable', bg: '#dcfce7', color: '#16a34a' } : { text: 'Readonly', bg: '#f3f4f6', color: '#4b5563' },
+                    cluster: `${proj.name} (ID:${proj.id})`,
+                    clusterLogo: '<polygon points="12 2 2 7 12 12 22 7 12 2"></polygon>',
+                    clusterColor: '#059669',
+                    version: '<div class="cc-spinner cc-spinner-sm" style="opacity:0.6;"></div>',
+                    seen: 'in 4 minutes',
+                    projId: proj.id
+                });
+            }
+        }
+
+        window.renderNodesPage();
+
+        // Fetch live metrics in background to resolve versions and actual statuses
+        for (const proj of projects) {
+            if (!proj.nodes || proj.nodes.length === 0) continue;
+            try {
+                const mr = await apiFetch('/api/projects/' + proj.id + '/metrics');
+                if (!mr.ok) continue;
+                const nodeMetrics = await mr.json();
+                for (const nm of nodeMetrics) {
+                    const m = nm.metrics;
+                    if (!m) continue;
+                    const matchedNode = window.nodesPageData.find(n => n.id === nm.id);
+                    if (matchedNode) {
+                        if (m.status === 'online') {
+                            matchedNode.status = 'Operational';
+                            matchedNode.version = m.version ? escapeHTML(m.version) : 'PostgreSQL 16.4';
+                        } else if (m.status === 'offline') {
+                            matchedNode.status = 'Offline';
+                            matchedNode.version = '-';
+                        }
+                    }
+                }
+                window.renderNodesPage();
+            } catch(e) { /* ignore */ }
+        }
+
+    } catch(e) {
+        console.error('fetchNodesPage error:', e);
+        if (tbody) tbody.innerHTML = '<tr><td colspan="10" style="text-align:center;padding:30px;color:#ef4444;">Error: ' + escapeHTML(String(e)) + '</td></tr>';
+    }
+};
+
+
+
 
 
 
@@ -2944,108 +3036,7 @@ document.querySelector('button[onclick="document.getElementById(\'modal-create-b
 });
 
 
-window.fetchNodesPage = async function fetchNodesPage() {
-    const tbody = document.getElementById('nodes-page-tbody');
-    if (!tbody) return;
-
-    tbody.innerHTML = '<tr class="cc-loading-row"><td colspan="10"><div class="cc-loading-container"><div class="cc-spinner cc-spinner-lg"></div><span style="color:#9ca3af;font-size:0.85rem;">Loading nodes...</span></div></td></tr>';
-
-    // Reset stats to loading state
-    ['stat-operational','stat-failed','stat-offline','stat-shutdown','stat-recovering','stat-unknown','stat-all'].forEach(id => {
-        const el = document.getElementById(id);
-        if (el) el.innerText = '-';
-    });
-
-    try {
-        const res = await apiFetch('/api/projects');
-        if (!res.ok) {
-            tbody.innerHTML = '<tr><td colspan="10" style="text-align:center;padding:30px;color:#ef4444;">Failed to load clusters.</td></tr>';
-            return;
-        }
-        const projects = await res.json();
-
-        // Build nodesPageData
-        window.nodesPageData = [];
-        nodesPageData = window.nodesPageData;
-
-        let nodeIndex = 0;
-        for (const proj of projects) {
-            for (const node of (proj.nodes || [])) {
-                nodeIndex++;
-                const isPrimary = (node.role || '').toLowerCase() === 'primary';
-                nodesPageData.push({
-                    id: node.id,
-                    host: node.name,
-                    port: '5432',
-                    ip: '10.0.20.' + (18 + nodeIndex),
-                    status: 'Operational',
-                    type: 'PostgreSQL',
-                    role: node.role ? (node.role.charAt(0).toUpperCase() + node.role.slice(1)) : 'Unknown',
-                    badge: isPrimary ? { text: 'Writable', bg: '#dcfce7', color: '#16a34a' } : { text: 'Readonly', bg: '#f3f4f6', color: '#4b5563' },
-                    cluster: `${proj.name} (ID:${proj.id})`,
-                    clusterLogo: '<polyline points="9 18 15 12 9 6"></polyline>',
-                    clusterColor: '#059669',
-                    version: '<div class="cc-spinner cc-spinner-sm" style="opacity:0.6;"></div>',
-                    seen: 'just now',
-                    nodeObj: node,
-                    projObj: proj
-                });
-            }
-        }
-
-        // Update stat counters
-        const statOp = document.getElementById('stat-operational');
-        const statAll = document.getElementById('stat-all');
-        if (statOp) statOp.innerText = nodesPageData.length;
-        if (statAll) statAll.innerText = nodesPageData.length;
-        ['stat-failed','stat-offline','stat-shutdown','stat-recovering','stat-unknown'].forEach(id => {
-            const el = document.getElementById(id);
-            if (el) el.innerText = '0';
-        });
-
-        if (nodesPageData.length === 0) {
-            tbody.innerHTML = '<tr><td colspan="10" style="text-align:center;padding:40px;color:#9ca3af;">No nodes found. Deploy a cluster first.</td></tr>';
-            return;
-        }
-
-        // Render immediately
-        if (typeof renderNodesPage === 'function') {
-            renderNodesPage();
-        }
-
-        // Fetch metrics in background to populate real versions and live status
-        for (const proj of projects) {
-            if (!proj.nodes || proj.nodes.length === 0) continue;
-            try {
-                const mr = await apiFetch('/api/projects/' + proj.id + '/metrics');
-                if (!mr.ok) continue;
-                const nodeMetrics = await mr.json();
-                for (const nm of nodeMetrics) {
-                    const m = nm.metrics;
-                    if (!m) continue;
-                    const matchedNode = nodesPageData.find(n => n.id === nm.id);
-                    if (matchedNode) {
-                        if (m.status === 'online') {
-                            matchedNode.status = 'Operational';
-                            matchedNode.version = m.version ? escapeHTML(m.version) : 'PostgreSQL';
-                        } else if (m.status === 'offline') {
-                            matchedNode.status = 'Offline';
-                            matchedNode.version = '-';
-                        }
-                    }
-                }
-                // Re-render with updated versions and status
-                if (typeof renderNodesPage === 'function') {
-                    renderNodesPage();
-                }
-            } catch(e) { /* ignore metric error */ }
-        }
-
-    } catch(e) {
-        console.error('fetchNodesPage error:', e);
-        if(tbody) tbody.innerHTML = '<tr><td colspan="10" style="text-align:center;padding:30px;color:#ef4444;">Error: ' + escapeHTML(String(e)) + '</td></tr>';
-    }
-};
+;
 
 async function fetchRecentAlarms() {
     const container = document.getElementById('recent-alarms-container');
