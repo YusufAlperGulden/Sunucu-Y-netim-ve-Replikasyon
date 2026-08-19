@@ -397,10 +397,15 @@ document.addEventListener('DOMContentLoaded', () => {
                            }
                         }
                         
-                        // BUT let's also hardcode some messages based on project name matching user screenshots
-                        let msg = null;
-                        if (nameLower.includes('maria')) msg = 'br4-ccdemo-svr1:3306 (Replica): Node is shutdown by user';
-                        if (nameLower.includes('percona mysql')) msg = 'br2-ccdemo-svr2:3306 (Replica): Node is shutdown by user';
+                        // Determine if there is a disabled node
+                          let msg = null;
+                          const cNodes = allNodes.filter(nd => nd.clusterId === proj.id && nd.status === 'Shut Down');
+                          if (cNodes.length > 0) {
+                              const n = cNodes[0];
+                              const r = n.role ? (n.role.charAt(0).toUpperCase() + n.role.slice(1)) : 'None';
+                              const port = r === 'ProxySQL' ? 6032 : (vendorType === 'postgres' ? 5432 : 3306);
+                              msg = `${n.name}:${port} (${r}): Node is shutdown by user`;
+                          }
                         
                         const msgBox = document.getElementById('tt-cluster-message');
                         const msgText = document.getElementById('tt-cluster-message-text');
@@ -723,11 +728,15 @@ if (donutCircle) {
             // Draw Honeycomb
             const hcContainer = document.getElementById('nodes-honeycomb');
             if (hcContainer) {
-                let hexHtml = '<svg width="100%" height="200" viewBox="0 0 240 200"><defs><polygon id="hex" points="50,0 93,25 93,75 50,100 7,75 7,25" stroke="var(--glass-bg)" stroke-width="4" /></defs>';
+                // Made smaller, scaled down by ~0.65
+                let hexHtml = '<svg width="100%" height="200" viewBox="0 0 240 200">';
                 
+                // New positions for smaller hexagons
+                // width ~56, height ~65
                 const positions = [
-                    {x:10, y:20}, {x:96, y:20}, {x:53, y:95}, {x:139, y:95},
-                    {x:182, y:20}, {x:225, y:95}, {x:10, y:170}, {x:96, y:170}
+                    {x:20, y:20}, {x:76, y:20}, {x:132, y:20}, {x:188, y:20},
+                    {x:48, y:68}, {x:104, y:68}, {x:160, y:68},
+                    {x:20, y:116}, {x:76, y:116}, {x:132, y:116}, {x:188, y:116}
                 ];
                 
                 let shutDownCount = 0;
@@ -747,7 +756,12 @@ if (donutCircle) {
                     if (node.role && node.role.toLowerCase() === 'primary') roleBadge = '<span style="background: rgba(34,197,94,0.1); color: var(--success); border: 1px solid var(--success);">Writable</span>';
                     else if (node.role && node.role.toLowerCase() === 'replica') roleBadge = '<span style="background: rgba(107,114,128,0.1); color: #6b7280; border: 1px solid #d1d5db;">Readonly</span>';
                     
-                    hexHtml += `<g class="node-hex-hover" data-idx="${idx}" style="cursor:pointer;" transform="translate(${pos.x}, ${pos.y})"><use href="#hex" fill="${node.color}" /></g>`;
+                    // The smaller polygon points (scaled from original)
+                    const polyPoints = "32,0 60,16 60,48 32,65 4,48 4,16";
+                    
+                    hexHtml += `<g class="node-hex-hover" data-idx="${idx}" style="cursor:pointer;" transform="translate(${pos.x}, ${pos.y})">
+                        <polygon class="node-petek" points="${polyPoints}" fill="${node.color}" stroke="var(--glass-bg)" stroke-width="3" />
+                    </g>`;
                     
                     window['nodeData_' + idx] = {
                         hostname: node.name,
