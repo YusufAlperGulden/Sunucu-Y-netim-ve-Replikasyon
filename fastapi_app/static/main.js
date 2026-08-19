@@ -216,6 +216,7 @@ document.addEventListener('DOMContentLoaded', () => {
             if(typeof stopDashboardInterval === 'function') stopDashboardInterval();
         } else if (hash === 'settings-view') {
             if(typeof stopDashboardInterval === 'function') stopDashboardInterval();
+            if(typeof fetchProfile === 'function') fetchProfile();
         } else {
             if(typeof stopDashboardInterval === 'function') stopDashboardInterval();
         }
@@ -285,6 +286,7 @@ document.addEventListener('DOMContentLoaded', () => {
     
     // Process initial route
     setTimeout(handleRouting, 10);
+    setTimeout(fetchProfile, 10);
 
     function startDashboardInterval() {
         fetchDashboardMetrics();
@@ -299,6 +301,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if(detailView) detailView.style.display = 'none';
         projectsContainer.style.display = 'grid';
         fetchProjects();
+        fetchRecentAlarms();
     }
 
     function showDetailView(proj) {
@@ -1168,12 +1171,7 @@ if (donutCircle) {
             `).join('');
         }
     }
-});
-            
-        } catch (e) {
-            tbody.innerHTML = `<tr><td colspan="6" style="padding: 16px 24px; text-align: center; color: var(--danger);">Network error fetching logs.</td></tr>`;
-        }
-    }
+}
 
     async function fetchDashboardMetrics() {
         try {
@@ -1464,6 +1462,7 @@ if (donutCircle) {
                 modalEditProj.style.display = 'none';
                 formEditProj.reset();
                 fetchProjects();
+        fetchRecentAlarms();
                 
                 // Update detail view if it's currently showing the edited project
                 if (currentProjectId == id && detailView && detailView.style.display !== 'none') {
@@ -1499,6 +1498,7 @@ if (donutCircle) {
                 modalAddProj.style.display = 'none';
                 formAddProj.reset();
                 fetchProjects();
+        fetchRecentAlarms();
             }
         } catch (err) {
             alert('Failed to create project');
@@ -1774,6 +1774,7 @@ if (donutCircle) {
                 
                 // Only fetch initial data after successful login
                 fetchProjects();
+        fetchRecentAlarms();
             } else {
                 loginError.style.display = 'block';
                 loginError.innerText = 'Invalid username or password';
@@ -1803,6 +1804,7 @@ if (donutCircle) {
             if (res.ok) {
                 modalEditNode.style.display = 'none';
                 fetchProjects();
+        fetchRecentAlarms();
             } else {
                 alert('Sunucu silinemedi.');
             }
@@ -2779,3 +2781,64 @@ document.querySelector('button[onclick="document.getElementById(\'modal-create-b
             projs.map(p => `<option value="${p.id}" style="color:black;">${p.name}</option>`).join('');
     }
 });
+
+
+async function fetchRecentAlarms() {
+    const container = document.getElementById('recent-alarms-container');
+    if (!container) return;
+    
+    try {
+        const res = await apiFetch('/api/audit-logs');
+        if (res.ok) {
+            const data = await res.json();
+            // Filter logs that look like alarms/errors
+            const alarms = data.filter(log => log.action.toLowerCase().includes('failed') || log.action.toLowerCase().includes('error') || log.action.toLowerCase().includes('alarm')).slice(0, 5);
+            
+            if (alarms.length === 0) {
+                container.innerHTML = `
+                <div style="display:flex; flex-direction:column; align-items:center; justify-content:center; height:100%; color: var(--text-muted); font-size: 0.95rem; padding: 24px;">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="#e5e7eb" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="margin-bottom: 16px;"><path d="M10 4H4c-1.1 0-1.99.9-1.99 2L2 18c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V8c0-1.1-.9-2-2-2h-8l-2-2z"/></svg>
+                    No alarms
+                </div>`;
+            } else {
+                container.innerHTML = alarms.map(alarm => `
+                <div style="padding: 12px; border-bottom: 1px solid var(--border); display: flex; flex-direction: column; gap: 4px;">
+                    <div style="display: flex; justify-content: space-between; align-items: center;">
+                        <span style="font-weight: 600; color: #ef4444; font-size: 0.85rem;">${escapeHTML(alarm.action)}</span>
+                        <span style="color: var(--text-muted); font-size: 0.75rem;">${escapeHTML(alarm.timestamp)}</span>
+                    </div>
+                    <div style="font-size: 0.85rem; color: var(--text-secondary);">${escapeHTML(alarm.details)}</div>
+                    <div style="font-size: 0.75rem; color: var(--text-muted);">Cluster ID: ${alarm.project_id}</div>
+                </div>
+                `).join('');
+            }
+        }
+    } catch (e) {
+        console.error("Failed to fetch alarms", e);
+    }
+}
+
+
+async function fetchProfile() {
+    try {
+        const res = await apiFetch('/api/users/me');
+        if (res.ok) {
+            const data = await res.json();
+            const avatar = document.getElementById('profile-avatar');
+            const fullname = document.getElementById('profile-fullname');
+            const role = document.getElementById('profile-role');
+            const username = document.getElementById('profile-username');
+            const team = document.getElementById('profile-team');
+            
+            if (avatar) avatar.innerText = data.username.substring(0, 2);
+            if (fullname) fullname.innerText = data.username;
+            if (role) role.innerText = data.role;
+            if (username) username.innerText = data.username;
+            if (team) team.innerText = data.team;
+            const headerUser = document.getElementById('header-username-display');
+            if (headerUser) headerUser.innerText = data.username;
+        }
+    } catch (e) {
+        console.error("Failed to fetch profile", e);
+    }
+}

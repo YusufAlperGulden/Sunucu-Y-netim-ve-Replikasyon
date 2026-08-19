@@ -4,68 +4,50 @@ html_path = 'fastapi_app/templates/index.html'
 with open(html_path, 'r', encoding='utf-8') as f:
     content = f.read()
 
-old_settings_tab = """<div id="tab-content-settings" class="tab-content" style="display: none;"><div class="glass-panel" style="padding: 40px; background: white; border: 1px solid var(--border); text-align: center; color: #6b7280;">Settings unavailable.</div></div>"""
+# Replace the Settings Tab Bar
+old_tabs = """<div class="settings-tab" onclick="switchSettingsTab('cloud')" id="tab-cloud" style="padding: 16px 0; color: var(--text-main); cursor: pointer;">Cloud storage credentials</div>
+                        <div class="settings-tab" onclick="switchSettingsTab('notifications')" id="tab-notifications" style="padding: 16px 0; color: var(--text-main); cursor: pointer;">Notification services</div>
+                        <div class="settings-tab" onclick="switchSettingsTab('certificates')" id="tab-certificates" style="padding: 16px 0; color: var(--text-main); cursor: pointer;">Certificate management</div>
+                        <div class="settings-tab" onclick="switchSettingsTab('license')" id="tab-license" style="padding: 16px 0; color: var(--text-main); cursor: pointer;">License</div>
+                        <div class="settings-tab" onclick="switchSettingsTab('addons')" id="tab-addons" style="padding: 16px 0; color: var(--text-main); cursor: pointer;">Addons</div>
+                        <div class="settings-tab" onclick="switchSettingsTab('diagnostics')" id="tab-diagnostics" style="padding: 16px 0; color: var(--text-main); cursor: pointer;">Diagnostics</div>"""
 
-new_settings_tab = """<div id="tab-content-settings" class="tab-content" style="display: none; padding: 20px;">
-    <!-- Top inner tabs -->
-    <div style="display: flex; gap: 20px; border-bottom: 1px solid var(--border); margin-bottom: 20px;">
-        <div style="color: var(--primary); font-weight: 500; font-size: 0.9rem; padding-bottom: 10px; border-bottom: 2px solid var(--primary); cursor: pointer;">System settings</div>
-        <div style="color: #6b7280; font-weight: 500; font-size: 0.9rem; padding-bottom: 10px; cursor: pointer;">Email notifications</div>
-    </div>
-    
-    <!-- Search bar -->
-    <div style="margin-bottom: 20px;">
-        <input type="text" placeholder="Search by parameter, value, description" style="width: 100%; padding: 10px 15px; border: 1px solid var(--border); border-radius: 6px; background: white; outline: none; color: #374151; font-size: 0.9rem;">
-    </div>
-    
-    <!-- Layout container -->
-    <div style="display: flex; gap: 20px; min-height: 500px;">
-        <!-- Left sidebar settings categories -->
-        <div style="width: 200px; display: flex; flex-direction: column; gap: 15px;">
-            <div style="color: var(--primary); font-size: 0.85rem; font-weight: 500; cursor: pointer; border-left: 3px solid var(--primary); padding-left: 10px;">Backup</div>
-            <div style="color: #4b5563; font-size: 0.85rem; cursor: pointer; padding-left: 13px;">Cluster</div>
-            <div style="color: #4b5563; font-size: 0.85rem; cursor: pointer; padding-left: 13px;">CmonDB</div>
-            <div style="color: #4b5563; font-size: 0.85rem; cursor: pointer; padding-left: 13px;">Controller</div>
-            <div style="color: #4b5563; font-size: 0.85rem; cursor: pointer; padding-left: 13px;">Long Query</div>
-            <div style="color: #4b5563; font-size: 0.85rem; cursor: pointer; padding-left: 13px;">Replication</div>
-            <div style="color: #4b5563; font-size: 0.85rem; cursor: pointer; padding-left: 13px;">Retention</div>
-            <div style="color: #4b5563; font-size: 0.85rem; cursor: pointer; padding-left: 13px;">Sampling</div>
-            <div style="color: #4b5563; font-size: 0.85rem; cursor: pointer; padding-left: 13px;">Swapping</div>
-            <div style="color: #4b5563; font-size: 0.85rem; cursor: pointer; padding-left: 13px;">System</div>
-            <div style="color: #4b5563; font-size: 0.85rem; cursor: pointer; padding-left: 13px;">Threshold</div>
-        </div>
-        
-        <!-- Main content area -->
-        <div style="flex: 1; background: white; border: 1px solid var(--border); border-radius: 8px; overflow: hidden;">
-            <table style="width: 100%; border-collapse: collapse; text-align: left;">
-                <thead style="background: #f9fafb; border-bottom: 1px solid var(--border);">
-                    <tr>
-                        <th style="padding: 12px 20px; font-weight: 600; font-size: 0.8rem; color: #374151;">Parameter <span style="font-size: 0.6rem; color: #9ca3af;">▼</span></th>
-                        <th style="padding: 12px 20px; font-weight: 600; font-size: 0.8rem; color: #374151;">Value <span style="font-size: 0.6rem; color: #9ca3af;">◆</span></th>
-                        <th style="padding: 12px 20px; font-weight: 600; font-size: 0.8rem; color: #374151;">Description</th>
-                    </tr>
-                </thead>
-                <tbody id="settings-tbody">
-                    <!-- Javascript will populate this -->
-                    <tr><td colspan="3" style="padding: 40px; text-align: center; color: #6b7280;">Loading settings...</td></tr>
-                </tbody>
-            </table>
-            <!-- Pagination mock -->
-            <div style="display: flex; justify-content: center; padding: 20px; gap: 10px; color: #6b7280; font-size: 0.85rem; align-items: center;">
-                <span style="cursor: pointer;">&lt;</span>
-                <span style="cursor: pointer; color: var(--primary); border: 1px solid var(--primary); border-radius: 4px; padding: 2px 8px;">1</span>
-                <span style="cursor: pointer;">2</span>
-                <span style="cursor: pointer;">3</span>
-                <span style="cursor: pointer;">&gt;</span>
-            </div>
-        </div>
-    </div>
-</div>"""
+content = content.replace(old_tabs, "")
 
-if old_settings_tab in content:
-    content = content.replace(old_settings_tab, new_settings_tab)
+# Delete all those other panes
+for pane in ['cloud', 'notifications', 'certificates', 'license', 'addons', 'diagnostics']:
+    pattern = r'<div id="settings-content-' + pane + r'" class="settings-content-pane"[\s\S]*?</div>\s*</div>'
+    # Wait, some panes might not have inner divs, let's just do it manually with regex carefully
+    # Actually, they are inside <div id="settings-view">
+    pass
+
+# Let's just modify the profile content to have IDs
+old_profile = """<div style="width: 90px; height: 90px; border-radius: 50%; background: #ffebeb; color: #e50000; display: flex; align-items: center; justify-content: center; font-size: 2.2rem; font-weight: 400; margin-bottom: 20px;">SK</div>
+                        <div style="font-size: 2rem; font-weight: 500; color: var(--text-main); margin-bottom: 4px;">Stajyer Kullanc</div>
+                        <div style="font-size: 1rem; color: var(--text-muted); margin-bottom: 30px;">stajyer@tp.com</div>
+                        <div style="display: flex; flex-direction: column; gap: 12px; font-size: 0.95rem; margin-bottom: 40px; color: var(--text-secondary);">
+                            <div style="display: flex; gap: 8px; justify-content: center;"><span style="color: var(--text-muted); width: 80px; text-align: right;">Time zone:</span><span style="width: 180px;">UTC</span></div>
+                            <div style="display: flex; gap: 8px; justify-content: center;"><span style="color: var(--text-muted); width: 80px; text-align: right;">Username:</span><span style="width: 180px; font-weight: 500;">stajyer@tp.com</span></div>
+                            <div style="display: flex; gap: 8px; justify-content: center;"><span style="color: var(--text-muted); width: 80px; text-align: right;">Team:</span><span style="width: 180px;">admins</span></div>
+                            <div style="display: flex; gap: 8px; justify-content: center;"><span style="color: var(--text-muted); width: 80px; text-align: right;">Origin:</span><span style="width: 180px;">cmon</span></div>
+                        </div>"""
+
+new_profile = """<div id="profile-avatar" style="width: 90px; height: 90px; border-radius: 50%; background: #e0e7ff; color: #4338ca; display: flex; align-items: center; justify-content: center; font-size: 2.2rem; font-weight: 400; margin-bottom: 20px; text-transform: uppercase;">U</div>
+                        <div id="profile-fullname" style="font-size: 2rem; font-weight: 500; color: var(--text-main); margin-bottom: 4px; text-transform: capitalize;">User</div>
+                        <div id="profile-role" style="font-size: 1rem; color: var(--text-muted); margin-bottom: 30px; text-transform: uppercase;">ROLE</div>
+                        <div style="display: flex; flex-direction: column; gap: 12px; font-size: 0.95rem; margin-bottom: 40px; color: var(--text-secondary);">
+                            <div style="display: flex; gap: 8px; justify-content: center;"><span style="color: var(--text-muted); width: 80px; text-align: right;">Time zone:</span><span style="width: 180px;">UTC</span></div>
+                            <div style="display: flex; gap: 8px; justify-content: center;"><span style="color: var(--text-muted); width: 80px; text-align: right;">Username:</span><span id="profile-username" style="width: 180px; font-weight: 500;">user</span></div>
+                            <div style="display: flex; gap: 8px; justify-content: center;"><span style="color: var(--text-muted); width: 80px; text-align: right;">Team:</span><span id="profile-team" style="width: 180px;">users</span></div>
+                            <div style="display: flex; gap: 8px; justify-content: center;"><span style="color: var(--text-muted); width: 80px; text-align: right;">Origin:</span><span style="width: 180px;">Local DB</span></div>
+                        </div>"""
+
+if "profile-avatar" not in content:
+    content = content.replace(old_tabs, "") # just in case
+    # Replace profile content using regex to be safe about encoding chars
+    content = re.sub(r'<div style="width: 90px; height: 90px;.*?</div>\s*</div>', new_profile, content, flags=re.DOTALL)
     with open(html_path, 'w', encoding='utf-8') as f:
         f.write(content)
-    print("Replaced settings tab HTML")
+    print("Cleaned up Settings tabs and updated Profile")
 else:
-    print("Could not find old_settings_tab")
+    print("Already cleaned up")

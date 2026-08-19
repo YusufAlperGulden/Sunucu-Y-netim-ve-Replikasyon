@@ -840,3 +840,16 @@ def delete_user(user_id: int, db: Session = Depends(get_db)):
     db.delete(user)
     db.commit()
     return {"success": True}
+
+
+@app.get("/api/users/me", dependencies=[Depends(verify_credentials)])
+def get_current_user(credentials: HTTPBasicCredentials = Depends(security), db: Session = Depends(get_db)):
+    from models import User
+    username = credentials.username
+    user = db.query(User).filter(User.username == username).first()
+    role = user.role if user else ("admin" if username == os.environ.get("ADMIN_USER") else "viewer")
+    return {
+        "username": username,
+        "role": role,
+        "team": "admins" if role == "admin" else "viewers"
+    }

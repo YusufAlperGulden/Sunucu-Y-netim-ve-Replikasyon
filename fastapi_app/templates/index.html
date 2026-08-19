@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Sunucu Yönetim ve Replikasyon</title>
-    <link rel="stylesheet" href="/static/style.css?v=34">
+    <link rel="stylesheet" href="/static/style.css?v=35">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 </head>
 <body>
@@ -130,7 +130,7 @@
                 </div>
                 <div style="display: flex; align-items: center; gap: 8px; color: #3a1c94; font-size: 0.9rem; font-weight: 500; cursor: pointer;">
                     <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
-                    Demo ClusterControl
+                    <span id='header-username-display'>Demo ClusterControl</span>
                 </div>
             </div>
 
@@ -248,24 +248,19 @@
                     <!-- Horizontal Tab Bar -->
                     <div style="display: flex; gap: 24px; padding: 0 24px; border-bottom: 1px solid var(--glass-border); font-size: 0.9rem; overflow-x: auto;">
                         <div class="settings-tab" onclick="switchSettingsTab('profile')" id="tab-profile" style="padding: 16px 0; color: #3a1c94; font-weight: 500; border-bottom: 2px solid #3a1c94; cursor: pointer;">Profile</div>
-                        <div class="settings-tab" onclick="switchSettingsTab('cloud')" id="tab-cloud" style="padding: 16px 0; color: var(--text-main); cursor: pointer;">Cloud storage credentials</div>
-                        <div class="settings-tab" onclick="switchSettingsTab('notifications')" id="tab-notifications" style="padding: 16px 0; color: var(--text-main); cursor: pointer;">Notification services</div>
-                        <div class="settings-tab" onclick="switchSettingsTab('certificates')" id="tab-certificates" style="padding: 16px 0; color: var(--text-main); cursor: pointer;">Certificate management</div>
-                        <div class="settings-tab" onclick="switchSettingsTab('license')" id="tab-license" style="padding: 16px 0; color: var(--text-main); cursor: pointer;">License</div>
-                        <div class="settings-tab" onclick="switchSettingsTab('addons')" id="tab-addons" style="padding: 16px 0; color: var(--text-main); cursor: pointer;">Addons</div>
-                        <div class="settings-tab" onclick="switchSettingsTab('diagnostics')" id="tab-diagnostics" style="padding: 16px 0; color: var(--text-main); cursor: pointer;">Diagnostics</div>
+                        
                     </div>
 
                     <!-- Profile Content -->
                     <div id="settings-content-profile" class="settings-content-pane" style="flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 40px;">
-                        <div style="width: 90px; height: 90px; border-radius: 50%; background: #ffebeb; color: #e50000; display: flex; align-items: center; justify-content: center; font-size: 2.2rem; font-weight: 400; margin-bottom: 20px;">SK</div>
-                        <div style="font-size: 2rem; font-weight: 500; color: var(--text-main); margin-bottom: 4px;">Stajyer Kullanıcı</div>
-                        <div style="font-size: 1rem; color: var(--text-muted); margin-bottom: 30px;">stajyer@tp.com</div>
+                        <div id="profile-avatar" style="width: 90px; height: 90px; border-radius: 50%; background: #e0e7ff; color: #4338ca; display: flex; align-items: center; justify-content: center; font-size: 2.2rem; font-weight: 400; margin-bottom: 20px; text-transform: uppercase;">U</div>
+                        <div id="profile-fullname" style="font-size: 2rem; font-weight: 500; color: var(--text-main); margin-bottom: 4px; text-transform: capitalize;">User</div>
+                        <div id="profile-role" style="font-size: 1rem; color: var(--text-muted); margin-bottom: 30px; text-transform: uppercase;">ROLE</div>
                         <div style="display: flex; flex-direction: column; gap: 12px; font-size: 0.95rem; margin-bottom: 40px; color: var(--text-secondary);">
                             <div style="display: flex; gap: 8px; justify-content: center;"><span style="color: var(--text-muted); width: 80px; text-align: right;">Time zone:</span><span style="width: 180px;">UTC</span></div>
-                            <div style="display: flex; gap: 8px; justify-content: center;"><span style="color: var(--text-muted); width: 80px; text-align: right;">Username:</span><span style="width: 180px; font-weight: 500;">stajyer@tp.com</span></div>
-                            <div style="display: flex; gap: 8px; justify-content: center;"><span style="color: var(--text-muted); width: 80px; text-align: right;">Team:</span><span style="width: 180px;">admins</span></div>
-                            <div style="display: flex; gap: 8px; justify-content: center;"><span style="color: var(--text-muted); width: 80px; text-align: right;">Origin:</span><span style="width: 180px;">cmon</span></div>
+                            <div style="display: flex; gap: 8px; justify-content: center;"><span style="color: var(--text-muted); width: 80px; text-align: right;">Username:</span><span id="profile-username" style="width: 180px; font-weight: 500;">user</span></div>
+                            <div style="display: flex; gap: 8px; justify-content: center;"><span style="color: var(--text-muted); width: 80px; text-align: right;">Team:</span><span id="profile-team" style="width: 180px;">users</span></div>
+                            <div style="display: flex; gap: 8px; justify-content: center;"><span style="color: var(--text-muted); width: 80px; text-align: right;">Origin:</span><span style="width: 180px;">Local DB</span></div>
                         </div>
                         <div style="display: flex; flex-direction: column; align-items: center; gap: 16px;">
                             <button style="background: #3a1c94; color: white; border: none; border-radius: 6px; padding: 10px 24px; font-size: 0.95rem; cursor: pointer;">Settings</button>
@@ -767,10 +762,11 @@
                             <a href="#" onclick="document.querySelector('a[data-view=\'activity-view\']').click(); document.getElementById('tab-btn-alarms').click(); return false;" style="color: var(--primary); text-decoration: none; font-size: 0.9rem; font-weight: 500;">View alarms</a>
                         </div>
                         
-                        <div style="flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 40px; color: var(--text-muted); font-size: 0.95rem;">
-                            <svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="#e5e7eb" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="margin-bottom: 16px;"><path d="M10 4H4c-1.1 0-1.99.9-1.99 2L2 18c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V8c0-1.1-.9-2-2-2h-8l-2-2z"/></svg>
-                            No alarms
-                        </div>
+                        <div id="recent-alarms-container" style="flex: 1; display: flex; flex-direction: column; overflow-y: auto; padding: 16px;">
+                              <div style="display:flex; align-items:center; justify-content:center; height:100%; color: var(--text-muted); font-size: 0.95rem;">
+                                  Loading alarms...
+                              </div>
+                          </div>
                     </div>
                 </div>
 
@@ -1106,59 +1102,9 @@ Real OS metrics (CPU, RAM, Disk I/O) cannot be fetched directly from PostgreSQL 
                   </table>
               </div>
 
-              <!-- TEAMS TABLE -->
-              <div id="content-teams" class="user-tab-content" style="display: none;">
-                  <table style="width: 100%; border-collapse: collapse; font-size: 0.9rem;">
-                      <thead>
-                          <tr style="border-bottom: 1px solid var(--glass-border); color: var(--text-muted); text-align: left;">
-                              <th style="padding: 12px 16px; font-weight: 600;">Name <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align:middle;margin-left:4px;"><polyline points="7 14 12 19 17 14"></polyline><polyline points="7 10 12 5 17 10"></polyline></svg></th>
-                              <th style="padding: 12px 16px; font-weight: 600;">Owner <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align:middle;margin-left:4px;"><polyline points="7 14 12 19 17 14"></polyline><polyline points="7 10 12 5 17 10"></polyline></svg></th>
-                              <th style="padding: 12px 16px; font-weight: 600;">Created <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align:middle;margin-left:4px;"><polyline points="7 14 12 19 17 14"></polyline><polyline points="7 10 12 5 17 10"></polyline></svg></th>
-                              <th style="padding: 12px 16px; font-weight: 600; text-align: right;">Actions</th>
-                          </tr>
-                      </thead>
-                      <tbody>
-                          <tr>
-                              <td colspan="4" style="padding: 40px; text-align: center; color: var(--text-muted);">
-                                  <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="#e5e7eb" stroke-width="2" style="margin: 0 auto 16px auto; display: block;"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M23 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg>
-                                  No teams created yet.
-                              </td>
-                          </tr>
-                      </tbody>
-                  </table>
               </div>
-
-              <!-- LDAP TABLE -->
-              <div id="content-ldap" class="user-tab-content" style="display: none;">
-                  <div style="display: flex; gap: 24px; margin-bottom: 24px;">
-                      <a href="#" style="color: var(--primary); text-decoration: none; font-weight: 500; display: flex; align-items: center; gap: 8px;">
-                          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"></path><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"></path></svg> Map LDAP group
-                      </a>
-                      <a href="#" style="color: var(--primary); text-decoration: none; font-weight: 500; display: flex; align-items: center; gap: 8px;">
-                          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg> LDAP Settings
-                      </a>
-                  </div>
-                  <table style="width: 100%; border-collapse: collapse; font-size: 0.9rem;">
-                      <thead>
-                          <tr style="border-bottom: 1px solid var(--glass-border); color: var(--text-muted); text-align: left;">
-                              <th style="padding: 12px 16px; font-weight: 600;">LDAP Group <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align:middle;margin-left:4px;"><polyline points="7 14 12 19 17 14"></polyline><polyline points="7 10 12 5 17 10"></polyline></svg></th>
-                              <th style="padding: 12px 16px; font-weight: 600; text-align: right;">Actions</th>
-                          </tr>
-                      </thead>
-                      <tbody>
-                          <tr>
-                              <td colspan="2" style="padding: 40px; text-align: center; color: var(--text-muted);">
-                                  <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="#e5e7eb" stroke-width="2" style="margin: 0 auto 16px auto; display: block;"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path></svg>
-                                  No LDAP groups mapped yet.
-                              </td>
-                          </tr>
-                      </tbody>
-                  </table>
-              </div>
-
-          </div>
-      </div>
-</section>
+        </div>
+        </section>
 
         
         
@@ -1229,7 +1175,7 @@ Real OS metrics (CPU, RAM, Disk I/O) cannot be fetched directly from PostgreSQL 
 <li><span style="font-weight: 600;">Fix:</span> "ift Giri Ekran (Double Login Prompt)" sorunu zld. Sayfa yklendiinde arka planda yaplan yetki kontrollerinin (API 401 dnleri) tarayc tarafndan yanl anlalp kendi varsaylan "Oturum an" uyarsn kartmas engellendi. Artk gvenlik bal sadece arka planda nlenip direkt olarak tasarladmz gvenli ve k giri ekranna (Balonlu ekran) ynlendiriliyor.</li>
 <li><span style="font-weight: 600;">Feature:</span> "Settings" ekranndaki arama ubuu (Search Bar) aktifleitirildi. Artk "Search by parameter, value, description" ksmna herhangi bir anahtar kelime yazdnzda, o ana kadar sol mendeki hangi kategoride olduunuza baklmakszn tm PostgreSQL parametreleri (isimleri, deeri ve aklamalar) iinde dinamik arama yaplp sonular annda ekrana yansyor.</li>
 <li><span style="font-weight: 600;">Fix:</span> "Settings" (Ayarlar) sayfasndaki sahte etiketlerin kaldrlmas/gizlenmesi ileminde meydana gelen kk bir HTML kapan etiketi kaymas nedeniyle 'User management' ve 'Backups' sayfalarnn saa doru kayarak yapsnn bozulmas (UI Bug) sorunu dzeltildi. Artk tm ekranlar ana gvdeye tam oturuyor.</li>
-<li><span style="font-weight: 600;">Fix:</span> Uygulama srm geikmesi (Render Cache) nedeniyle "Clusters" sayfasnda tklanan projelerin yeni ekranda/sekmede almayp i ie gemesi sorunu son v=34 srmyle tamamen zld. Eer u an kullanyorsanz sayfay tamamen yenileyip (CTRL+F5) dzeldiini grebilirsiniz.</li>
+<li><span style="font-weight: 600;">Fix:</span> Uygulama srm geikmesi (Render Cache) nedeniyle "Clusters" sayfasnda tklanan projelerin yeni ekranda/sekmede almayp i ie gemesi sorunu son v=35 srmyle tamamen zld. Eer u an kullanyorsanz sayfay tamamen yenileyip (CTRL+F5) dzeldiini grebilirsiniz.</li>
 <li><span style="font-weight: 600;">Feature:</span> PostgreSQL Fiziksel Entegrasyonu: "Settings" sekmesinde yer alan PostgreSQL motor parametreleri (shared_buffers, work_mem, max_connections, wal_level, max_replication_slots, log_min_duration_statement vb.) artk sadece veritabanmza kaydedilmekle kalmyor; arkaplanda alan dzenli bir Python isisi sayesinde ilgili kmenin tm Node'larna ngilizce ('ALTER SYSTEM SET...') SQL komutlar araclyla fiziksel olarak gnderilip 'SELECT pg_reload_conf()' komutuyla annda aktif ediliyor. Ayrnca gelecekte kkmeye eklenecek yeni sunuculara da bu proje ayarlarnn otomatik olarak yklenmesi iin eklemeler yapld.</li>
 <li><span style="font-weight: 600;">Fix:</span> Uygulamaya yaplan nceki gncellemeler srasnda (Nodes listesinin deiimi srasnda) meydana gelen kk bir yazm hatasndan dolay arka plan animasyonlar (Baloncuklar) dhil tm etkileimlerin bozulmas (Syntax Error) sorunu dzeltildi.</li>
 <li><span style="font-weight: 600;">Feature:</span> "Settings" ekrannda artk gerekten var olan PostgreSQL ayarlar (Long Query, Replication, Retention, System vb.) iin API balantlar kuruldu. Sol mendeki deerlere tklandnda tpk "Backup" ksmnda olduu gibi kendi API'lerinden gerek deerleri okuyup yanstan bir altyap eklendi ve baz sahte sekmeler (CmonDB, Controller) veritabanyla hibir ilgisi olmad iin mmknse tasarmdan gizlendi.</li>
@@ -1502,7 +1448,7 @@ Real OS metrics (CPU, RAM, Disk I/O) cannot be fetched directly from PostgreSQL 
         </div>
     </div>
 
-    <script src="/static/main.js?v=34"></script>
+    <script src="/static/main.js?v=35"></script>
 
 
 
