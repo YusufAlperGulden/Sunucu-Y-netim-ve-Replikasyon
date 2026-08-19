@@ -94,3 +94,16 @@ class AuditLog(Base):
 
     project = relationship("Project")
 
+
+class OperationalReport(Base):
+    __tablename__ = 'operational_reports'
+    id = Column(Integer, primary_key=True, index=True)
+    project_id = Column(Integer, ForeignKey('projects.id', ondelete='CASCADE'))
+    report_type = Column(String(255))
+    data_range_days = Column(Integer, default=7)
+    recipients = Column(String(500))
+    file_name = Column(String(255))
+    created_by = Column(String(100), default='admin')
+    created_at = Column(DateTime, default=datetime.datetime.utcnow)
+
+    project = relationship('Project')

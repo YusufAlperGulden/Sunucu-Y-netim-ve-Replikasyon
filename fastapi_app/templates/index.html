@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Sunucu Yönetim ve Replikasyon</title>
-    <link rel="stylesheet" href="/static/style.css?v=24">
+    <link rel="stylesheet" href="/static/style.css?v=25">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 </head>
 <body>
@@ -182,7 +182,7 @@
 
               <!-- Reports Table -->
               <div id="table-reports" style="display: block;">
-                  <table style="width: 100%; border-collapse: collapse; text-align: left; margin-bottom: 40px;">
+                  <table id="reports-table-element" style="width: 100%; border-collapse: collapse; text-align: left; margin-bottom: 40px; display: none;">
                       <thead style="background: white; border-bottom: 1px solid var(--border);">
                           <tr>
                               <th style="padding: 12px 0; font-weight: 600; font-size: 0.8rem; color: #374151;">Created</th>
@@ -198,7 +198,7 @@
                       <tbody>
                       </tbody>
                   </table>
-                  <div style="text-align: center; color: #6b7280; font-size: 14px; padding: 20px;">
+                  <div id="empty-reports-state" style="text-align: center; color: #6b7280; font-size: 14px; padding: 20px;">
                       <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="#e5e7eb" stroke-width="2" style="margin: 0 auto 10px auto; display: block;"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path></svg>
                       No reports generated yet <span style="font-size: 0.65rem; color: #ef4444; font-weight: bold; margin-left: 5px;">[PLACEHOLDER]</span>
                   </div>
@@ -206,7 +206,7 @@
 
               <!-- Schedules Table -->
               <div id="table-schedules" style="display: none;">
-                  <table style="width: 100%; border-collapse: collapse; text-align: left; margin-bottom: 40px;">
+                  <table id="reports-table-element" style="width: 100%; border-collapse: collapse; text-align: left; margin-bottom: 40px; display: none;">
                       <thead style="background: white; border-bottom: 1px solid var(--border);">
                           <tr>
                               <th style="padding: 12px 0; font-weight: 600; font-size: 0.8rem; color: #374151;">Schedule</th>
@@ -220,7 +220,7 @@
                       <tbody>
                       </tbody>
                   </table>
-                  <div style="text-align: center; color: #6b7280; font-size: 14px; padding: 20px;">
+                  <div id="empty-reports-state" style="text-align: center; color: #6b7280; font-size: 14px; padding: 20px;">
                       <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="#e5e7eb" stroke-width="2" style="margin: 0 auto 10px auto; display: block;"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path></svg>
                       No schedules generated yet <span style="font-size: 0.65rem; color: #ef4444; font-weight: bold; margin-left: 5px;">[PLACEHOLDER]</span>
                   </div>
@@ -1205,12 +1205,13 @@ Real OS metrics (CPU, RAM, Disk I/O) cannot be fetched directly from PostgreSQL 
                     
                     <h3 style="color: #4b5563; font-weight: 400; font-size: 1.4rem; margin-bottom: 16px;">What's New</h3>
                     <ul style="color: #4b5563; line-height: 1.7; padding-left: 20px; margin-bottom: 40px;">
-                        <li><span style="font-weight: 600;">Fix & Feature:</span> Rapor oluturma (Create report) butonunun CSS'teki stil eksiklii nedeniyle grnmez/effaf olmas sorunu zld. Butonlara orijinal mor rengi (Background: #3a1c94) eklendi. Ayrca sahte [PLACEHOLDER] altyaps kaldrlarak, formdaki "Select cluster" (Sunucu Se) alalr menesne <b>gerek veritaban sunucularnz dinamik olarak (API zerinden) eklendi!</b> Artk sahte men yerine gerek projelerinizi seebilirsiniz.</li>
+                        <li><span style="font-weight: 600;">Feature:</span> Rapor oluturma motoru (Operational Reports) tmyle ii dolu ve aktif hale getirildi! Artk seilen veritaban kmesi (Cluster), Rapor Tp (System, Backup, Upgrade vb.), Gn says (Sadece rakam alacak ekilde) ve Alc mailleriyle <b>gerek</b> rapor kaytlar oluturuluyor. Veriler dorudan PostgreSQL veritabanna iilip sayfa her yenilendiinde sunucudan canl ekiliyor.</li>
+<li><span style="font-weight: 600;">Fix & Feature:</span> Rapor oluturma (Create report) butonunun CSS'teki stil eksiklii nedeniyle grnmez/effaf olmas sorunu zld. Butonlara orijinal mor rengi (Background: #3a1c94) eklendi. Ayrca sahte [PLACEHOLDER] altyaps kaldrlarak, formdaki "Select cluster" (Sunucu Se) alalr menesne <b>gerek veritaban sunucularnz dinamik olarak (API zerinden) eklendi!</b> Artk sahte men yerine gerek projelerinizi seebilirsiniz.</li>
 <li><span style="font-weight: 600;">UI/UX:</span> "Operational reports" (Operasyonel Raporlar) ekran baa dnlerek aslnn (ClusterControl) yapsna tam sadk kalnacak ekilde yeniden ina edildi. Artk sayfada i ie gemi "Reports" ve "Schedules" sekmeleri yer alyor ve tablolarn seenekleri (Created by, File name, Data range vb.) deiiyor. Ayrca sa stte beliren "Create report" ve "Create schedule" butonlar ve onlara tklaynca alan orijinal tasarmdaki form (Modal) birebir kodland. Kzarm [PLACEHOLDER] etiketleri sadece gerekli grlen input alanlarna eklenerek sayfa zenginletirildi.</li>
 <li><span style="font-weight: 600;">Fix:</span> "ift Giri Ekran (Double Login Prompt)" sorunu zld. Sayfa yklendiinde arka planda yaplan yetki kontrollerinin (API 401 dnleri) tarayc tarafndan yanl anlalp kendi varsaylan "Oturum an" uyarsn kartmas engellendi. Artk gvenlik bal sadece arka planda nlenip direkt olarak tasarladmz gvenli ve k giri ekranna (Balonlu ekran) ynlendiriliyor.</li>
 <li><span style="font-weight: 600;">Feature:</span> "Settings" ekranndaki arama ubuu (Search Bar) aktifleitirildi. Artk "Search by parameter, value, description" ksmna herhangi bir anahtar kelime yazdnzda, o ana kadar sol mendeki hangi kategoride olduunuza baklmakszn tm PostgreSQL parametreleri (isimleri, deeri ve aklamalar) iinde dinamik arama yaplp sonular annda ekrana yansyor.</li>
 <li><span style="font-weight: 600;">Fix:</span> "Settings" (Ayarlar) sayfasndaki sahte etiketlerin kaldrlmas/gizlenmesi ileminde meydana gelen kk bir HTML kapan etiketi kaymas nedeniyle 'User management' ve 'Backups' sayfalarnn saa doru kayarak yapsnn bozulmas (UI Bug) sorunu dzeltildi. Artk tm ekranlar ana gvdeye tam oturuyor.</li>
-<li><span style="font-weight: 600;">Fix:</span> Uygulama srm geikmesi (Render Cache) nedeniyle "Clusters" sayfasnda tklanan projelerin yeni ekranda/sekmede almayp i ie gemesi sorunu son v=24 srmyle tamamen zld. Eer u an kullanyorsanz sayfay tamamen yenileyip (CTRL+F5) dzeldiini grebilirsiniz.</li>
+<li><span style="font-weight: 600;">Fix:</span> Uygulama srm geikmesi (Render Cache) nedeniyle "Clusters" sayfasnda tklanan projelerin yeni ekranda/sekmede almayp i ie gemesi sorunu son v=25 srmyle tamamen zld. Eer u an kullanyorsanz sayfay tamamen yenileyip (CTRL+F5) dzeldiini grebilirsiniz.</li>
 <li><span style="font-weight: 600;">Feature:</span> PostgreSQL Fiziksel Entegrasyonu: "Settings" sekmesinde yer alan PostgreSQL motor parametreleri (shared_buffers, work_mem, max_connections, wal_level, max_replication_slots, log_min_duration_statement vb.) artk sadece veritabanmza kaydedilmekle kalmyor; arkaplanda alan dzenli bir Python isisi sayesinde ilgili kmenin tm Node'larna ngilizce ('ALTER SYSTEM SET...') SQL komutlar araclyla fiziksel olarak gnderilip 'SELECT pg_reload_conf()' komutuyla annda aktif ediliyor. Ayrnca gelecekte kkmeye eklenecek yeni sunuculara da bu proje ayarlarnn otomatik olarak yklenmesi iin eklemeler yapld.</li>
 <li><span style="font-weight: 600;">Fix:</span> Uygulamaya yaplan nceki gncellemeler srasnda (Nodes listesinin deiimi srasnda) meydana gelen kk bir yazm hatasndan dolay arka plan animasyonlar (Baloncuklar) dhil tm etkileimlerin bozulmas (Syntax Error) sorunu dzeltildi.</li>
 <li><span style="font-weight: 600;">Feature:</span> "Settings" ekrannda artk gerekten var olan PostgreSQL ayarlar (Long Query, Replication, Retention, System vb.) iin API balantlar kuruldu. Sol mendeki deerlere tklandnda tpk "Backup" ksmnda olduu gibi kendi API'lerinden gerek deerleri okuyup yanstan bir altyap eklendi ve baz sahte sekmeler (CmonDB, Controller) veritabanyla hibir ilgisi olmad iin mmknse tasarmdan gizlendi.</li>
@@ -1482,7 +1483,7 @@ Real OS metrics (CPU, RAM, Disk I/O) cannot be fetched directly from PostgreSQL 
         </div>
     </div>
 
-    <script src="/static/main.js?v=24"></script>
+    <script src="/static/main.js?v=25"></script>
 
 
 
@@ -1855,24 +1856,30 @@ Real OS metrics (CPU, RAM, Disk I/O) cannot be fetched directly from PostgreSQL 
                 </div>
                 <div style="margin-bottom: 16px;">
                     <label style="display: block; font-size: 0.85rem; font-weight: 500; margin-bottom: 6px; color: #374151;">Type <span style="color: #ef4444;">*</span></label>
-                    <select style="width: 100%; padding: 10px; border: 1px solid var(--border); border-radius: 6px; font-size: 0.9rem; background: white; outline: none;">
-                        <option value="">Select report type [PLACEHOLDER]</option>
+                    <select id="report-type-select" style="width: 100%; padding: 10px; border: 1px solid var(--border); border-radius: 6px; font-size: 0.9rem; background: white; outline: none;">
+                        <option value="">Select report type</option>
+                        <option value="System Report">System Report</option>
+                        <option value="Database Availability Report">Database Availability Report</option>
+                        <option value="Backup Report">Backup Report</option>
+                        <option value="Upgrade Report">Upgrade Report</option>
+                        <option value="Schema Change Report">Schema Change Report</option>
+                        <option value="Database Growth Report">Database Growth Report</option>
                     </select>
                 </div>
                 <div style="margin-bottom: 16px;">
                     <label style="display: block; font-size: 0.85rem; font-weight: 500; margin-bottom: 6px; color: #374151;">Data range <span style="color: #ef4444;">*</span></label>
                     <div style="display: flex; gap: 10px;">
                         <div style="padding: 10px; border: 1px solid var(--border); border-radius: 6px; background: #f9fafb; font-size: 0.9rem; color: #6b7280; width: 80px; text-align: center;">Days</div>
-                        <input type="number" value="7" style="flex: 1; padding: 10px; border: 1px solid var(--border); border-radius: 6px; font-size: 0.9rem; outline: none;">
+                        <input type="number" id="report-data-range" value="7" min="1" max="365" style="flex: 1; padding: 10px; border: 1px solid var(--border); border-radius: 6px; font-size: 0.9rem; outline: none;">
                     </div>
                 </div>
                 <div style="margin-bottom: 24px;">
                     <label style="display: block; font-size: 0.85rem; font-weight: 500; margin-bottom: 6px; color: #374151;">Recipients</label>
-                    <input type="text" placeholder="Enter email recipients [PLACEHOLDER]" style="width: 100%; padding: 10px; border: 1px solid var(--border); border-radius: 6px; font-size: 0.9rem; outline: none;">
+                    <input type="text" id="report-recipients" placeholder="yusufalper@gmail.com, admin@example.com" style="width: 100%; padding: 10px; border: 1px solid var(--border); border-radius: 6px; font-size: 0.9rem; outline: none;">
                 </div>
                 <div style="display: flex; justify-content: flex-end; gap: 12px;">
                     <button class="btn-secondary" onclick="document.getElementById('modal-create-report').style.display='none'">Cancel</button>
-                    <button class="btn-primary" style="background: #3a1c94; color: white; border: none; padding: 8px 16px; border-radius: 6px; cursor: pointer;" onclick="document.getElementById('modal-create-report').style.display='none'">Create <span style="font-size: 0.65rem; color: #ef4444; font-weight: bold; margin-left: 5px;">[PLACEHOLDER]</span></button>
+                    <button id="btn-submit-report" class="btn-primary" style="background: #3a1c94; color: white; border: none; padding: 8px 16px; border-radius: 6px; cursor: pointer;">Create</button>
                 </div>
             </div>
         </div>
