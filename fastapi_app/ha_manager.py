@@ -380,10 +380,15 @@ async def get_server_metrics(node: dict, project_id: int = None) -> dict:
                 try:
                     count_row = await conn.fetchrow(f'SELECT count(*) as count FROM "{metric_table}"')
                     if count_row:
-                        plates_count = f"{count_row['count']} Kayıt ({metric_table})"
+                        cnt = count_row['count']
+                        if metric_table == 'vehicles':
+                            plates_count = f"{cnt} Araç (vehicles)"
+                        elif metric_table == 'emails':
+                            plates_count = f"{cnt} E-posta (emails)"
+                        else:
+                            plates_count = f"{cnt} Kayıt ({metric_table})"
                 except Exception:
                     plates_count = f"Tablo Bulunamadı ({metric_table})"
-            
             
             # Fetch OS metrics via SSH if available
             os_metrics = {'cpu': 'N/A', 'ram': 'N/A'}

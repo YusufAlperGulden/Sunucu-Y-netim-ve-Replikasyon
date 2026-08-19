@@ -60,6 +60,12 @@ async def lifespan(app: FastAPI):
         try:
             projects = db.query(Project).all()
             for proj in projects:
+                p_name = (proj.name or '').lower()
+                if 'email' in p_name or 'e-mail' in p_name:
+                    proj.metric_table = 'emails'
+                elif 'plaka' in p_name or 'araç' in p_name:
+                    proj.metric_table = 'vehicles'
+                    
                 nodes = proj.nodes
                 if len(nodes) >= 2:
                     primary_nodes = [n for n in nodes if n.role and n.role.lower() == 'primary']
@@ -79,14 +85,8 @@ async def lifespan(app: FastAPI):
                         if current != YEDEK_URL:
                             node.encrypted_url = encrypt(YEDEK_URL)
                             print(f"Updated standby node {node.id} URL to Yedek (Neon)")
-                    
-                    db.commit()
-                    
-                    # Also set metric_table if not set
-                    if not proj.metric_table:
-                        proj.metric_table = 'vehicles'
-                        db.commit()
-                        print(f"Set metric_table=vehicles for project {proj.id}")
+                            
+            db.commit()
         finally:
             db.close()
     except Exception as e:
