@@ -193,7 +193,7 @@ document.addEventListener('DOMContentLoaded', () => {
         let hash = window.location.hash.substring(1) || 'projects-view';
         
         // If hash is a changelog section anchor (e.g. v1-4-2), show changelog-view and scroll
-        const changelogAnchors = ['v1-5-2', 'v1-5-1', 'v1-5-0', 'v1-4-9', 'v1-4-8', 'v1-4-7', 'v1-4-6', 'v1-4-5', 'v1-4-4', 'v1-4-3', 'v1-4-2', 'v1-4-1', 'release-cycle', 'whats-new'];
+        const changelogAnchors = ['v1-5-3', 'v1-5-2', 'v1-5-1', 'v1-5-0', 'v1-4-9', 'v1-4-8', 'v1-4-7', 'v1-4-6', 'v1-4-5', 'v1-4-4', 'v1-4-3', 'v1-4-2', 'v1-4-1', 'release-cycle', 'whats-new'];
         if (changelogAnchors.includes(hash)) {
             document.querySelectorAll('.view-section').forEach(s => s.style.display = 'none');
             const cv = document.getElementById('changelog-view');
@@ -1332,38 +1332,50 @@ window.exportAuditLogsCsv = function() {
 
     async function fetchDashboardMetrics() {
         try {
-            const projRes = await apiFetch('/api/projects');
-            if (!projRes.ok) return;
-            const projs = await projRes.json();
-            
             const container = document.getElementById('dashboard-metrics-container');
             if(!container) return;
 
-            if (projs.length === 0) {
+            const projRes = await apiFetch('/api/projects');
+            if (!projRes.ok) return;
+            const allProjs = await projRes.json();
+            
+            if (allProjs.length === 0) {
                 container.innerHTML = '<div class="loading-state">No projects found. Add a project to view metrics.</div>';
                 return;
             }
+            
+            // When inside a project's detail view, ONLY render metrics for currentProjectId!
+            const currentHash = (window.location.hash || '').replace(/^#/, '');
+            const isDetailView = (currentHash === 'project-detail-view' || (detailView && getComputedStyle(detailView).display !== 'none'));
+            const targetProjs = (isDetailView && currentProjectId) 
+                ? allProjs.filter(p => p.id === currentProjectId)
+                : allProjs;
+                
+            if (targetProjs.length === 0) {
+                container.innerHTML = '<div class="loading-state">Cluster not found.</div>';
+                return;
+            }
+            
+            // Fetch metrics for target projects concurrently
+            const metricPromises = targetProjs.map(p => apiFetch(`/api/projects/${p.id}/metrics`).then(r => r.ok ? r.json() : []));
+            const metricsResults = await Promise.all(metricPromises);
+            
+            // Flat list of all nodes returned for target projects
+            const allTargetNodes = metricsResults.flat();
             
             if (container.querySelector('.loading-state')) {
                 container.innerHTML = '';
             }
             
-            // Fetch metrics for all projects concurrently
-            const metricPromises = projs.map(p => apiFetch(`/api/projects/${p.id}/metrics`).then(r => r.ok ? r.json() : []));
-            const metricsResults = await Promise.all(metricPromises);
-            
-            // Flat list of all nodes returned by metrics API
-            const allNodes = metricsResults.flat();
-            
-            // Remove columns for nodes that no longer exist
-            const allNodeIds = allNodes.map(n => "dash-node-" + n.id);
+            // Remove columns for nodes that don't belong to current target cluster!
+            const allTargetNodeIds = allTargetNodes.map(n => "dash-node-" + n.id);
             Array.from(container.children).forEach(child => {
-                if (!allNodeIds.includes(child.id)) {
+                if (!allTargetNodeIds.includes(child.id)) {
                     child.remove();
                 }
             });
             
-            projs.forEach((proj, i) => {
+            targetProjs.forEach((proj, i) => {
                 const dataList = metricsResults[i];
                 if (!dataList || dataList.length === 0) return;
                 
@@ -1410,35 +1422,46 @@ window.exportAuditLogsCsv = function() {
                     
                     const m = node.metrics;
                     if(m && m.status === 'online') {
-                        document.getElementById("metric-" + node.id + "-status").className = 'status-badge status-online';
-{ const TMP_EL = document.getElementById("metric-" + node.id + "-status"); if(TMP_EL) {                         TMP_EL.innerText = 'Aktif'; } }
+                        const statusEl = document.getElementById("metric-" + node.id + "-status");
+                        if(statusEl) { statusEl.className = 'status-badge status-online'; statusEl.innerText = 'Aktif'; }
                         
-{ const TMP_EL = document.getElementById("metric-" + node.id + "-ping"); if(TMP_EL) {                         TMP_EL.innerText = m.ping; } }
-{ const TMP_EL = document.getElementById("metric-" + node.id + "-lag"); if(TMP_EL) {                         TMP_EL.innerText = m.lag; } }
-{ const TMP_EL = document.getElementById("metric-" + node.id + "-storage"); if(TMP_EL) {                         TMP_EL.innerText = m.storage; } }
-{ const TMP_EL = document.getElementById("metric-" + node.id + "-conn"); if(TMP_EL) {                         TMP_EL.innerText = m.connections; } }
-{ const TMP_EL = document.getElementById("metric-" + node.id + "-xact"); if(TMP_EL) {                         TMP_EL.innerText = m.xact; } }
-{ const TMP_EL = document.getElementById("metric-" + node.id + "-cache"); if(TMP_EL) {                         TMP_EL.innerText = m.cache_hit; } }
-{ const TMP_EL = document.getElementById("metric-" + node.id + "-version"); if(TMP_EL) { TMP_EL.innerText = m.version; } }
-                          { const TMP_EL = document.getElementById("metric-" + node.id + "-cpu"); if(TMP_EL) { TMP_EL.innerText = m.cpu_usage || "N/A"; } }
-                          { const TMP_EL = document.getElementById("metric-" + node.id + "-ram"); if(TMP_EL) { TMP_EL.innerText = m.ram_usage || "N/A"; } }
-                          { const TMP_EL = document.getElementById("metric-" + node.id + "-plates"); if(TMP_EL) { TMP_EL.innerText = m.row_count !== undefined ? m.row_count.toLocaleString() : "N/A"; } }
-                          { const TMP_EL = document.getElementById("metric-" + node.id + "-uptime"); if(TMP_EL) { TMP_EL.innerText = m.uptime || "N/A"; } }
-                      } else if (m && m.status === 'offline') {
-                          const statusEl = document.getElementById("metric-" + node.id + "-status");
-                          if(statusEl) { statusEl.className = 'status-badge status-offline'; statusEl.innerText = 'Çevrimdışı'; }
-                          const errMsg = m.error || 'Bağlantı kurulamadı';
-                          ['cpu','ram','ping','lag','storage','conn','xact','plates','cache','uptime'].forEach(k => {
-                              const el = document.getElementById("metric-" + node.id + "-" + k);
-                              if(el) el.innerText = '-';
-                          });
-
-                      // Show error reason under the offline badge
-                      const errEl = document.getElementById("metric-" + node.id + "-status");
-                      if(errEl && m.error) errEl.title = m.error;
-                    } else {
-                        document.getElementById("metric-" + node.id + "-status").className = 'status-badge status-offline';
-{ const TMP_EL = document.getElementById("metric-" + node.id + "-status"); if(TMP_EL) {                         TMP_EL.innerText = 'Çevrimdışı'; } }
+                        const setEl = (id, val) => { const el = document.getElementById(id); if(el) el.innerText = val; };
+                        setEl("metric-" + node.id + "-ping", m.ping);
+                        setEl("metric-" + node.id + "-lag", m.lag);
+                        setEl("metric-" + node.id + "-storage", m.storage);
+                        setEl("metric-" + node.id + "-conn", m.connections);
+                        setEl("metric-" + node.id + "-xact", m.xact);
+                        setEl("metric-" + node.id + "-cache", m.cache_hit);
+                        setEl("metric-" + node.id + "-version", m.version);
+                        setEl("metric-" + node.id + "-plates", m.plates || m.row_count || "N/A");
+                        setEl("metric-" + node.id + "-uptime", m.uptime || "N/A");
+                        
+                        // Hide CPU & RAM if N/A
+                        const cardCpu = document.getElementById(`metric-${node.id}-card-cpu`);
+                        if (cardCpu) {
+                            if (m.cpu_usage && m.cpu_usage !== 'N/A') {
+                                cardCpu.style.display = 'block';
+                                setEl(`metric-${node.id}-cpu`, m.cpu_usage);
+                            } else {
+                                cardCpu.style.display = 'none';
+                            }
+                        }
+                        const cardRam = document.getElementById(`metric-${node.id}-card-ram`);
+                        if (cardRam) {
+                            if (m.ram_usage && m.ram_usage !== 'N/A') {
+                                cardRam.style.display = 'block';
+                                setEl(`metric-${node.id}-ram`, m.ram_usage);
+                            } else {
+                                cardRam.style.display = 'none';
+                            }
+                        }
+                    } else if (m && m.status === 'offline') {
+                        const statusEl = document.getElementById("metric-" + node.id + "-status");
+                        if(statusEl) { statusEl.className = 'status-badge status-offline'; statusEl.innerText = 'Çevrimdışı'; }
+                        ['cpu','ram','ping','lag','storage','conn','xact','plates','cache','uptime'].forEach(key => {
+                            const el = document.getElementById(`metric-${node.id}-${key}`);
+                            if(el) el.innerText = '-';
+                        });
                     }
                 });
             });
