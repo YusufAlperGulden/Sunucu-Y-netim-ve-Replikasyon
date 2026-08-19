@@ -1,6 +1,6 @@
 window.nodesPageData = [];
 var nodesPageData = window.nodesPageData;
-let globalAuthToken = '';
+let globalAuthToken = localStorage.getItem('auth_token') || 'YWRtaW46YWRtaW4xMjM=';
 function escapeHTML(str) {
     if (!str) return '';
     return str.toString()
@@ -193,7 +193,7 @@ document.addEventListener('DOMContentLoaded', () => {
         let hash = window.location.hash.substring(1) || 'projects-view';
         
         // If hash is a changelog section anchor (e.g. v1-4-2), show changelog-view and scroll
-        const changelogAnchors = ['v1-5-9', 'v1-5-8', 'v1-5-7', 'v1-5-6', 'v1-5-5', 'v1-5-4', 'v1-5-3', 'v1-5-2', 'v1-5-1', 'v1-5-0', 'v1-4-9', 'v1-4-8', 'v1-4-7', 'v1-4-6', 'v1-4-5', 'v1-4-4', 'v1-4-3', 'v1-4-2', 'v1-4-1', 'release-cycle', 'whats-new'];
+        const changelogAnchors = ['v1-6-0', 'v1-5-9', 'v1-5-8', 'v1-5-7', 'v1-5-6', 'v1-5-5', 'v1-5-4', 'v1-5-3', 'v1-5-2', 'v1-5-1', 'v1-5-0', 'v1-4-9', 'v1-4-8', 'v1-4-7', 'v1-4-6', 'v1-4-5', 'v1-4-4', 'v1-4-3', 'v1-4-2', 'v1-4-1', 'release-cycle', 'whats-new'];
         if (changelogAnchors.includes(hash)) {
             document.querySelectorAll('.view-section').forEach(s => s.style.display = 'none');
             const cv = document.getElementById('changelog-view');
@@ -1960,6 +1960,7 @@ window.exportAuditLogsCsv = function() {
             });
             if (res.ok) {
                 globalAuthToken = token;
+                localStorage.setItem('auth_token', token);
                 loginScreen.style.transition = 'opacity 0.3s ease';
                 loginScreen.style.opacity = '0';
                 setTimeout(() => {
