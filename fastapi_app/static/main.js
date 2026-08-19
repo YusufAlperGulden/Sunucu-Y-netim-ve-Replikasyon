@@ -120,6 +120,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const btnEditProjectDetail = document.getElementById('btn-edit-project-detail');
 
     let currentProjectId = null;
+    let clusterHoverTimeout = null;
 
     const statusFilter = document.getElementById('cc-status-filter');
     if (statusFilter) {
@@ -281,6 +282,24 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // --- API CALLS ---
     
+    
+    // Global tooltip hover events
+    const clusterTooltip = document.getElementById('cluster-hover-tooltip');
+    if (clusterTooltip) {
+        clusterTooltip.addEventListener('mouseenter', () => {
+            clearTimeout(clusterHoverTimeout);
+        });
+        clusterTooltip.addEventListener('mouseleave', () => {
+            clusterHoverTimeout = setTimeout(() => {
+                clusterTooltip.style.opacity = '0';
+                clusterTooltip.style.transform = 'translateY(10px)';
+                setTimeout(() => {
+                    if(clusterTooltip.style.opacity === '0') clusterTooltip.style.display = 'none';
+                }, 200);
+            }, 100);
+        });
+    }
+
     async function fetchProjects() {
         try {
             const response = await apiFetch('/api/projects');
@@ -535,11 +554,14 @@ document.addEventListener('DOMContentLoaded', () => {
                     clearTimeout(clusterHoverTimeout);
                     const ct = document.getElementById('cluster-hover-tooltip'); 
                     if (ct) { 
-                        ct.style.opacity = '0'; 
-                        ct.style.transform = 'translateY(10px)';
-                        setTimeout(() => {
-                            if(ct.style.opacity === '0') ct.style.display = 'none';
-                        }, 200);
+                        // Start hide timeout
+                        clusterHoverTimeout = setTimeout(() => {
+                            ct.style.opacity = '0'; 
+                            ct.style.transform = 'translateY(10px)';
+                            setTimeout(() => {
+                                if(ct.style.opacity === '0') ct.style.display = 'none';
+                            }, 200);
+                        }, 50); // small delay to allow mouse to enter the tooltip
                     } 
                 };
 
