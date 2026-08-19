@@ -166,7 +166,32 @@ def get_project_detail(project_id: int, db: Session = Depends(get_db)):
     sync_status = latest_job.status if latest_job else "IDLE"
     sync_error = latest_job.error_message if latest_job else None
 
-    nodes = [{"id": n.id, "role": n.role, "name": n.name} for n in proj.nodes]
+    from vault import decrypt
+    from urllib.parse import urlparse
+    nodes = []
+    for n in proj.nodes:
+        ip = "Unknown"
+        port = "Unknown"
+        db_type = "Unknown"
+        try:
+            if n.encrypted_url:
+                url = decrypt(n.encrypted_url)
+                parsed = urlparse(url)
+                ip = parsed.hostname or "Unknown"
+                port = str(parsed.port) if parsed.port else ("5432" if parsed.scheme == "postgresql" else "Unknown")
+                db_type = "PostgreSQL" if parsed.scheme == "postgresql" else (parsed.scheme or "Unknown")
+        except Exception:
+            pass
+        nodes.append({
+            "id": n.id, 
+            "role": n.role, 
+            "name": n.name,
+            "ip": ip,
+            "port": port,
+            "type": db_type,
+            "status": "Operational",
+            "version": "16.4" # Or fetch from DB if available
+        })
     return {
         "id": proj.id, 
         "name": proj.name, 
