@@ -1252,7 +1252,7 @@ if (donutCircle) {
                     }
                     
                     const m = node.metrics;
-                    if(m && m.ping !== undefined) {
+                    if(m && m.status === 'online') {
                         document.getElementById("metric-" + node.id + "-status").className = 'status-badge status-online';
 { const TMP_EL = document.getElementById("metric-" + node.id + "-status"); if(TMP_EL) {                         TMP_EL.innerText = 'Aktif'; } }
                         
@@ -1262,7 +1262,19 @@ if (donutCircle) {
 { const TMP_EL = document.getElementById("metric-" + node.id + "-conn"); if(TMP_EL) {                         TMP_EL.innerText = m.connections; } }
 { const TMP_EL = document.getElementById("metric-" + node.id + "-xact"); if(TMP_EL) {                         TMP_EL.innerText = m.xact; } }
 { const TMP_EL = document.getElementById("metric-" + node.id + "-cache"); if(TMP_EL) {                         TMP_EL.innerText = m.cache_hit; } }
-{ const TMP_EL = document.getElementById("metric-" + node.id + "-version"); if(TMP_EL) {                         TMP_EL.innerText = m.version; } }
+{ const TMP_EL = document.getElementById("metric-" + node.id + "-version"); if(TMP_EL) { TMP_EL.innerText = m.version; } }
+                          { const TMP_EL = document.getElementById("metric-" + node.id + "-cpu"); if(TMP_EL) { TMP_EL.innerText = m.cpu_usage || "N/A"; } }
+                          { const TMP_EL = document.getElementById("metric-" + node.id + "-ram"); if(TMP_EL) { TMP_EL.innerText = m.ram_usage || "N/A"; } }
+                          { const TMP_EL = document.getElementById("metric-" + node.id + "-plates"); if(TMP_EL) { TMP_EL.innerText = m.row_count !== undefined ? m.row_count.toLocaleString() : "N/A"; } }
+                          { const TMP_EL = document.getElementById("metric-" + node.id + "-uptime"); if(TMP_EL) { TMP_EL.innerText = m.uptime || "N/A"; } }
+                      } else if (m && m.status === 'offline') {
+                          const statusEl = document.getElementById("metric-" + node.id + "-status");
+                          if(statusEl) { statusEl.className = 'status-badge status-offline'; statusEl.innerText = 'Çevrimdışı'; }
+                          const errMsg = m.error || 'Bağlantı kurulamadı';
+                          ['cpu','ram','ping','lag','storage','conn','xact','plates','cache','uptime'].forEach(k => {
+                              const el = document.getElementById("metric-" + node.id + "-" + k);
+                              if(el) el.innerText = '-';
+                          });
 { const TMP_EL = document.getElementById("metric-" + node.id + "-uptime"); if(TMP_EL) {                         TMP_EL.innerText = m.uptime; } }
 { const TMP_EL = document.getElementById("metric-" + node.id + "-plates"); if(TMP_EL) {                         TMP_EL.innerText = m.plates; } }
                     } else {

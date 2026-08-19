@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Sunucu Yönetim ve Replikasyon</title>
-    <link rel="stylesheet" href="/static/style.css?v=35">
+    <link rel="stylesheet" href="/static/style.css?v=36">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 </head>
 <body>
@@ -1175,7 +1175,7 @@ Real OS metrics (CPU, RAM, Disk I/O) cannot be fetched directly from PostgreSQL 
 <li><span style="font-weight: 600;">Fix:</span> "ift Giri Ekran (Double Login Prompt)" sorunu zld. Sayfa yklendiinde arka planda yaplan yetki kontrollerinin (API 401 dnleri) tarayc tarafndan yanl anlalp kendi varsaylan "Oturum an" uyarsn kartmas engellendi. Artk gvenlik bal sadece arka planda nlenip direkt olarak tasarladmz gvenli ve k giri ekranna (Balonlu ekran) ynlendiriliyor.</li>
 <li><span style="font-weight: 600;">Feature:</span> "Settings" ekranndaki arama ubuu (Search Bar) aktifleitirildi. Artk "Search by parameter, value, description" ksmna herhangi bir anahtar kelime yazdnzda, o ana kadar sol mendeki hangi kategoride olduunuza baklmakszn tm PostgreSQL parametreleri (isimleri, deeri ve aklamalar) iinde dinamik arama yaplp sonular annda ekrana yansyor.</li>
 <li><span style="font-weight: 600;">Fix:</span> "Settings" (Ayarlar) sayfasndaki sahte etiketlerin kaldrlmas/gizlenmesi ileminde meydana gelen kk bir HTML kapan etiketi kaymas nedeniyle 'User management' ve 'Backups' sayfalarnn saa doru kayarak yapsnn bozulmas (UI Bug) sorunu dzeltildi. Artk tm ekranlar ana gvdeye tam oturuyor.</li>
-<li><span style="font-weight: 600;">Fix:</span> Uygulama srm geikmesi (Render Cache) nedeniyle "Clusters" sayfasnda tklanan projelerin yeni ekranda/sekmede almayp i ie gemesi sorunu son v=35 srmyle tamamen zld. Eer u an kullanyorsanz sayfay tamamen yenileyip (CTRL+F5) dzeldiini grebilirsiniz.</li>
+<li><span style="font-weight: 600;">Fix:</span> Uygulama srm geikmesi (Render Cache) nedeniyle "Clusters" sayfasnda tklanan projelerin yeni ekranda/sekmede almayp i ie gemesi sorunu son v=36 srmyle tamamen zld. Eer u an kullanyorsanz sayfay tamamen yenileyip (CTRL+F5) dzeldiini grebilirsiniz.</li>
 <li><span style="font-weight: 600;">Feature:</span> PostgreSQL Fiziksel Entegrasyonu: "Settings" sekmesinde yer alan PostgreSQL motor parametreleri (shared_buffers, work_mem, max_connections, wal_level, max_replication_slots, log_min_duration_statement vb.) artk sadece veritabanmza kaydedilmekle kalmyor; arkaplanda alan dzenli bir Python isisi sayesinde ilgili kmenin tm Node'larna ngilizce ('ALTER SYSTEM SET...') SQL komutlar araclyla fiziksel olarak gnderilip 'SELECT pg_reload_conf()' komutuyla annda aktif ediliyor. Ayrnca gelecekte kkmeye eklenecek yeni sunuculara da bu proje ayarlarnn otomatik olarak yklenmesi iin eklemeler yapld.</li>
 <li><span style="font-weight: 600;">Fix:</span> Uygulamaya yaplan nceki gncellemeler srasnda (Nodes listesinin deiimi srasnda) meydana gelen kk bir yazm hatasndan dolay arka plan animasyonlar (Baloncuklar) dhil tm etkileimlerin bozulmas (Syntax Error) sorunu dzeltildi.</li>
 <li><span style="font-weight: 600;">Feature:</span> "Settings" ekrannda artk gerekten var olan PostgreSQL ayarlar (Long Query, Replication, Retention, System vb.) iin API balantlar kuruldu. Sol mendeki deerlere tklandnda tpk "Backup" ksmnda olduu gibi kendi API'lerinden gerek deerleri okuyup yanstan bir altyap eklendi ve baz sahte sekmeler (CmonDB, Controller) veritabanyla hibir ilgisi olmad iin mmknse tasarmdan gizlendi.</li>
@@ -1448,7 +1448,7 @@ Real OS metrics (CPU, RAM, Disk I/O) cannot be fetched directly from PostgreSQL 
         </div>
     </div>
 
-    <script src="/static/main.js?v=35"></script>
+    <script src="/static/main.js?v=36"></script>
 
 
 
