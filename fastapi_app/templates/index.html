@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Sunucu Yönetim ve Replikasyon</title>
-    <link rel="stylesheet" href="/static/style.css?v=16">
+    <link rel="stylesheet" href="/static/style.css?v=17">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 </head>
 <body>
@@ -924,7 +924,7 @@ Real OS metrics (CPU, RAM, Disk I/O) cannot be fetched directly from PostgreSQL 
     <!-- Top inner tabs -->
     <div style="display: flex; gap: 20px; border-bottom: 1px solid var(--border); margin-bottom: 20px;">
         <div style="color: var(--primary); font-weight: 500; font-size: 0.9rem; padding-bottom: 10px; border-bottom: 2px solid var(--primary); cursor: pointer;">System settings</div>
-        <div style="color: #6b7280; font-weight: 500; font-size: 0.9rem; padding-bottom: 10px; cursor: pointer;">Email notifications</div>
+        <div style="color: #6b7280; font-weight: 500; font-size: 0.9rem; padding-bottom: 10px; cursor: default; opacity: 0.7;">Email notifications <span style="font-size: 0.65rem; color: #ef4444; font-weight: bold; margin-left: 5px;">[PLACEHOLDER]</span></div>
     </div>
     
     <!-- Search bar -->
@@ -937,16 +937,16 @@ Real OS metrics (CPU, RAM, Disk I/O) cannot be fetched directly from PostgreSQL 
         <!-- Left sidebar settings categories -->
         <div style="width: 200px; display: flex; flex-direction: column; gap: 15px;">
             <div style="color: var(--primary); font-size: 0.85rem; font-weight: 500; cursor: pointer; border-left: 3px solid var(--primary); padding-left: 10px;">Backup</div>
-            <div style="color: #4b5563; font-size: 0.85rem; cursor: pointer; padding-left: 13px;">Cluster</div>
-            <div style="color: #4b5563; font-size: 0.85rem; cursor: pointer; padding-left: 13px;">CmonDB</div>
-            <div style="color: #4b5563; font-size: 0.85rem; cursor: pointer; padding-left: 13px;">Controller</div>
-            <div style="color: #4b5563; font-size: 0.85rem; cursor: pointer; padding-left: 13px;">Long Query</div>
-            <div style="color: #4b5563; font-size: 0.85rem; cursor: pointer; padding-left: 13px;">Replication</div>
-            <div style="color: #4b5563; font-size: 0.85rem; cursor: pointer; padding-left: 13px;">Retention</div>
-            <div style="color: #4b5563; font-size: 0.85rem; cursor: pointer; padding-left: 13px;">Sampling</div>
-            <div style="color: #4b5563; font-size: 0.85rem; cursor: pointer; padding-left: 13px;">Swapping</div>
-            <div style="color: #4b5563; font-size: 0.85rem; cursor: pointer; padding-left: 13px;">System</div>
-            <div style="color: #4b5563; font-size: 0.85rem; cursor: pointer; padding-left: 13px;">Threshold</div>
+            <div style="color: #4b5563; font-size: 0.85rem; cursor: default; padding-left: 13px; opacity: 0.7;">Cluster <br><span style="font-size: 0.65rem; color: #ef4444; font-weight: bold;">[PLACEHOLDER]</span></div>
+            <div style="color: #4b5563; font-size: 0.85rem; cursor: default; padding-left: 13px; opacity: 0.7;">CmonDB <br><span style="font-size: 0.65rem; color: #ef4444; font-weight: bold;">[PLACEHOLDER]</span></div>
+            <div style="color: #4b5563; font-size: 0.85rem; cursor: default; padding-left: 13px; opacity: 0.7;">Controller <br><span style="font-size: 0.65rem; color: #ef4444; font-weight: bold;">[PLACEHOLDER]</span></div>
+            <div style="color: #4b5563; font-size: 0.85rem; cursor: default; padding-left: 13px; opacity: 0.7;">Long Query <br><span style="font-size: 0.65rem; color: #ef4444; font-weight: bold;">[PLACEHOLDER]</span></div>
+            <div style="color: #4b5563; font-size: 0.85rem; cursor: default; padding-left: 13px; opacity: 0.7;">Replication <br><span style="font-size: 0.65rem; color: #ef4444; font-weight: bold;">[PLACEHOLDER]</span></div>
+            <div style="color: #4b5563; font-size: 0.85rem; cursor: default; padding-left: 13px; opacity: 0.7;">Retention <br><span style="font-size: 0.65rem; color: #ef4444; font-weight: bold;">[PLACEHOLDER]</span></div>
+            <div style="color: #4b5563; font-size: 0.85rem; cursor: default; padding-left: 13px; opacity: 0.7;">Sampling <br><span style="font-size: 0.65rem; color: #ef4444; font-weight: bold;">[PLACEHOLDER]</span></div>
+            <div style="color: #4b5563; font-size: 0.85rem; cursor: default; padding-left: 13px; opacity: 0.7;">Swapping <br><span style="font-size: 0.65rem; color: #ef4444; font-weight: bold;">[PLACEHOLDER]</span></div>
+            <div style="color: #4b5563; font-size: 0.85rem; cursor: default; padding-left: 13px; opacity: 0.7;">System <br><span style="font-size: 0.65rem; color: #ef4444; font-weight: bold;">[PLACEHOLDER]</span></div>
+            <div style="color: #4b5563; font-size: 0.85rem; cursor: default; padding-left: 13px; opacity: 0.7;">Threshold <br><span style="font-size: 0.65rem; color: #ef4444; font-weight: bold;">[PLACEHOLDER]</span></div>
         </div>
         
         <!-- Main content area -->
@@ -1143,7 +1143,8 @@ Real OS metrics (CPU, RAM, Disk I/O) cannot be fetched directly from PostgreSQL 
                     
                     <h3 style="color: #4b5563; font-weight: 400; font-size: 1.4rem; margin-bottom: 16px;">What's New</h3>
                     <ul style="color: #4b5563; line-height: 1.7; padding-left: 20px; margin-bottom: 40px;">
-                        <li><span style="font-weight: 600;">Feature:</span> Sistem Altyapısı Değişimi: Kullanıcının talebi üzerine, Cluster detay sayfasına "Settings" (Sistem Ayarları) sekmesi ve veritabanına bu ayarları tutacak altyapı eklendi. Artık CMON ayarları, PostgreSQL pgBackRest şifrelemeleri ve Cloud yedekleme politikaları (retention) FAKE (sahte) olmayan ve gerçekten veritabanında saklanan, güncellenebilen ayarlardır. İlgili arkaplan işlemcileri yazıldığında bu ayarlara direkt entegre olacak şekilde tasarlandı.</li>
+                        <li><span style="font-weight: 600;">Fix:</span> "Şeffaflık kuralları" gereğince, Settings menüsünde görsel bütünlük için tasarlanmış fakat henüz API altyapısı yazılmamış olan (Çalışmayan) sol ve üst sekme başlıklarına açıkça kırmızı renkle "[PLACEHOLDER]" uyarısı eklendi.</li>
+<li><span style="font-weight: 600;">Feature:</span> Sistem Altyapısı Değişimi: Kullanıcının talebi üzerine, Cluster detay sayfasına "Settings" (Sistem Ayarları) sekmesi ve veritabanına bu ayarları tutacak altyapı eklendi. Artık CMON ayarları, PostgreSQL pgBackRest şifrelemeleri ve Cloud yedekleme politikaları (retention) FAKE (sahte) olmayan ve gerçekten veritabanında saklanan, güncellenebilen ayarlardır. İlgili arkaplan işlemcileri yazıldığında bu ayarlara direkt entegre olacak şekilde tasarlandı.</li>
 <li><span style="font-weight: 600;">Fix:</span> "Clusters" listesi ve "Proje Detay" sayfalarının (Dashboard) aynı ekranda üst üste binmesi (Stacking) hatası giderildi. Yönlendirme (Routing) mantığı düzeltilerek her sayfanın kendi özel bağlantısına sahip olması sağlandı. Artık bir kümeye tıkladığınızda tertemiz yepyeni bir sayfada detaylar açılıyor.</li>
 <li><span style="font-weight: 600;">Fix:</span> Uygulama içindeki tüm sahte (placeholder) veritabanı düğüm verileri (IP adresleri, portlar, DB tipleri) koddan temizlendi. "Nodes" sekmelerindeki tablolar artık veritabanında şifreli olarak tutulan bağlantı (connection string) url'lerini AES-256 ile çözerek tamamen %100 gerçek IP, Port ve Veritabanı tipini (PostgreSQL vb.) dinamik olarak ekrana yansıtmaktadır.</li>
 <li><span style="font-weight: 600;">Feature:</span> Cluster detay sayfasındaki "Nodes" sekmesinin içerisine "Node list" (Tablo ve Özet İstatistikler) ve "Topology" alt sekmeleri eklendi. Node List tablosu orjinal sisteme birebir uyumlu olarak tasarlandı.</li>
@@ -1410,7 +1411,7 @@ Real OS metrics (CPU, RAM, Disk I/O) cannot be fetched directly from PostgreSQL 
         </div>
     </div>
 
-    <script src="/static/main.js?v=16"></script>
+    <script src="/static/main.js?v=17"></script>
 
 
 
