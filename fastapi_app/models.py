@@ -1,6 +1,6 @@
 import os
 import datetime
-from sqlalchemy import create_engine, Column, Integer, String, ForeignKey, DateTime, text, Index
+from sqlalchemy import create_engine, Column, Integer, String, ForeignKey, DateTime, text, Index, Float
 from sqlalchemy.orm import declarative_base, relationship, sessionmaker
 from vault import encrypt
 
@@ -133,4 +133,13 @@ class BackupSchedule(Base):
     schedule_expression = Column(String(100)) # e.g. "Daily at 02:00 AM"
     backup_type = Column(String(50))
     retention_days = Column(Integer, default=7)
+    created_at = Column(DateTime, default=datetime.datetime.utcnow)
+
+
+class User(Base):
+    __tablename__ = 'users'
+    id = Column(Integer, primary_key=True, index=True)
+    username = Column(String(50), unique=True, index=True, nullable=False)
+    password_hash = Column(String(255), nullable=False)
+    role = Column(String(20), default="viewer") # "admin" or "viewer"
     created_at = Column(DateTime, default=datetime.datetime.utcnow)

@@ -791,3 +791,38 @@ def get_schedules(db: Session = Depends(get_db)):
             "created_at": s.created_at.strftime("%Y-%m-%d %H:%M:%S") if s.created_at else ""
         })
     return results
+
+
+class UserCreate(BaseModel):
+    username: str
+    password: str
+    role: str
+
+@app.get("/api/users", dependencies=[Depends(verify_credentials)])
+def get_users(db: Session = Depends(get_db)):
+    from models import User
+    users = db.query(User).order_by(User.id.asc()).all()
+    return [{"id": u.id, "username": u.username, "role": u.role, "created_at": u.created_at.strftime("%Y-%m-%d %H:%M:%S") if u.created_at else ""} for u in users]
+
+@app.post("/api/users", dependencies=[Depends(verify_credentials)])
+def create_user(payload: UserCreate, db: Session = Depends(get_db)):
+    from models import User
+    existing = db.query(User).filter(User.username == payload.username).first()
+    if existing:
+        return JSONResponse(status_code=400, content={"message": "Username already exists"})
+    new_user = User(username=payload.username, password_hash=get_password_hash(payload.password), role=payload.role)
+    db.add(new_user)
+    db.commit()
+    return {"success": True}
+
+@app.delete("/api/users/{user_id}", dependencies=[Depends(verify_credentials)])
+def delete_user(user_id: int, db: Session = Depends(get_db)):
+    from models import User
+    user = db.query(User).filter(User.id == user_id).first()
+    if not user:
+        return JSONResponse(status_code=404, content={"message": "User not found"})
+    if db.query(User).count() == 1:
+        return JSONResponse(status_code=400, content={"message": "Cannot delete the last user"})
+    db.delete(user)
+    db.commit()
+    return {"success": True}
