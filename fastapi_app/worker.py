@@ -204,7 +204,24 @@ async def main_loop():
             print(f"Worker error: {e}")
             await asyncio.sleep(POLL_INTERVAL)
         finally:
-            db.close()
+            
+        # --- Handle Backup Jobs ---
+        from models import BackupJob
+        from datetime import datetime
+        import random
+        
+        pending_backups = db.query(BackupJob).filter(BackupJob.status == "IN_PROGRESS").all()
+        for job in pending_backups:
+            # Simulate a 10-20 second backup time
+            diff = (datetime.utcnow() - job.created_at).total_seconds()
+            if diff > random.randint(15, 30):
+                job.status = "COMPLETED"
+                job.size_mb = round(random.uniform(500.0, 5000.0), 2)
+                job.completed_at = datetime.utcnow()
+                db.commit()
+                print(f"Simulated backup {job.id} completed.")
+
+        db.close()
 
 if __name__ == "__main__":
     asyncio.run(main_loop())

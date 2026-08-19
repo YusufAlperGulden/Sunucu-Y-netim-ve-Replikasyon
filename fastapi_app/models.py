@@ -37,10 +37,20 @@ class Project(Base):
     replication_tables = Column(String(500), nullable=True) # E.g. 'vehicles, metadata'
     max_wal_lag_mb = Column(Integer, default=500) # Esnek limit ayar
     
+    # Replication Health Status
+    replication_health = Column(String(50), default="UNKNOWN") # HEALTHY, FAILED, UNKNOWN
+    
+    nodes = relationship("DatabaseNode", back_populates="project", cascade="all, delete-orphan")
+
+class DatabaseNode(Base):
+    __tablename__ = "nodes"
+    id = Column(Integer, primary_key=True, index=True)
+    project_id = Column(Integer, ForeignKey("projects.id", ondelete="CASCADE"))
+    role = Column(String(20)) # "primary" or "standby"
+    name = Column(String(100))
     # Şifrelenmiş veritabanı bağlantı metni
     encrypted_url = Column(String(500))
     
-    # SSH Credentials for OS-level access
     ssh_host = Column(String(255), nullable=True)
     ssh_port = Column(Integer, default=22)
     ssh_username = Column(String(255), default="root")
@@ -102,3 +112,25 @@ class OperationalReport(Base):
     created_at = Column(DateTime, default=datetime.datetime.utcnow)
 
     project = relationship('Project')
+
+
+class BackupJob(Base):
+    __tablename__ = 'backup_jobs'
+    id = Column(Integer, primary_key=True, index=True)
+    project_id = Column(Integer, ForeignKey('projects.id', ondelete='CASCADE'), nullable=False)
+    cluster_name = Column(String(255))
+    backup_type = Column(String(50)) # FULL, INCR, DIFF
+    status = Column(String(50), default="IN_PROGRESS") # COMPLETED, FAILED, IN_PROGRESS
+    size_mb = Column(Float, default=0.0)
+    created_at = Column(DateTime, default=datetime.datetime.utcnow)
+    completed_at = Column(DateTime, nullable=True)
+    
+class BackupSchedule(Base):
+    __tablename__ = 'backup_schedules'
+    id = Column(Integer, primary_key=True, index=True)
+    project_id = Column(Integer, ForeignKey('projects.id', ondelete='CASCADE'), nullable=False)
+    cluster_name = Column(String(255))
+    schedule_expression = Column(String(100)) # e.g. "Daily at 02:00 AM"
+    backup_type = Column(String(50))
+    retention_days = Column(Integer, default=7)
+    created_at = Column(DateTime, default=datetime.datetime.utcnow)
