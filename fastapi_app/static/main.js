@@ -316,7 +316,7 @@ document.addEventListener('DOMContentLoaded', () => {
             }
 
             const tbody = document.getElementById('cc-projects-tbody');
-            tbody.innerHTML = '';
+            if(tbody) tbody.innerHTML = '';
             
             const clustersList = document.getElementById('cc-clusters-list');
             if (clustersList) clustersList.innerHTML = '';
@@ -686,7 +686,7 @@ document.addEventListener('DOMContentLoaded', () => {
             
             // Update Donut Chart
             document.getElementById('cc-total-clusters').innerText = `${data.length} Clusters`;
-            document.getElementById('cc-donut-center-text').innerText = operationalCount;
+            const el1 = document.getElementById('cc-donut-center-text'); if(el1) el1.innerText = operationalCount;
             
             const radius = 80;
             const circumference = 2 * Math.PI * radius; // ~502.6
@@ -912,7 +912,7 @@ if (donutCircle) {
                    }
                 }
                 
-                const nodeStats = document.getElementById('nodes-donut-slice').parentNode.parentNode.nextElementSibling;
+                const nds = document.getElementById('nodes-donut-slice'); const nodeStats = nds ? nds.parentNode.parentNode.nextElementSibling : null;
                 if (nodeStats) {
                     nodeStats.innerHTML = `<span style="color: var(--success);">&#8226; ${allNodes.length - shutDownCount} Operational</span><span style="color: var(--primary);">&#8226; ${shutDownCount} Shut Down</span>`;
                 }
@@ -921,7 +921,7 @@ if (donutCircle) {
         } catch (error) {
             console.error("fetchProjects error:", error);
             const errDiv = document.getElementById('projects-container');
-            if (errDiv) errDiv.innerHTML = `<div class="loading-state" style="color: var(--danger)">Error loading projects. Exception: ${escapeHTML(error.stack || error.toString())}</div>`;
+            if (errDiv) errDiv.insertAdjacentHTML("afterbegin", `<div class="loading-state" style="color: var(--danger)">Error loading projects. Exception: ${escapeHTML(error.stack || error.toString())}</div>`);
         }
     }
 
