@@ -193,7 +193,7 @@ document.addEventListener('DOMContentLoaded', () => {
         let hash = window.location.hash.substring(1) || 'projects-view';
         
         // If hash is a changelog section anchor (e.g. v1-4-2), show changelog-view and scroll
-        const changelogAnchors = ['v1-5-0', 'v1-4-9', 'v1-4-8', 'v1-4-7', 'v1-4-6', 'v1-4-5', 'v1-4-4', 'v1-4-3', 'v1-4-2', 'v1-4-1', 'release-cycle', 'whats-new'];
+        const changelogAnchors = ['v1-5-1', 'v1-5-0', 'v1-4-9', 'v1-4-8', 'v1-4-7', 'v1-4-6', 'v1-4-5', 'v1-4-4', 'v1-4-3', 'v1-4-2', 'v1-4-1', 'release-cycle', 'whats-new'];
         if (changelogAnchors.includes(hash)) {
             document.querySelectorAll('.view-section').forEach(s => s.style.display = 'none');
             const cv = document.getElementById('changelog-view');
@@ -225,6 +225,11 @@ document.addEventListener('DOMContentLoaded', () => {
             document.querySelectorAll('.view-section').forEach(section => section.style.display = 'none');
             const dv = document.getElementById('project-detail-view');
             if(dv) dv.style.display = 'block';
+            if(currentProjectId) {
+                const c = document.getElementById('dashboard-metrics-container');
+                if (c) c.innerHTML = '';
+                fetchDashboardMetrics();
+            }
         } else if (hash === 'projects-view') {
             if(typeof showProjectsView === 'function') showProjectsView();
             if(typeof stopDashboardInterval === 'function') stopDashboardInterval();

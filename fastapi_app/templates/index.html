@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Sunucu Yönetim ve Replikasyon</title>
-    <link rel="stylesheet" href="/static/style.css?v=57">
+    <link rel="stylesheet" href="/static/style.css?v=58">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 </head>
 <body>
@@ -1243,7 +1243,8 @@ Real OS metrics (CPU, RAM, Disk I/O) cannot be fetched directly from PostgreSQL 
                 <!-- Left Sidebar (Fixed / Non-scrolling) -->
                 <div style="width: 250px; flex-shrink: 0; border-right: 1px solid #e5e7eb; padding: 32px 24px; display: flex; flex-direction: column; gap: 16px; font-size: 0.9rem; background: #fafafa; position: sticky; top: 0; align-self: flex-start; height: 100%; overflow-y: auto; user-select: none;">
                     <div style="color: #c026d3; font-weight: 600; margin-bottom: 8px;">Release Notes</div>
-                    <a href="#changelog-view" onclick="event.preventDefault(); document.getElementById('v1-5-0').scrollIntoView({behavior:'smooth'}); document.querySelectorAll('#changelog-view .cl-sidebar-link').forEach(e=>e.style.fontWeight='normal'); this.style.fontWeight='bold';" class="cl-sidebar-link" style="color: #4b5563; text-decoration: none; font-weight: bold;">v1.5.0 (Latest)</a>
+                    <a href="#changelog-view" onclick="event.preventDefault(); document.getElementById('v1-5-1').scrollIntoView({behavior:'smooth'}); document.querySelectorAll('#changelog-view .cl-sidebar-link').forEach(e=>e.style.fontWeight='normal'); this.style.fontWeight='bold';" class="cl-sidebar-link" style="color: #4b5563; text-decoration: none; font-weight: bold;">v1.5.1 (Latest)</a>
+                    <a href="#changelog-view" onclick="event.preventDefault(); document.getElementById('v1-5-0').scrollIntoView({behavior:'smooth'}); document.querySelectorAll('#changelog-view .cl-sidebar-link').forEach(e=>e.style.fontWeight='normal'); this.style.fontWeight='bold';" class="cl-sidebar-link" style="color: #4b5563; text-decoration: none;">v1.5.0</a>
                     <a href="#changelog-view" onclick="event.preventDefault(); document.getElementById('v1-4-9').scrollIntoView({behavior:'smooth'}); document.querySelectorAll('#changelog-view .cl-sidebar-link').forEach(e=>e.style.fontWeight='normal'); this.style.fontWeight='bold';" class="cl-sidebar-link" style="color: #4b5563; text-decoration: none;">v1.4.9</a>
                     <a href="#changelog-view" onclick="event.preventDefault(); document.getElementById('v1-4-8').scrollIntoView({behavior:'smooth'}); document.querySelectorAll('#changelog-view .cl-sidebar-link').forEach(e=>e.style.fontWeight='normal'); this.style.fontWeight='bold';" class="cl-sidebar-link" style="color: #4b5563; text-decoration: none;">v1.4.8</a>
                     <a href="#changelog-view" onclick="event.preventDefault(); document.getElementById('v1-4-7').scrollIntoView({behavior:'smooth'}); document.querySelectorAll('#changelog-view .cl-sidebar-link').forEach(e=>e.style.fontWeight='normal'); this.style.fontWeight='bold';" class="cl-sidebar-link" style="color: #4b5563; text-decoration: none;">v1.4.7</a>
@@ -1262,7 +1263,7 @@ Real OS metrics (CPU, RAM, Disk I/O) cannot be fetched directly from PostgreSQL 
                     <h1 style="color: #4b5563; font-weight: 300; font-size: 2.2rem; margin-bottom: 24px;">Release Notes</h1>
                     <p style="color: #4b5563; line-height: 1.6; margin-bottom: 40px; font-size: 1.05rem;">Use this page as your guide to stay up to date on the latest enhancements and changes, ensuring you can make the most of ClusterControl's powerful capabilities.</p>
                     
-                    <h2 id="v1-5-0" style="color: #4b5563; font-weight: 300; font-size: 1.8rem; margin-bottom: 20px; border-top: 1px solid #e5e7eb; padding-top: 32px;">v1.5.0</h2>
+                    <h2 id="v1-5-1" style="color: #4b5563; font-weight: 300; font-size: 1.8rem; margin-bottom: 20px; border-top: 1px solid #e5e7eb; padding-top: 32px;">v1.5.1</h2>
                     
                     <h3 id="release-cycle" style="color: #4b5563; font-weight: 400; font-size: 1.4rem; margin-bottom: 16px;">Release cycle</h3>
                     <p style="color: #4b5563; margin-bottom: 16px; line-height: 1.6;">We highly advise you to keep up to date with the latest version for the following reasons:</p>
@@ -1273,6 +1274,11 @@ Real OS metrics (CPU, RAM, Disk I/O) cannot be fetched directly from PostgreSQL 
                     </ul>
                     
                     <h3 id="whats-new" style="color: #4b5563; font-weight: 400; font-size: 1.4rem; margin-bottom: 16px;">What's New</h3>
+                    <ul style="color: #4b5563; line-height: 1.7; padding-left: 20px; margin-bottom: 40px;">
+                        <li><span style="font-weight: 600;">Fix (Cluster Switch &amp; Telemetry Reset):</span> <b>E-mail Okuma Programı</b> ve <b>Araç Plaka Takip Sistemi</b> gibi farklı cluster'lar arasında geçiş yapılırken metrik kartlarının karışması ve eski kümenin kartlarının ekranda kalması sorunu hash normalizasyonu ve tam DOM temizliği (DOM wipe &amp; fresh reload) ile giderildi. Her cluster kendi başlığı (örn: <code>E-MAIL OKUMA PROGRAMI</code>) ve kendi sunucuları ile anında yüklenir.</li>
+                    </ul>
+
+                    <h2 id="v1-5-0" style="color: #4b5563; font-weight: 300; font-size: 1.8rem; margin-bottom: 20px; border-top: 1px solid #e5e7eb; padding-top: 32px;">v1.5.0</h2>
                     <ul style="color: #4b5563; line-height: 1.7; padding-left: 20px; margin-bottom: 40px;">
                         <li><span style="font-weight: 600;">UI/UX (Dynamic CPU/RAM Visibility):</span> Sunucu Yönetim Dashboard ekranında, Linux VPS / SSH yapılandırması olmayan sunucularda <code>N/A</code> gösteren CPU ve RAM kartları otomatik olarak tamamen gizlendi. Yalnızca gerçek SSH/OS metrikleri mevcut olduğunda kartlar görünür hale getirilir; böylece arayüz gereksiz N/A kutucuklarından arındırılmış temiz bir görünüme kavuşturuldu.</li>
                     </ul>
@@ -1339,11 +1345,12 @@ Real OS metrics (CPU, RAM, Disk I/O) cannot be fetched directly from PostgreSQL 
                 <div style="width: 250px; flex-shrink: 0; border-left: 1px solid #e5e7eb; padding: 32px 24px; font-size: 0.85rem; background: #fafafa; position: sticky; top: 0; align-self: flex-start; height: 100%; overflow-y: auto; user-select: none;">
                     <div style="color: #9ca3af; margin-bottom: 16px; font-weight: 500;">Table of contents</div>
                     <div style="display: flex; flex-direction: column; gap: 12px; color: #4b5563;">
-                        <a href="#changelog-view" onclick="event.preventDefault(); document.getElementById('v1-5-0').scrollIntoView({behavior:'smooth'});" style="color: inherit; text-decoration: none; font-weight: 600;">v1.5.0 Release</a>
+                        <a href="#changelog-view" onclick="event.preventDefault(); document.getElementById('v1-5-1').scrollIntoView({behavior:'smooth'});" style="color: inherit; text-decoration: none; font-weight: 600;">v1.5.1 Release</a>
                         <div style="margin-left: 12px; display: flex; flex-direction: column; gap: 8px;">
                             <a href="#changelog-view" onclick="event.preventDefault(); document.getElementById('release-cycle').scrollIntoView({behavior:'smooth'});" style="color: inherit; text-decoration: none;">Release cycle</a>
                             <a href="#changelog-view" onclick="event.preventDefault(); document.getElementById('whats-new').scrollIntoView({behavior:'smooth'});" style="color: inherit; text-decoration: none;">What's New</a>
                         </div>
+                        <a href="#changelog-view" onclick="event.preventDefault(); document.getElementById('v1-5-0').scrollIntoView({behavior:'smooth'});" style="color: inherit; text-decoration: none; font-weight: 500;">v1.5.0 Release</a>
                         <a href="#changelog-view" onclick="event.preventDefault(); document.getElementById('v1-4-9').scrollIntoView({behavior:'smooth'});" style="color: inherit; text-decoration: none; font-weight: 500;">v1.4.9 Release</a>
                         <a href="#changelog-view" onclick="event.preventDefault(); document.getElementById('v1-4-8').scrollIntoView({behavior:'smooth'});" style="color: inherit; text-decoration: none; font-weight: 500;">v1.4.8 Release</a>
                         <a href="#changelog-view" onclick="event.preventDefault(); document.getElementById('v1-4-7').scrollIntoView({behavior:'smooth'});" style="color: inherit; text-decoration: none; font-weight: 500;">v1.4.7 Release</a>
@@ -1621,7 +1628,7 @@ Real OS metrics (CPU, RAM, Disk I/O) cannot be fetched directly from PostgreSQL 
         </div>
     </div>
 
-    <script src="/static/main.js?v=57"></script>
+    <script src="/static/main.js?v=58"></script>
 
 
 
