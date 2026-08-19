@@ -292,9 +292,11 @@ async def check_and_protect_wal_bloat(project_id: int, primary_encrypted_url: st
 
 import time
 
-async def get_server_metrics(encrypted_url: str, project_id: int = None, role: str = None, metric_table: str = None) -> dict:
+async def get_server_metrics(node: dict, project_id: int = None) -> dict:
     try:
-        url = decrypt(encrypted_url)
+        url = decrypt(node['encrypted_url'])
+        role = node['role']
+        metric_table = node.get('metric_table')
         if not url:
             return {'status': 'offline', 'error': 'Decryption failed'}
         
@@ -376,6 +378,35 @@ async def get_server_metrics(encrypted_url: str, project_id: int = None, role: s
                 except Exception:
                     plates_count = f"Tablo Bulunamadı ({metric_table})"
             
+            
+            # Fetch OS metrics via SSH if available
+            os_metrics = {'cpu': 'N/A', 'ram': 'N/A'}
+            if node.get('ssh_host') and node.get('encrypted_ssh_credential'):
+                import asyncio
+                
+                def fetch_os():
+                    from ssh_worker import SSHManager
+                    ssh_cred = decrypt(node['encrypted_ssh_credential'])
+                    if not ssh_cred: return {}
+                    try:
+                        with SSHManager(node['ssh_host'], node.get('ssh_port', 22), node.get('ssh_username', 'root'), ssh_cred) as ssh:
+                            # Basic Linux commands for CPU and RAM
+                            cpu_out, _, _ = ssh.execute_command("top -bn1 | grep 'Cpu(s)' | awk '{print $2 + $4}'")
+                            ram_out, _, _ = ssh.execute_command("free -m | awk 'NR==2{printf \"%.1f\", $3*100/$2 }'")
+                            
+                            cpu = cpu_out.strip()
+                            ram = ram_out.strip()
+                            return {'cpu': f"{cpu}%" if cpu else 'N/A', 'ram': f"{ram}%" if ram else 'N/A'}
+                    except Exception as e:
+                        print("SSH Metric error:", e)
+                        return {}
+                
+                try:
+                    os_res = await asyncio.to_thread(fetch_os)
+                    os_metrics.update(os_res)
+                except:
+                    pass
+
             return {
                 'status': 'online',
                 'ping': f"{int(ping_ms)}ms",
@@ -395,7 +426,9 @@ async def get_server_metrics(encrypted_url: str, project_id: int = None, role: s
                 'tup_fetched': tup_fetched,
                 'tup_inserted': tup_inserted,
                 'tup_updated': tup_updated,
-                'tup_deleted': tup_deleted
+                'tup_deleted': tup_deleted,
+                'cpu_usage': os_metrics.get('cpu', 'N/A'),
+                'ram_usage': os_metrics.get('ram', 'N/A')
             }
         finally:
             await conn.close()
