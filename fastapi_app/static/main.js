@@ -1221,7 +1221,11 @@ if (donutCircle) {
     async function fetchModalMetrics(nodeId) {
         try {
             const res = await apiFetch(`/api/nodes/${nodeId}/metrics`);
-            if(!res.ok) return;
+            if(!res.ok) {
+                document.getElementById('modal-metric-status').className = 'status-badge status-offline';
+                document.getElementById('modal-metric-status').innerText = 'Hata (502)';
+                return;
+            }
             const data = await res.json();
             
             if(!data || data.status !== 'online') {

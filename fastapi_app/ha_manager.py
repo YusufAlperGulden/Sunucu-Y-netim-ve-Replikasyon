@@ -386,7 +386,16 @@ async def get_server_metrics(encrypted_url: str, project_id: int = None, role: s
                 'version': version_str,
                 'uptime': uptime,
                 'lag': lag_val,
-                'plates': plates_count
+                'plates': plates_count,
+                'active_conn': active_conn,
+                'max_conn': max_conn,
+                'cache_hit_raw': cache_hit,
+                'commits_raw': commits,
+                'rollbacks_raw': rollbacks,
+                'tup_fetched': tup_fetched,
+                'tup_inserted': tup_inserted,
+                'tup_updated': tup_updated,
+                'tup_deleted': tup_deleted
             }
         finally:
             await conn.close()
