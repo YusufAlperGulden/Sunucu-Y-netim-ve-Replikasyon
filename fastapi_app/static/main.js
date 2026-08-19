@@ -193,7 +193,7 @@ document.addEventListener('DOMContentLoaded', () => {
         let hash = window.location.hash.substring(1) || 'projects-view';
         
         // If hash is a changelog section anchor (e.g. v1-4-2), show changelog-view and scroll
-        const changelogAnchors = ['v1-4-8', 'v1-4-7', 'v1-4-6', 'v1-4-5', 'v1-4-4', 'v1-4-3', 'v1-4-2', 'v1-4-1', 'release-cycle', 'whats-new'];
+        const changelogAnchors = ['v1-4-9', 'v1-4-8', 'v1-4-7', 'v1-4-6', 'v1-4-5', 'v1-4-4', 'v1-4-3', 'v1-4-2', 'v1-4-1', 'release-cycle', 'whats-new'];
         if (changelogAnchors.includes(hash)) {
             document.querySelectorAll('.view-section').forEach(s => s.style.display = 'none');
             const cv = document.getElementById('changelog-view');
@@ -337,12 +337,19 @@ document.addEventListener('DOMContentLoaded', () => {
         
         const el_detail_proj_name = document.getElementById('detail-proj-name'); if(el_detail_proj_name) el_detail_proj_name.innerText = proj.name;
         const el_detail_proj_desc = document.getElementById('detail-proj-desc'); if(el_detail_proj_desc) el_detail_proj_desc.innerText = proj.description || 'No description';
+        const el_breadcrumb = document.getElementById('detail-proj-breadcrumb-name'); if(el_breadcrumb) el_breadcrumb.innerText = `${proj.name} (ID: ${proj.id})`;
+        
+        // Clear previous cluster cards from container
+        const container = document.getElementById('dashboard-metrics-container');
+        if (container) container.innerHTML = '';
         
         renderNodes(proj.nodes);
         
         // Ensure "Dashboards" tab is active by default
         const dashTab = document.querySelector('.cluster-tab[data-tab="dashboards"]');
         if(dashTab) dashTab.click();
+        
+        fetchDashboardMetrics();
     }
 
     function renderNodes(nodes) {
