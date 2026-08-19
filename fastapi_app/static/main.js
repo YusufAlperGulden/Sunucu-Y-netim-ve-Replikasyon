@@ -176,43 +176,57 @@ document.addEventListener('DOMContentLoaded', () => {
     const sidebarLinks = document.querySelectorAll('.sidebar-nav > a, .sidebar-nav > div > a, a[data-view="changelog-view"]');
     const viewSections = document.querySelectorAll('.view-section');
     
+    function handleRouting() {
+        let hash = window.location.hash.substring(1) || 'projects-view';
+        
+        sidebarLinks.forEach(l => l.classList.remove('active'));
+        let activeLink = document.querySelector(`a[data-view="${hash}"]`);
+        if (!activeLink && hash === 'dashboard-view') {
+            activeLink = document.querySelector(`a[data-view="clusters-view"]`);
+        }
+        if (activeLink) activeLink.classList.add('active');
+        
+        viewSections.forEach(section => {
+            section.style.display = 'none';
+        });
+        
+        const view = document.getElementById(hash);
+        if (view) view.style.display = 'block';
+        
+        if (hash === 'projects-view') {
+            if(typeof showProjectsView === 'function') showProjectsView();
+            if(typeof stopDashboardInterval === 'function') stopDashboardInterval();
+        } else if (hash === 'audit-logs-view') {
+            if (typeof window.fetchAuditLogs === 'function') window.fetchAuditLogs();
+            if(typeof stopDashboardInterval === 'function') stopDashboardInterval();
+        } else if (hash === 'settings-view') {
+            if(typeof stopDashboardInterval === 'function') stopDashboardInterval();
+        } else if (hash === 'dashboard-view') {
+            if(typeof startDashboardInterval === 'function') startDashboardInterval();
+        } else {
+            if(typeof stopDashboardInterval === 'function') stopDashboardInterval();
+        }
+    }
+    
+    window.addEventListener('hashchange', handleRouting);
+
     sidebarLinks.forEach(link => {
         link.addEventListener('click', (e) => {
             e.preventDefault();
-            // Remove active class from all links
-            sidebarLinks.forEach(l => l.classList.remove('active'));
-            // Add active class to clicked link
-            link.classList.add('active');
-            
-            // Hide all views
-            viewSections.forEach(section => {
-                section.style.display = 'none';
-            });
-            
-            // Show target view
             const targetId = link.getAttribute('data-view');
             if (targetId) {
-                const view = document.getElementById(targetId);
-                if (view) view.style.display = 'block';
-            }
-            
-            // If projects view is shown, ensure detail view is hidden
-            if(targetId === 'projects-view') {
-                showProjectsView();
-                stopDashboardInterval();
-            } else if (targetId === 'audit-logs-view') {
-                window.fetchAuditLogs();
-                stopDashboardInterval();
-            } else if (targetId === 'settings-view') {
-                stopDashboardInterval();
-            } else if (targetId === 'dashboard-view') {
-                startDashboardInterval();
+                if (window.location.hash !== '#' + targetId) {
+                    window.location.hash = targetId;
+                } else {
+                    handleRouting();
+                }
             }
         });
     });
+    
+    // Process initial route
+    setTimeout(handleRouting, 10);
 
-    let dashboardInterval = null;
-    let clusterHoverTimeout = null;
     function startDashboardInterval() {
         fetchDashboardMetrics();
         let updateIntervalSec = parseInt(localStorage.getItem('dashboard_update_interval_sec')) || 1;
@@ -300,14 +314,13 @@ document.addEventListener('DOMContentLoaded', () => {
                       let a = document.createElement('div');
                       
                       a.className = "submenu-item"; a.onclick = (e) => {
-                          e.preventDefault();
-                          document.querySelectorAll('.view-section').forEach(v => v.style.display = 'none');
-                          document.getElementById('dashboard-view').style.display = 'block';
-                          document.querySelectorAll('.sidebar-nav a').forEach(l => l.classList.remove('active'));
-                          const clustersLink = document.querySelector('a[data-view="clusters-view"]');
-                          if (clustersLink) clustersLink.classList.add('active');
-                          if (typeof startDashboardInterval === 'function') startDashboardInterval();
-                      };
+                            e.preventDefault();
+                            if (window.location.hash !== '#dashboard-view') {
+                                window.location.hash = 'dashboard-view';
+                            } else {
+                                handleRouting();
+                            }
+                        };
                       a.innerHTML = `<span style="color: ${color}; font-size: 1.2rem; line-height: 1;">&#8226;</span> <span style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 150px;">${proj.name}</span>`;
                       submenu.appendChild(a);
                   });
@@ -1267,7 +1280,7 @@ if (donutCircle) {
     });
     
     // Navigation
-    btnBackProjects.addEventListener('click', showProjectsView);
+    btnBackProjects.addEventListener('click', () => { window.location.hash = 'projects-view'; });
 
     // Form: Edit Project
     btnCloseEditProjModal.addEventListener('click', () => modalEditProj.style.display = 'none');
