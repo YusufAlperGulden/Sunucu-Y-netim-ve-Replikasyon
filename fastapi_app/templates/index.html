@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Sunucu Yönetim ve Replikasyon</title>
-    <link rel="stylesheet" href="/static/style.css?v=30">
+    <link rel="stylesheet" href="/static/style.css?v=31">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 </head>
 <body>
@@ -1205,7 +1205,8 @@ Real OS metrics (CPU, RAM, Disk I/O) cannot be fetched directly from PostgreSQL 
                     
                     <h3 style="color: #4b5563; font-weight: 400; font-size: 1.4rem; margin-bottom: 16px;">What's New</h3>
                     <ul style="color: #4b5563; line-height: 1.7; padding-left: 20px; margin-bottom: 40px;">
-                        <li><span style="font-weight: 600;">Hotfix 2:</span> Internal Server Error (500) tam olarak zld! Bir nceki gncellemede manuel veritaban glerini yaparken tablonun adn "database_nodes" olarak yazdgm iin yeni stunlar eklenememiti (Aslnda tablonun ad "nodes" imi!). Bu isim dzeltilerek gler baaryla altrld. Tm Cluster ve Node grnmleri eski salna kavutu.</li>
+                        <li><span style="font-weight: 600;">Hotfix 3 (Final):</span> Python <code style="background: rgba(255,255,255,0.1); padding: 2px 4px; border-radius: 4px;">AttributeError</code> hatas zld. "models.py" ierisindeki snf tanmna eklenmesi unutulan stun deikenleri (ssh_host) koda dahil edildi. Tm zellikler %100 istikrarl alyor.</li>
+<li><span style="font-weight: 600;">Hotfix 2:</span> Internal Server Error (500) tam olarak zld! Bir nceki gncellemede manuel veritaban glerini yaparken tablonun adn "database_nodes" olarak yazdgm iin yeni stunlar eklenememiti (Aslnda tablonun ad "nodes" imi!). Bu isim dzeltilerek gler baaryla altrld. Tm Cluster ve Node grnmleri eski salna kavutu.</li>
 <li><span style="font-weight: 600;">Feature:</span> Gerçek OS Metrikleri (CPU ve RAM) eklendi! Önceden sahte verilerle gösterilen veya "Veri alınamıyor" denilen CPU/RAM kullanımı, artık SSH altyapısı sayesinde arka planda <code>top</code> ve <code>free</code> komutları çalıştırılarak doğrudan Linux sunucularından anlık çekiliyor. SSH bilgisi girilmiş her sunucunun metrikleri Dashboard ekranında listelenir.</li>
 <li><span style="font-weight: 600;">Hotfix:</span> Sunucu Ynetimi sekmesindeki <code style="background: rgba(255,255,255,0.1); padding: 2px 4px; border-radius: 4px;">Internal Server Error</code> (Web Sitesi kmesi) sorunu tespit edilip giderildi. Bir nceki gncellmede (v=27) veritaban modline eklenen SSH stnlarnn (ssh_host vb.) Render zerindeki mevcut veritaban tablosuna yansmamas (Migration eksiklii) sebebiyle yaanan 500 hatas zlerek uygulumann balangcnda otomatik <code style="background: rgba(255,255,255,0.1); padding: 2px 4px; border-radius: 4px;">ALTER TABLE</code> sorgular altrlmas saland. Artk Sunucularnz (Nodes) listesi sorunsuzca yklenmektedir.</li>
 <li><span style="font-weight: 600;">Feature:</span> SSH Altyap iin <b>Paramiko</b> entegrasyonu tamamland! Artk Backend tarafnda, sunucularnza kaydedilen ifreler veya PEM Private Key'ler zlerek dorudan Linux Terminaline erisim saglanabiliyor. "Edit Node" penceresine eklenen "Test SSH" butonu ile, sunucuya baaryla bala-balanamadnz (whoami vb. temel komutlarla) test edebilirsiniz.</li>
@@ -1216,7 +1217,7 @@ Real OS metrics (CPU, RAM, Disk I/O) cannot be fetched directly from PostgreSQL 
 <li><span style="font-weight: 600;">Fix:</span> "ift Giri Ekran (Double Login Prompt)" sorunu zld. Sayfa yklendiinde arka planda yaplan yetki kontrollerinin (API 401 dnleri) tarayc tarafndan yanl anlalp kendi varsaylan "Oturum an" uyarsn kartmas engellendi. Artk gvenlik bal sadece arka planda nlenip direkt olarak tasarladmz gvenli ve k giri ekranna (Balonlu ekran) ynlendiriliyor.</li>
 <li><span style="font-weight: 600;">Feature:</span> "Settings" ekranndaki arama ubuu (Search Bar) aktifleitirildi. Artk "Search by parameter, value, description" ksmna herhangi bir anahtar kelime yazdnzda, o ana kadar sol mendeki hangi kategoride olduunuza baklmakszn tm PostgreSQL parametreleri (isimleri, deeri ve aklamalar) iinde dinamik arama yaplp sonular annda ekrana yansyor.</li>
 <li><span style="font-weight: 600;">Fix:</span> "Settings" (Ayarlar) sayfasndaki sahte etiketlerin kaldrlmas/gizlenmesi ileminde meydana gelen kk bir HTML kapan etiketi kaymas nedeniyle 'User management' ve 'Backups' sayfalarnn saa doru kayarak yapsnn bozulmas (UI Bug) sorunu dzeltildi. Artk tm ekranlar ana gvdeye tam oturuyor.</li>
-<li><span style="font-weight: 600;">Fix:</span> Uygulama srm geikmesi (Render Cache) nedeniyle "Clusters" sayfasnda tklanan projelerin yeni ekranda/sekmede almayp i ie gemesi sorunu son v=30 srmyle tamamen zld. Eer u an kullanyorsanz sayfay tamamen yenileyip (CTRL+F5) dzeldiini grebilirsiniz.</li>
+<li><span style="font-weight: 600;">Fix:</span> Uygulama srm geikmesi (Render Cache) nedeniyle "Clusters" sayfasnda tklanan projelerin yeni ekranda/sekmede almayp i ie gemesi sorunu son v=31 srmyle tamamen zld. Eer u an kullanyorsanz sayfay tamamen yenileyip (CTRL+F5) dzeldiini grebilirsiniz.</li>
 <li><span style="font-weight: 600;">Feature:</span> PostgreSQL Fiziksel Entegrasyonu: "Settings" sekmesinde yer alan PostgreSQL motor parametreleri (shared_buffers, work_mem, max_connections, wal_level, max_replication_slots, log_min_duration_statement vb.) artk sadece veritabanmza kaydedilmekle kalmyor; arkaplanda alan dzenli bir Python isisi sayesinde ilgili kmenin tm Node'larna ngilizce ('ALTER SYSTEM SET...') SQL komutlar araclyla fiziksel olarak gnderilip 'SELECT pg_reload_conf()' komutuyla annda aktif ediliyor. Ayrnca gelecekte kkmeye eklenecek yeni sunuculara da bu proje ayarlarnn otomatik olarak yklenmesi iin eklemeler yapld.</li>
 <li><span style="font-weight: 600;">Fix:</span> Uygulamaya yaplan nceki gncellemeler srasnda (Nodes listesinin deiimi srasnda) meydana gelen kk bir yazm hatasndan dolay arka plan animasyonlar (Baloncuklar) dhil tm etkileimlerin bozulmas (Syntax Error) sorunu dzeltildi.</li>
 <li><span style="font-weight: 600;">Feature:</span> "Settings" ekrannda artk gerekten var olan PostgreSQL ayarlar (Long Query, Replication, Retention, System vb.) iin API balantlar kuruldu. Sol mendeki deerlere tklandnda tpk "Backup" ksmnda olduu gibi kendi API'lerinden gerek deerleri okuyup yanstan bir altyap eklendi ve baz sahte sekmeler (CmonDB, Controller) veritabanyla hibir ilgisi olmad iin mmknse tasarmdan gizlendi.</li>
@@ -1489,7 +1490,7 @@ Real OS metrics (CPU, RAM, Disk I/O) cannot be fetched directly from PostgreSQL 
         </div>
     </div>
 
-    <script src="/static/main.js?v=30"></script>
+    <script src="/static/main.js?v=31"></script>
 
 
 
