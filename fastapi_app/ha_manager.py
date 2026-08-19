@@ -331,7 +331,8 @@ async def get_server_metrics(node: dict, project_id: int = None) -> dict:
             version_str = ver_row['version'].split('on')[0].strip() if ver_row else 'Unknown'
             
             uptime_row = await conn.fetchrow("SELECT date_trunc('second', current_timestamp - pg_postmaster_start_time()) as uptime")
-            uptime = str(uptime_row['uptime']) if uptime_row else 'Unknown'
+            raw_uptime = str(uptime_row['uptime']) if uptime_row else 'Unknown'
+            uptime = raw_uptime.replace('days', 'gün').replace('day', 'gün')
             
             lag_val = 'Bağlantı Bekleniyor'
             # Check replication lag
@@ -418,7 +419,7 @@ async def get_server_metrics(node: dict, project_id: int = None) -> dict:
                 'storage': f'{db_size_kb/1024:.1f} MB' if db_size_kb > 1024 else f'{int(db_size_kb)} kB',
                 'connections': f'{active_conn} / {max_conn}',
                 'cache_hit': f'{cache_hit:.1f}%',
-                'xact': f'{commits} / {rollbacks}',
+                'xact': f'{commits:,} ✓ / {rollbacks:,} ✗',
                 'version': version_str,
                 'uptime': uptime,
                 'lag': lag_val,
