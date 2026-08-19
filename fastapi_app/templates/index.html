@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Sunucu Yönetim ve Replikasyon</title>
-    <link rel="stylesheet" href="/static/style.css?v=13">
+    <link rel="stylesheet" href="/static/style.css?v=15">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 </head>
 <body>
@@ -703,7 +703,7 @@
                 </div>
 
             </div>
-            <div id="project-detail-view" style="display: none;">
+            <div id="project-detail-view" class="view-section" style="display: none;">
     <div style="background: white; border-bottom: 1px solid var(--border); padding: 10px 24px;">
         <div style="font-size: 13px; color: #6b7280; display: flex; align-items: center; gap: 8px;">
             <span>Home</span> / <span id="btn-back-projects" style="cursor: pointer; color: var(--primary);">Clusters</span> / <span id="detail-proj-breadcrumb-name" style="font-weight: 500; color: #374151;">Project Name (ID: 1)</span>
@@ -1089,7 +1089,8 @@ Real OS metrics (CPU, RAM, Disk I/O) cannot be fetched directly from PostgreSQL 
                     
                     <h3 style="color: #4b5563; font-weight: 400; font-size: 1.4rem; margin-bottom: 16px;">What's New</h3>
                     <ul style="color: #4b5563; line-height: 1.7; padding-left: 20px; margin-bottom: 40px;">
-                        <li><span style="font-weight: 600;">Fix:</span> Uygulama içindeki tüm sahte (placeholder) veritabanı düğüm verileri (IP adresleri, portlar, DB tipleri) koddan temizlendi. "Nodes" sekmelerindeki tablolar artık veritabanında şifreli olarak tutulan bağlantı (connection string) url'lerini AES-256 ile çözerek tamamen %100 gerçek IP, Port ve Veritabanı tipini (PostgreSQL vb.) dinamik olarak ekrana yansıtmaktadır.</li>
+                        <li><span style="font-weight: 600;">Fix:</span> "Clusters" listesi ve "Proje Detay" sayfalarının (Dashboard) aynı ekranda üst üste binmesi (Stacking) hatası giderildi. Yönlendirme (Routing) mantığı düzeltilerek her sayfanın kendi özel bağlantısına sahip olması sağlandı. Artık bir kümeye tıkladığınızda tertemiz yepyeni bir sayfada detaylar açılıyor.</li>
+<li><span style="font-weight: 600;">Fix:</span> Uygulama içindeki tüm sahte (placeholder) veritabanı düğüm verileri (IP adresleri, portlar, DB tipleri) koddan temizlendi. "Nodes" sekmelerindeki tablolar artık veritabanında şifreli olarak tutulan bağlantı (connection string) url'lerini AES-256 ile çözerek tamamen %100 gerçek IP, Port ve Veritabanı tipini (PostgreSQL vb.) dinamik olarak ekrana yansıtmaktadır.</li>
 <li><span style="font-weight: 600;">Feature:</span> Cluster detay sayfasındaki "Nodes" sekmesinin içerisine "Node list" (Tablo ve Özet İstatistikler) ve "Topology" alt sekmeleri eklendi. Node List tablosu orjinal sisteme birebir uyumlu olarak tasarlandı.</li>
 <li><span style="font-weight: 600;">Improvement:</span> "Sunucu Yönetim Dashboard" (Canlı Metrikler) ayrı bir sayfa olmak yerine, doğrudan her projenin detaylarındaki "Dashboards" sekmesinin altına taşındı. Böylece ekran karmaşası giderildi ve menü navigasyonu daha tutarlı hale getirildi.</li>
 <li><span style="font-weight: 600;">Feature:</span> Cluster detay sayfas&#305; tamamen yenilenerek orjinal sisteme benzer sekilde "Dashboards", "Nodes", "Performance", "Alarms" gibi sekmeli (tab) yap&#305;ya ge&#231;irildi. Sahte OS verileri (CPU/RAM/Network) kullan&#305;lmay&#305;p "Veri Al&#305;nam&#305;yor" (Unavailable) mesaj&#305; eklendi. TPS, Cache Hit ve ba&#287;lant&#305; metrikleri gibi al&#305;nabilen veriler GER&#199;EK sunuculardan saniyede bir canl&#305; okunan verilerle ger&#231;ek&#231;i olarak eklendi.</li>
@@ -1354,7 +1355,7 @@ Real OS metrics (CPU, RAM, Disk I/O) cannot be fetched directly from PostgreSQL 
         </div>
     </div>
 
-    <script src="/static/main.js?v=13"></script>
+    <script src="/static/main.js?v=15"></script>
 
 
 

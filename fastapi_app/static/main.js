@@ -204,7 +204,11 @@ document.addEventListener('DOMContentLoaded', () => {
         const view = document.getElementById(hash);
         if (view) view.style.display = 'block';
         
-        if (hash === 'projects-view') {
+        if (hash === 'project-detail-view') {
+            document.querySelectorAll('.view-section').forEach(section => section.style.display = 'none');
+            const dv = document.getElementById('project-detail-view');
+            if(dv) dv.style.display = 'block';
+        } else if (hash === 'projects-view') {
             if(typeof showProjectsView === 'function') showProjectsView();
             if(typeof stopDashboardInterval === 'function') stopDashboardInterval();
         } else if (hash === 'audit-logs-view') {
@@ -298,7 +302,11 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function showDetailView(proj) {
+        window.location.hash = 'project-detail-view';
+        // wait for routing to finish or just populate directly
         projectsContainer.style.display = 'none';
+        const clustersView = document.getElementById('clusters-view');
+        if (clustersView) clustersView.style.display = 'none';
         detailView.style.display = 'block';
         currentProjectId = proj.id;
         
@@ -482,9 +490,6 @@ document.addEventListener('DOMContentLoaded', () => {
                       
                       a.className = "submenu-item"; a.onclick = async (e) => {
                             e.preventDefault();
-                            if (window.location.hash !== '#projects-view') {
-                                window.location.hash = 'projects-view';
-                            }
                             try {
                                 const res = await apiFetch(`/api/projects/${proj.id}`);
                                 if (res.ok) {
@@ -1469,7 +1474,7 @@ if (donutCircle) {
     });
     
     // Navigation
-    btnBackProjects.addEventListener('click', () => { window.location.hash = 'projects-view'; });
+    btnBackProjects.addEventListener('click', () => { window.location.hash = 'clusters-view'; });
 
     // Form: Edit Project
     btnCloseEditProjModal.addEventListener('click', () => modalEditProj.style.display = 'none');

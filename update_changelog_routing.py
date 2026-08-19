@@ -1,13 +1,15 @@
 ﻿import re
+
 html_path = 'fastapi_app/templates/index.html'
 with open(html_path, 'r', encoding='utf-8') as f:
     content = f.read()
 
-new_changelog_item = """<li><span style="font-weight: 600;">Feature:</span> Taray&#305;c&#305; ge&#231;mi&#351;i (Browser History / Back Button) deste&#287;i i&#231;in Hash tabanl&#305; y&#246;nlendirme (Routing) sistemi eklendi. Art&#305;k sayfalar aras&#305; ge&#231;i&#351;lerde taray&#305;c&#305;n&#305;n "Geri" ve "&#304;leri" butonlar&#305; tam fonksiyonalite ile &#231;al&#305;&#351;maktad&#305;r.</li>
-                        <li><span style="font-weight: 600;">Fix:</span> Sol men&#252;deki"""
+new_changelog = """<li><span style="font-weight: 600;">Fix:</span> "Clusters" listesi ve "Proje Detay" sayfalarının (Dashboard) aynı ekranda üst üste binmesi (Stacking) hatası giderildi. Yönlendirme (Routing) mantığı düzeltilerek her sayfanın kendi özel bağlantısına sahip olması sağlandı. Artık bir kümeye tıkladığınızda tertemiz yepyeni bir sayfada detaylar açılıyor.</li>
+"""
 
-content = content.replace('<li><span style="font-weight: 600;">Fix:</span> Sol men&#252;deki', new_changelog_item)
+pattern = r'(<h3[^>]*>What\'s New</h3>\s*<ul[^>]*>\s*)'
+content = re.sub(pattern, r'\g<1>' + new_changelog, content)
 
 with open(html_path, 'w', encoding='utf-8') as f:
     f.write(content)
-print("Changelog updated.")
+print("Updated changelog for view stacking")
