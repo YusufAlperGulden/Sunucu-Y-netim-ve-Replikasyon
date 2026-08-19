@@ -746,7 +746,16 @@
                 
                 <h3 style="font-size: 14px; font-weight: 500; margin-bottom: 10px; color: #374151;">Cluster Load (OS Metrics)</h3>
                 <div style="height: 150px; background: #f9fafb; border: 1px dashed #d1d5db; display: flex; align-items: center; justify-content: center; color: #6b7280; font-size: 13px;">
-                    Real OS metrics unavailable (Requires Prometheus Node Exporter agent installed on servers). No fake placeholder data is being drawn.
+                    
+Real OS metrics (CPU, RAM, Disk I/O) cannot be fetched directly from PostgreSQL (port 5432).<br><br>
+<strong>How to enable this:</strong><br>
+1. SSH into your database servers as root.<br>
+2. Install Prometheus Node Exporter: <code>sudo apt install prometheus-node-exporter</code><br>
+3. Start the service: <code>sudo systemctl start prometheus-node-exporter</code><br>
+4. Ensure port 9100 is open in your firewall.<br>
+<br>
+<em>Once installed on your servers, this dashboard will automatically detect the OS metrics. No fake placeholder data is being drawn.</em>
+
                 </div>
             </div>
             

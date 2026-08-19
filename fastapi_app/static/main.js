@@ -2251,8 +2251,8 @@ let currentSortCol = null;
                 `;
             }).join('');
             
-            document.getElementById('stat-all').innerText = proj.nodes.length;
-            document.getElementById('stat-operational').innerText = proj.nodes.length; // Simplified for now
+            if(document.getElementById('stat-all')) document.getElementById('stat-all').innerText = proj.nodes.length;
+            if(document.getElementById('stat-operational')) document.getElementById('stat-operational').innerText = proj.nodes.length; // Simplified for now
         }
         
         try {
