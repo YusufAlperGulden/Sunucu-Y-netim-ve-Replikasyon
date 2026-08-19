@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Sunucu Yönetim ve Replikasyon</title>
-    <link rel="stylesheet" href="/static/style.css?v=53">
+    <link rel="stylesheet" href="/static/style.css?v=54">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 </head>
 <body>
@@ -976,31 +976,31 @@ Real OS metrics (CPU, RAM, Disk I/O) cannot be fetched directly from PostgreSQL 
                     <div style="display: flex; margin-bottom: 20px; border: 1px solid var(--border); border-radius: 4px; overflow-x: auto; background: white;">
                           <div style="flex: 1; min-width: 120px; padding: 15px 20px; border-right: 1px solid var(--border); border-left: 2px solid #10b981;">
                               <div style="color: #6b7280; font-size: 13px; margin-bottom: 5px;">Operational</div>
-                              <div style="color: #10b981; font-size: 24px;" id="stat-operational">0</div>
+                              <div style="color: #10b981; font-size: 24px;" id="cluster-stat-operational">0</div>
                           </div>
                           <div style="flex: 1; min-width: 120px; padding: 15px 20px; border-right: 1px solid var(--border); border-top: 1px solid transparent; border-bottom: 1px solid transparent;">
                               <div style="color: #6b7280; font-size: 13px; margin-bottom: 5px;">Failed</div>
-                              <div style="color: #374151; font-size: 24px;" id="stat-failed">0</div>
+                              <div style="color: #374151; font-size: 24px;" id="cluster-stat-failed">0</div>
                           </div>
                           <div style="flex: 1; min-width: 120px; padding: 15px 20px; border-right: 1px solid var(--border);">
                               <div style="color: #6b7280; font-size: 13px; margin-bottom: 5px;">Offline</div>
-                              <div style="color: #374151; font-size: 24px;" id="stat-offline">0</div>
+                              <div style="color: #374151; font-size: 24px;" id="cluster-stat-offline">0</div>
                           </div>
                           <div style="flex: 1; min-width: 120px; padding: 15px 20px; border-right: 1px solid var(--border);">
                               <div style="color: #6b7280; font-size: 13px; margin-bottom: 5px;">Shut Down</div>
-                              <div style="color: #3b82f6; font-size: 24px;" id="stat-shutdown">0</div>
+                              <div style="color: #3b82f6; font-size: 24px;" id="cluster-stat-shutdown">0</div>
                           </div>
                           <div style="flex: 1; min-width: 120px; padding: 15px 20px; border-right: 1px solid var(--border);">
                               <div style="color: #6b7280; font-size: 13px; margin-bottom: 5px;">Recovering</div>
-                              <div style="color: #374151; font-size: 24px;" id="stat-recovering">0</div>
+                              <div style="color: #374151; font-size: 24px;" id="cluster-stat-recovering">0</div>
                           </div>
                           <div style="flex: 1; min-width: 120px; padding: 15px 20px; border-right: 1px solid var(--border);">
                               <div style="color: #6b7280; font-size: 13px; margin-bottom: 5px;">Unknown State</div>
-                              <div style="color: #374151; font-size: 24px;" id="stat-unknown">0</div>
+                              <div style="color: #374151; font-size: 24px;" id="cluster-stat-unknown">0</div>
                           </div>
                           <div style="flex: 1; min-width: 120px; padding: 15px 20px; border: 1px solid #8b5cf6;">
                               <div style="color: #6b7280; font-size: 13px; margin-bottom: 5px;">All</div>
-                              <div style="color: #374151; font-size: 24px;" id="stat-all">0</div>
+                              <div style="color: #374151; font-size: 24px;" id="cluster-stat-all">0</div>
                           </div>
                       </div>
                       
@@ -1213,7 +1213,8 @@ Real OS metrics (CPU, RAM, Disk I/O) cannot be fetched directly from PostgreSQL 
                 <!-- Left Sidebar (Fixed / Non-scrolling) -->
                 <div style="width: 250px; flex-shrink: 0; border-right: 1px solid #e5e7eb; padding: 32px 24px; display: flex; flex-direction: column; gap: 16px; font-size: 0.9rem; background: #fafafa; position: sticky; top: 0; align-self: flex-start; height: 100%; overflow-y: auto; user-select: none;">
                     <div style="color: #c026d3; font-weight: 600; margin-bottom: 8px;">Release Notes</div>
-                    <a href="#changelog-view" onclick="event.preventDefault(); document.getElementById('v1-4-6').scrollIntoView({behavior:'smooth'}); document.querySelectorAll('#changelog-view .cl-sidebar-link').forEach(e=>e.style.fontWeight='normal'); this.style.fontWeight='bold';" class="cl-sidebar-link" style="color: #4b5563; text-decoration: none; font-weight: bold;">v1.4.6 (Latest)</a>
+                    <a href="#changelog-view" onclick="event.preventDefault(); document.getElementById('v1-4-7').scrollIntoView({behavior:'smooth'}); document.querySelectorAll('#changelog-view .cl-sidebar-link').forEach(e=>e.style.fontWeight='normal'); this.style.fontWeight='bold';" class="cl-sidebar-link" style="color: #4b5563; text-decoration: none; font-weight: bold;">v1.4.7 (Latest)</a>
+                    <a href="#changelog-view" onclick="event.preventDefault(); document.getElementById('v1-4-6').scrollIntoView({behavior:'smooth'}); document.querySelectorAll('#changelog-view .cl-sidebar-link').forEach(e=>e.style.fontWeight='normal'); this.style.fontWeight='bold';" class="cl-sidebar-link" style="color: #4b5563; text-decoration: none;">v1.4.6</a>
                     <a href="#changelog-view" onclick="event.preventDefault(); document.getElementById('v1-4-5').scrollIntoView({behavior:'smooth'}); document.querySelectorAll('#changelog-view .cl-sidebar-link').forEach(e=>e.style.fontWeight='normal'); this.style.fontWeight='bold';" class="cl-sidebar-link" style="color: #4b5563; text-decoration: none;">v1.4.5</a>
                     <a href="#changelog-view" onclick="event.preventDefault(); document.getElementById('v1-4-4').scrollIntoView({behavior:'smooth'}); document.querySelectorAll('#changelog-view .cl-sidebar-link').forEach(e=>e.style.fontWeight='normal'); this.style.fontWeight='bold';" class="cl-sidebar-link" style="color: #4b5563; text-decoration: none;">v1.4.4</a>
                     <a href="#changelog-view" onclick="event.preventDefault(); document.getElementById('v1-4-3').scrollIntoView({behavior:'smooth'}); document.querySelectorAll('#changelog-view .cl-sidebar-link').forEach(e=>e.style.fontWeight='normal'); this.style.fontWeight='bold';" class="cl-sidebar-link" style="color: #4b5563; text-decoration: none;">v1.4.3</a>
@@ -1228,7 +1229,7 @@ Real OS metrics (CPU, RAM, Disk I/O) cannot be fetched directly from PostgreSQL 
                     <h1 style="color: #4b5563; font-weight: 300; font-size: 2.2rem; margin-bottom: 24px;">Release Notes</h1>
                     <p style="color: #4b5563; line-height: 1.6; margin-bottom: 40px; font-size: 1.05rem;">Use this page as your guide to stay up to date on the latest enhancements and changes, ensuring you can make the most of ClusterControl's powerful capabilities.</p>
                     
-                    <h2 id="v1-4-6" style="color: #4b5563; font-weight: 300; font-size: 1.8rem; margin-bottom: 20px; border-top: 1px solid #e5e7eb; padding-top: 32px;">v1.4.6</h2>
+                    <h2 id="v1-4-7" style="color: #4b5563; font-weight: 300; font-size: 1.8rem; margin-bottom: 20px; border-top: 1px solid #e5e7eb; padding-top: 32px;">v1.4.7</h2>
                     
                     <h3 id="release-cycle" style="color: #4b5563; font-weight: 400; font-size: 1.4rem; margin-bottom: 16px;">Release cycle</h3>
                     <p style="color: #4b5563; margin-bottom: 16px; line-height: 1.6;">We highly advise you to keep up to date with the latest version for the following reasons:</p>
@@ -1239,6 +1240,11 @@ Real OS metrics (CPU, RAM, Disk I/O) cannot be fetched directly from PostgreSQL 
                     </ul>
                     
                     <h3 id="whats-new" style="color: #4b5563; font-weight: 400; font-size: 1.4rem; margin-bottom: 16px;">What's New</h3>
+                    <ul style="color: #4b5563; line-height: 1.7; padding-left: 20px; margin-bottom: 40px;">
+                        <li><span style="font-weight: 600;">Fix (Cluster Detail Nodes Tab):</span> Cluster Detay sayfasındaki Nodes sekmesinde düğüm sayısı kartlarının <code>0</code> olarak görünmesine sebep olan DOM ID çakışması giderildi (<code>cluster-stat-*</code>). Artık seçili cluster'a ait tüm düğümler anında <code>Operational: 2</code>, <code>All: 2</code> vb. olarak dinamik şekilde kartlara yansıtılmaktadır.</li>
+                    </ul>
+
+                    <h2 id="v1-4-6" style="color: #4b5563; font-weight: 300; font-size: 1.8rem; margin-bottom: 20px; border-top: 1px solid #e5e7eb; padding-top: 32px;">v1.4.6</h2>
                     <ul style="color: #4b5563; line-height: 1.7; padding-left: 20px; margin-bottom: 40px;">
                         <li><span style="font-weight: 600;">Improvement (Sunucu Yönetim Dashboard):</span> Sunucu Yönetim Dashboard ekranındaki metrik biçimlendirmeleri (İşlem Yükü: <code>1,152,848 ✓ / 551,667 ✗</code>, Çalışma Süresi: <code>6 gün</code>, Depolama ve Bağlantılar) Araç Plaka Yönetim Sistemi formatı ile birebir uyumlu ve estetik hale getirildi. Canlı Render API doğrulaması tamamlandı.</li>
                     </ul>
@@ -1285,11 +1291,12 @@ Real OS metrics (CPU, RAM, Disk I/O) cannot be fetched directly from PostgreSQL 
                 <div style="width: 250px; flex-shrink: 0; border-left: 1px solid #e5e7eb; padding: 32px 24px; font-size: 0.85rem; background: #fafafa; position: sticky; top: 0; align-self: flex-start; height: 100%; overflow-y: auto; user-select: none;">
                     <div style="color: #9ca3af; margin-bottom: 16px; font-weight: 500;">Table of contents</div>
                     <div style="display: flex; flex-direction: column; gap: 12px; color: #4b5563;">
-                        <a href="#changelog-view" onclick="event.preventDefault(); document.getElementById('v1-4-6').scrollIntoView({behavior:'smooth'});" style="color: inherit; text-decoration: none; font-weight: 600;">v1.4.6 Release</a>
+                        <a href="#changelog-view" onclick="event.preventDefault(); document.getElementById('v1-4-7').scrollIntoView({behavior:'smooth'});" style="color: inherit; text-decoration: none; font-weight: 600;">v1.4.7 Release</a>
                         <div style="margin-left: 12px; display: flex; flex-direction: column; gap: 8px;">
                             <a href="#changelog-view" onclick="event.preventDefault(); document.getElementById('release-cycle').scrollIntoView({behavior:'smooth'});" style="color: inherit; text-decoration: none;">Release cycle</a>
                             <a href="#changelog-view" onclick="event.preventDefault(); document.getElementById('whats-new').scrollIntoView({behavior:'smooth'});" style="color: inherit; text-decoration: none;">What's New</a>
                         </div>
+                        <a href="#changelog-view" onclick="event.preventDefault(); document.getElementById('v1-4-6').scrollIntoView({behavior:'smooth'});" style="color: inherit; text-decoration: none; font-weight: 500;">v1.4.6 Release</a>
                         <a href="#changelog-view" onclick="event.preventDefault(); document.getElementById('v1-4-5').scrollIntoView({behavior:'smooth'});" style="color: inherit; text-decoration: none; font-weight: 500;">v1.4.5 Release</a>
                         <a href="#changelog-view" onclick="event.preventDefault(); document.getElementById('v1-4-4').scrollIntoView({behavior:'smooth'});" style="color: inherit; text-decoration: none; font-weight: 500;">v1.4.4 Release</a>
                         <a href="#changelog-view" onclick="event.preventDefault(); document.getElementById('v1-4-3').scrollIntoView({behavior:'smooth'});" style="color: inherit; text-decoration: none; font-weight: 500;">v1.4.3 Release</a>
@@ -1563,7 +1570,7 @@ Real OS metrics (CPU, RAM, Disk I/O) cannot be fetched directly from PostgreSQL 
         </div>
     </div>
 
-    <script src="/static/main.js?v=53"></script>
+    <script src="/static/main.js?v=54"></script>
 
 
 

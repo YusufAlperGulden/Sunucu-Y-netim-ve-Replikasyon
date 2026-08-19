@@ -193,7 +193,7 @@ document.addEventListener('DOMContentLoaded', () => {
         let hash = window.location.hash.substring(1) || 'projects-view';
         
         // If hash is a changelog section anchor (e.g. v1-4-2), show changelog-view and scroll
-        const changelogAnchors = ['v1-4-6', 'v1-4-5', 'v1-4-4', 'v1-4-3', 'v1-4-2', 'v1-4-1', 'release-cycle', 'whats-new'];
+        const changelogAnchors = ['v1-4-7', 'v1-4-6', 'v1-4-5', 'v1-4-4', 'v1-4-3', 'v1-4-2', 'v1-4-1', 'release-cycle', 'whats-new'];
         if (changelogAnchors.includes(hash)) {
             document.querySelectorAll('.view-section').forEach(s => s.style.display = 'none');
             const cv = document.getElementById('changelog-view');
@@ -353,9 +353,9 @@ document.addEventListener('DOMContentLoaded', () => {
             if(nodesContainer) nodesContainer.innerHTML = '<div class="loading-state">No nodes added yet.</div>';
             if(tbody) tbody.innerHTML = '<tr><td colspan="9" style="text-align: center; padding: 20px; color: #6b7280;">No nodes found</td></tr>';
             
-            // Reset stats
+            // Reset stats for cluster detail nodes tab
             ['operational', 'failed', 'offline', 'shutdown', 'recovering', 'unknown', 'all'].forEach(id => {
-                const el = document.getElementById('stat-' + id);
+                const el = document.getElementById('cluster-stat-' + id);
                 if (el) el.innerText = '0';
             });
             return;
@@ -445,9 +445,9 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         });
 
-        // Update stats
+        // Update stats for cluster detail nodes tab
         ['operational', 'failed', 'offline', 'shutdown', 'recovering', 'unknown'].forEach(id => {
-            const el = document.getElementById('stat-' + id);
+            const el = document.getElementById('cluster-stat-' + id);
             let val = 0;
             if (id === 'operational') val = stats['Operational'];
             if (id === 'failed') val = stats['Failed'];
@@ -457,7 +457,7 @@ document.addEventListener('DOMContentLoaded', () => {
             if (id === 'unknown') val = stats['Unknown State'];
             if (el) el.innerText = val;
         });
-        const elAll = document.getElementById('stat-all');
+        const elAll = document.getElementById('cluster-stat-all');
         if (elAll) elAll.innerText = nodes.length;
     }
 
