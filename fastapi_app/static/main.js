@@ -2108,70 +2108,7 @@ function renderBackups() {
     fetchBackups();
     fetchSchedules();
 }
-</td>
-                <td style="padding: 16px 10px; color: #6b7280;">
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="16" x2="12" y2="12"></line><line x1="12" y1="8" x2="12.01" y2="8"></line></svg>
-                </td>
-                <td style="padding: 16px 10px;">
-                    <div style="display: flex; align-items: center; gap: 8px;">
-                        ${getClusterIconStr(b.clusterType)}
-                        <span style="font-size: 0.9rem; color: #111827;">${b.cluster}</span>
-                    </div>
-                </td>
-                <td style="padding: 16px 10px; font-size: 0.9rem; color: #111827;">${b.method}</td>
-                <td style="padding: 16px 10px;">
-                    <div style="display: flex; align-items: center; gap: 6px; font-size: 0.85rem; color: #16a34a;">
-                        <span style="width: 6px; height: 6px; border-radius: 50%; background: #16a34a;"></span>
-                        ${b.status}
-                    </div>
-                </td>
-                <td style="padding: 16px 10px; font-size: 0.9rem; color: #111827;">${b.title}</td>
-                <td style="padding: 16px 10px; font-size: 0.9rem; color: #4b5563;">${b.created}</td>
-                <td style="padding: 16px 10px; font-size: 0.9rem; color: #4b5563;">${b.size}</td>
-                <td style="padding: 16px 10px; font-size: 0.9rem; color: #4b5563;">${b.host}</td>
-                <td style="padding: 16px 10px;">
-                    <div style="display: flex; align-items: center; gap: 6px; color: #4b5563;">
-                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"></path><polyline points="22,6 12,13 2,6"></polyline></svg>
-                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2L2 7l10 5 10-5-10-5z"></path><path d="M2 17l10 5 10-5"></path><path d="M2 12l10 5 10-5"></path></svg>
-                        <span style="font-size: 0.9rem;">0</span>
-                    </div>
-                </td>
-                <td style="padding: 16px 24px;">
-                    <button style="background: white; border: 1px solid var(--border); border-radius: 4px; padding: 4px 8px; cursor: pointer; color: #6b7280;">...</button>
-                </td>
-            </tr>
-        `).join('');
-    }
 
-    if (tbodySched) {
-        tbodySched.innerHTML = schedulesData.map(s => `
-            <tr style="border-bottom: 1px solid var(--glass-border); transition: background 0.2s; cursor: pointer;" onmouseover="this.style.background='#f9fafb'" onmouseout="this.style.background='transparent'">
-                <td style="padding: 16px 24px; font-size: 0.9rem; color: #111827;">${s.name}</td>
-                <td style="padding: 16px 10px;">
-                    <div style="display: flex; align-items: center; gap: 8px;">
-                        ${getClusterIconStr(s.clusterType)}
-                        <span style="font-size: 0.9rem; color: #111827;">${s.cluster}</span>
-                    </div>
-                </td>
-                <td style="padding: 16px 10px; font-size: 0.9rem; color: #111827;">${s.method}</td>
-                <td style="padding: 16px 10px;">
-                    <div style="display: flex; align-items: center; gap: 6px; font-size: 0.85rem; color: #d97706;">
-                        <span style="width: 6px; height: 6px; border-radius: 50%; background: #f59e0b;"></span>
-                        ${s.status}
-                    </div>
-                </td>
-                <td style="padding: 16px 10px; font-size: 0.9rem; color: #4b5563;">${s.schedule}</td>
-                <td style="padding: 16px 10px; font-size: 0.9rem; color: #4b5563;">${s.host}</td>
-                <td style="padding: 16px 10px; font-size: 0.9rem; color: #4b5563;">${s.storageHost}</td>
-                <td style="padding: 16px 10px; font-size: 0.9rem; color: #4b5563;">${s.location}</td>
-                <td style="padding: 16px 10px; font-size: 0.9rem; color: #4b5563;">${s.lastExec}</td>
-                <td style="padding: 16px 24px;">
-                    <button style="background: white; border: 1px solid var(--border); border-radius: 4px; padding: 4px 8px; cursor: pointer; color: #6b7280;">...</button>
-                </td>
-            </tr>
-        `).join('');
-    }
-}
 
 const usersData = [
         { initial: 'DU', bg: '#fef3c7', color: '#d97706', user: 'admin', email: '', team: 'admins', fname: 'Default', lname: 'User', status: 'Enabled', created: '4 months ago' },
