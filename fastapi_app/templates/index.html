@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Sunucu Yönetim ve Replikasyon</title>
-    <link rel="stylesheet" href="/static/style.css?v=22">
+    <link rel="stylesheet" href="/static/style.css?v=23">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 </head>
 <body>
@@ -156,18 +156,79 @@
       
       <!-- OPERATIONAL REPORTS VIEW -->
       <section id="reports-view" class="view-section" style="display: none;">
-    <div style="padding: 24px;">
-        <div class="glass-panel" style="padding: 16px 24px; margin-bottom: 24px; display: flex; align-items: center; border: 1px solid var(--border); background: white;">
-            <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#4b5563" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-right: 16px;"><rect x="4" y="2" width="16" height="20" rx="2" ry="2"></rect><line x1="8" y1="8" x2="16" y2="8"></line><line x1="8" y1="12" x2="16" y2="12"></line><line x1="8" y1="16" x2="12" y2="16"></line></svg>
-            <h2 style="font-size: 1.25rem; font-weight: 500; color: var(--text-main); margin: 0;">Operational reports</h2>
-        </div>
-        
-        <div class="glass-panel" style="background: white; border: 1px solid var(--border); overflow: hidden; border-radius: 12px; padding: 40px; text-align: center;">
-            <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="#d1d5db" stroke-width="2" style="margin: 0 auto 20px auto; display: block;"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path></svg>
-            <div style="color: #6b7280; font-size: 14px;">No reports generated yet.</div>
-        </div>
-    </div>
-</section>
+      <div style="padding: 24px;">
+          <!-- Header -->
+          <div class="glass-panel" style="padding: 16px 24px; margin-bottom: 24px; display: flex; align-items: center; border: 1px solid var(--border); background: white; border-radius: 12px;">
+              <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#4b5563" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-right: 16px;"><rect x="4" y="2" width="16" height="20" rx="2" ry="2"></rect><line x1="8" y1="8" x2="16" y2="8"></line><line x1="8" y1="12" x2="16" y2="12"></line><line x1="8" y1="16" x2="12" y2="16"></line></svg>
+              <h2 style="font-size: 1.25rem; font-weight: 500; color: var(--text-main); margin: 0;">Operational reports</h2>
+          </div>
+          
+          <!-- Content Card -->
+          <div class="glass-panel" style="background: white; border: 1px solid var(--border); border-radius: 12px; padding: 24px;">
+              
+              <!-- Tabs -->
+              <div style="display: flex; gap: 24px; border-bottom: 1px solid var(--glass-border); margin-bottom: 20px;">
+                  <div id="tab-reports-sub" onclick="switchReportsTab('reports')" style="padding-bottom: 12px; cursor: pointer; color: var(--primary); font-weight: 500; border-bottom: 2px solid var(--primary); font-size: 0.9rem;">Reports</div>
+                  <div id="tab-schedules-sub" onclick="switchReportsTab('schedules')" style="padding-bottom: 12px; cursor: pointer; color: var(--text-muted); font-weight: 500; border-bottom: 2px solid transparent; font-size: 0.9rem;">Schedules</div>
+              </div>
+
+              <!-- Actions row -->
+              <div style="display: flex; justify-content: flex-end; margin-bottom: 16px;">
+                  <button id="btn-create-report-action" class="btn-primary" style="display: flex; align-items: center; gap: 8px; border-radius: 20px; padding: 8px 16px;" onclick="document.getElementById('modal-create-report').style.display='flex'">
+                      <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="16"></line><line x1="8" y1="12" x2="16" y2="12"></line></svg>
+                      <span id="text-create-report-action">Create report</span>
+                  </button>
+              </div>
+
+              <!-- Reports Table -->
+              <div id="table-reports" style="display: block;">
+                  <table style="width: 100%; border-collapse: collapse; text-align: left; margin-bottom: 40px;">
+                      <thead style="background: white; border-bottom: 1px solid var(--border);">
+                          <tr>
+                              <th style="padding: 12px 0; font-weight: 600; font-size: 0.8rem; color: #374151;">Created</th>
+                              <th style="padding: 12px 0; font-weight: 600; font-size: 0.8rem; color: #374151;">File name</th>
+                              <th style="padding: 12px 0; font-weight: 600; font-size: 0.8rem; color: #374151;">Report type</th>
+                              <th style="padding: 12px 0; font-weight: 600; font-size: 0.8rem; color: #374151;">Cluster</th>
+                              <th style="padding: 12px 0; font-weight: 600; font-size: 0.8rem; color: #374151;">Created by</th>
+                              <th style="padding: 12px 0; font-weight: 600; font-size: 0.8rem; color: #374151;">Data range</th>
+                              <th style="padding: 12px 0; font-weight: 600; font-size: 0.8rem; color: #374151;">Recipients</th>
+                              <th style="padding: 12px 0; font-weight: 600; font-size: 0.8rem; color: #374151;">Actions</th>
+                          </tr>
+                      </thead>
+                      <tbody>
+                      </tbody>
+                  </table>
+                  <div style="text-align: center; color: #6b7280; font-size: 14px; padding: 20px;">
+                      <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="#e5e7eb" stroke-width="2" style="margin: 0 auto 10px auto; display: block;"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path></svg>
+                      No reports generated yet <span style="font-size: 0.65rem; color: #ef4444; font-weight: bold; margin-left: 5px;">[PLACEHOLDER]</span>
+                  </div>
+              </div>
+
+              <!-- Schedules Table -->
+              <div id="table-schedules" style="display: none;">
+                  <table style="width: 100%; border-collapse: collapse; text-align: left; margin-bottom: 40px;">
+                      <thead style="background: white; border-bottom: 1px solid var(--border);">
+                          <tr>
+                              <th style="padding: 12px 0; font-weight: 600; font-size: 0.8rem; color: #374151;">Schedule</th>
+                              <th style="padding: 12px 0; font-weight: 600; font-size: 0.8rem; color: #374151;">Report type</th>
+                              <th style="padding: 12px 0; font-weight: 600; font-size: 0.8rem; color: #374151;">Cluster</th>
+                              <th style="padding: 12px 0; font-weight: 600; font-size: 0.8rem; color: #374151;">Data range</th>
+                              <th style="padding: 12px 0; font-weight: 600; font-size: 0.8rem; color: #374151;">Recipients</th>
+                              <th style="padding: 12px 0; font-weight: 600; font-size: 0.8rem; color: #374151;">Actions</th>
+                          </tr>
+                      </thead>
+                      <tbody>
+                      </tbody>
+                  </table>
+                  <div style="text-align: center; color: #6b7280; font-size: 14px; padding: 20px;">
+                      <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="#e5e7eb" stroke-width="2" style="margin: 0 auto 10px auto; display: block;"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path></svg>
+                      No schedules generated yet <span style="font-size: 0.65rem; color: #ef4444; font-weight: bold; margin-left: 5px;">[PLACEHOLDER]</span>
+                  </div>
+              </div>
+
+          </div>
+      </div>
+  </section>
 
       <!-- SETTINGS VIEW -->
             <div id="settings-view" class="view-section" style="display: none;">
@@ -1144,10 +1205,11 @@ Real OS metrics (CPU, RAM, Disk I/O) cannot be fetched directly from PostgreSQL 
                     
                     <h3 style="color: #4b5563; font-weight: 400; font-size: 1.4rem; margin-bottom: 16px;">What's New</h3>
                     <ul style="color: #4b5563; line-height: 1.7; padding-left: 20px; margin-bottom: 40px;">
-                        <li><span style="font-weight: 600;">Fix:</span> "ift Giri Ekran (Double Login Prompt)" sorunu zld. Sayfa yklendiinde arka planda yaplan yetki kontrollerinin (API 401 dnleri) tarayc tarafndan yanl anlalp kendi varsaylan "Oturum an" uyarsn kartmas engellendi. Artk gvenlik bal sadece arka planda nlenip direkt olarak tasarladmz gvenli ve k giri ekranna (Balonlu ekran) ynlendiriliyor.</li>
+                        <li><span style="font-weight: 600;">UI/UX:</span> "Operational reports" (Operasyonel Raporlar) ekran baa dnlerek aslnn (ClusterControl) yapsna tam sadk kalnacak ekilde yeniden ina edildi. Artk sayfada i ie gemi "Reports" ve "Schedules" sekmeleri yer alyor ve tablolarn seenekleri (Created by, File name, Data range vb.) deiiyor. Ayrca sa stte beliren "Create report" ve "Create schedule" butonlar ve onlara tklaynca alan orijinal tasarmdaki form (Modal) birebir kodland. Kzarm [PLACEHOLDER] etiketleri sadece gerekli grlen input alanlarna eklenerek sayfa zenginletirildi.</li>
+<li><span style="font-weight: 600;">Fix:</span> "ift Giri Ekran (Double Login Prompt)" sorunu zld. Sayfa yklendiinde arka planda yaplan yetki kontrollerinin (API 401 dnleri) tarayc tarafndan yanl anlalp kendi varsaylan "Oturum an" uyarsn kartmas engellendi. Artk gvenlik bal sadece arka planda nlenip direkt olarak tasarladmz gvenli ve k giri ekranna (Balonlu ekran) ynlendiriliyor.</li>
 <li><span style="font-weight: 600;">Feature:</span> "Settings" ekranndaki arama ubuu (Search Bar) aktifleitirildi. Artk "Search by parameter, value, description" ksmna herhangi bir anahtar kelime yazdnzda, o ana kadar sol mendeki hangi kategoride olduunuza baklmakszn tm PostgreSQL parametreleri (isimleri, deeri ve aklamalar) iinde dinamik arama yaplp sonular annda ekrana yansyor.</li>
 <li><span style="font-weight: 600;">Fix:</span> "Settings" (Ayarlar) sayfasndaki sahte etiketlerin kaldrlmas/gizlenmesi ileminde meydana gelen kk bir HTML kapan etiketi kaymas nedeniyle 'User management' ve 'Backups' sayfalarnn saa doru kayarak yapsnn bozulmas (UI Bug) sorunu dzeltildi. Artk tm ekranlar ana gvdeye tam oturuyor.</li>
-<li><span style="font-weight: 600;">Fix:</span> Uygulama srm geikmesi (Render Cache) nedeniyle "Clusters" sayfasnda tklanan projelerin yeni ekranda/sekmede almayp i ie gemesi sorunu son v=22 srmyle tamamen zld. Eer u an kullanyorsanz sayfay tamamen yenileyip (CTRL+F5) dzeldiini grebilirsiniz.</li>
+<li><span style="font-weight: 600;">Fix:</span> Uygulama srm geikmesi (Render Cache) nedeniyle "Clusters" sayfasnda tklanan projelerin yeni ekranda/sekmede almayp i ie gemesi sorunu son v=23 srmyle tamamen zld. Eer u an kullanyorsanz sayfay tamamen yenileyip (CTRL+F5) dzeldiini grebilirsiniz.</li>
 <li><span style="font-weight: 600;">Feature:</span> PostgreSQL Fiziksel Entegrasyonu: "Settings" sekmesinde yer alan PostgreSQL motor parametreleri (shared_buffers, work_mem, max_connections, wal_level, max_replication_slots, log_min_duration_statement vb.) artk sadece veritabanmza kaydedilmekle kalmyor; arkaplanda alan dzenli bir Python isisi sayesinde ilgili kmenin tm Node'larna ngilizce ('ALTER SYSTEM SET...') SQL komutlar araclyla fiziksel olarak gnderilip 'SELECT pg_reload_conf()' komutuyla annda aktif ediliyor. Ayrnca gelecekte kkmeye eklenecek yeni sunuculara da bu proje ayarlarnn otomatik olarak yklenmesi iin eklemeler yapld.</li>
 <li><span style="font-weight: 600;">Fix:</span> Uygulamaya yaplan nceki gncellemeler srasnda (Nodes listesinin deiimi srasnda) meydana gelen kk bir yazm hatasndan dolay arka plan animasyonlar (Baloncuklar) dhil tm etkileimlerin bozulmas (Syntax Error) sorunu dzeltildi.</li>
 <li><span style="font-weight: 600;">Feature:</span> "Settings" ekrannda artk gerekten var olan PostgreSQL ayarlar (Long Query, Replication, Retention, System vb.) iin API balantlar kuruldu. Sol mendeki deerlere tklandnda tpk "Backup" ksmnda olduu gibi kendi API'lerinden gerek deerleri okuyup yanstan bir altyap eklendi ve baz sahte sekmeler (CmonDB, Controller) veritabanyla hibir ilgisi olmad iin mmknse tasarmdan gizlendi.</li>
@@ -1419,7 +1481,7 @@ Real OS metrics (CPU, RAM, Disk I/O) cannot be fetched directly from PostgreSQL 
         </div>
     </div>
 
-    <script src="/static/main.js?v=22"></script>
+    <script src="/static/main.js?v=23"></script>
 
 
 
@@ -1770,6 +1832,46 @@ Real OS metrics (CPU, RAM, Disk I/O) cannot be fetched directly from PostgreSQL 
                             <li>Easily assign permissions for all users in the team</li>
                         </ul>
                     </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+
+    <!-- Modal: Create Report / Schedule -->
+    <div id="modal-create-report" class="modal-overlay" style="display: none;">
+        <div class="modal-content" style="max-width: 500px;">
+            <div class="modal-header">
+                <h3 style="margin: 0; font-weight: 500; font-size: 1.1rem; color: #111827;" id="modal-create-report-title">Generate new report</h3>
+                <span class="modal-close" onclick="document.getElementById('modal-create-report').style.display='none'">&times;</span>
+            </div>
+            <div class="modal-body">
+                <div style="margin-bottom: 16px;">
+                    <label style="display: block; font-size: 0.85rem; font-weight: 500; margin-bottom: 6px; color: #374151;">Cluster <span style="color: #ef4444;">*</span></label>
+                    <select style="width: 100%; padding: 10px; border: 1px solid var(--border); border-radius: 6px; font-size: 0.9rem; background: white; outline: none;">
+                        <option value="">Select cluster [PLACEHOLDER]</option>
+                    </select>
+                </div>
+                <div style="margin-bottom: 16px;">
+                    <label style="display: block; font-size: 0.85rem; font-weight: 500; margin-bottom: 6px; color: #374151;">Type <span style="color: #ef4444;">*</span></label>
+                    <select style="width: 100%; padding: 10px; border: 1px solid var(--border); border-radius: 6px; font-size: 0.9rem; background: white; outline: none;">
+                        <option value="">Select report type [PLACEHOLDER]</option>
+                    </select>
+                </div>
+                <div style="margin-bottom: 16px;">
+                    <label style="display: block; font-size: 0.85rem; font-weight: 500; margin-bottom: 6px; color: #374151;">Data range <span style="color: #ef4444;">*</span></label>
+                    <div style="display: flex; gap: 10px;">
+                        <div style="padding: 10px; border: 1px solid var(--border); border-radius: 6px; background: #f9fafb; font-size: 0.9rem; color: #6b7280; width: 80px; text-align: center;">Days</div>
+                        <input type="number" value="7" style="flex: 1; padding: 10px; border: 1px solid var(--border); border-radius: 6px; font-size: 0.9rem; outline: none;">
+                    </div>
+                </div>
+                <div style="margin-bottom: 24px;">
+                    <label style="display: block; font-size: 0.85rem; font-weight: 500; margin-bottom: 6px; color: #374151;">Recipients</label>
+                    <input type="text" placeholder="Enter email recipients [PLACEHOLDER]" style="width: 100%; padding: 10px; border: 1px solid var(--border); border-radius: 6px; font-size: 0.9rem; outline: none;">
+                </div>
+                <div style="display: flex; justify-content: flex-end; gap: 12px;">
+                    <button class="btn-secondary" onclick="document.getElementById('modal-create-report').style.display='none'">Cancel</button>
+                    <button class="btn-primary" onclick="document.getElementById('modal-create-report').style.display='none'">Create <span style="font-size: 0.65rem; color: #ef4444; font-weight: bold; margin-left: 5px;">[PLACEHOLDER]</span></button>
                 </div>
             </div>
         </div>
