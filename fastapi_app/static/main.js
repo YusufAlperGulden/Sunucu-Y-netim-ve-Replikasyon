@@ -48,7 +48,7 @@ document.addEventListener('DOMContentLoaded', () => {
         
         class Particle {
             constructor() {
-                this.size = Math.random() * 220 + 120;
+                this.size = Math.random() * 280 + 180;
                 this.color = colors[Math.floor(Math.random() * colors.length)];
                 
                 // Start them randomly around the edges
@@ -60,11 +60,11 @@ document.addEventListener('DOMContentLoaded', () => {
                     this.y = Math.random() > 0.5 ? -this.size : height + this.size;
                 }
                 
-                this.vx = (Math.random() - 0.5) * 0.4;
-                this.vy = (Math.random() - 0.5) * 0.4;
+                this.vx = (Math.random() - 0.5) * 2.2;
+                this.vy = (Math.random() - 0.5) * 2.2;
                 
-                if (Math.abs(this.vx) < 0.1) this.vx = 0.2 * Math.sign(this.vx || 1);
-                if (Math.abs(this.vy) < 0.1) this.vy = 0.2 * Math.sign(this.vy || 1);
+                if (Math.abs(this.vx) < 0.8) this.vx = 1.1 * Math.sign(this.vx || 1);
+                if (Math.abs(this.vy) < 0.8) this.vy = 1.1 * Math.sign(this.vy || 1);
             }
             update() {
                 this.x += this.vx;
@@ -193,7 +193,7 @@ document.addEventListener('DOMContentLoaded', () => {
         let hash = window.location.hash.substring(1) || 'projects-view';
         
         // If hash is a changelog section anchor (e.g. v1-4-2), show changelog-view and scroll
-        const changelogAnchors = ['v1-5-7', 'v1-5-6', 'v1-5-5', 'v1-5-4', 'v1-5-3', 'v1-5-2', 'v1-5-1', 'v1-5-0', 'v1-4-9', 'v1-4-8', 'v1-4-7', 'v1-4-6', 'v1-4-5', 'v1-4-4', 'v1-4-3', 'v1-4-2', 'v1-4-1', 'release-cycle', 'whats-new'];
+        const changelogAnchors = ['v1-5-8', 'v1-5-7', 'v1-5-6', 'v1-5-5', 'v1-5-4', 'v1-5-3', 'v1-5-2', 'v1-5-1', 'v1-5-0', 'v1-4-9', 'v1-4-8', 'v1-4-7', 'v1-4-6', 'v1-4-5', 'v1-4-4', 'v1-4-3', 'v1-4-2', 'v1-4-1', 'release-cycle', 'whats-new'];
         if (changelogAnchors.includes(hash)) {
             document.querySelectorAll('.view-section').forEach(s => s.style.display = 'none');
             const cv = document.getElementById('changelog-view');
