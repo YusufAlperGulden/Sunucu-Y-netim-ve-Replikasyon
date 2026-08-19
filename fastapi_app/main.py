@@ -65,7 +65,7 @@ async def lifespan(app: FastAPI):
                     primary_nodes = [n for n in nodes if n.role and n.role.lower() == 'primary']
                     standby_nodes = [n for n in nodes if n.role and n.role.lower() == 'standby']
                     
-                    FRANKFURT_URL = "postgresql://neondb_owner:npg_EfQe3IRhHo9K@ep-rapid-star-aszbsk55.c-4.eu-central-1.aws.neon.tech/neondb?sslmode=require&channel_binding=require"
+                    FRANKFURT_URL = "postgresql://neondb_owner:npg_mONv8dTcRuZ2@ep-rapid-star-aszbsk55.c-4.eu-central-1.aws.neon.tech/neondb?sslmode=require&channel_binding=require"
                     YEDEK_URL = "postgresql://neondb_owner:npg_GtTYZs3elJU0@ep-bold-leaf-zatatmr6.c-2.eu-west-2.aws.neon.tech/neondb?sslmode=require&channel_binding=require"
                     
                     for node in primary_nodes:
