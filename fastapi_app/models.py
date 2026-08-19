@@ -56,6 +56,14 @@ class DatabaseNode(Base):
     def set_url(self, raw_url: str):
         self.encrypted_url = encrypt(raw_url)
 
+class ProjectSettings(Base):
+    __tablename__ = "project_settings"
+    id = Column(Integer, primary_key=True, index=True)
+    project_id = Column(Integer, ForeignKey("projects.id", ondelete="CASCADE"), unique=True)
+    settings_json = Column(String(5000), default="{}")
+    
+    project = relationship("Project")
+
 class SyncJob(Base):
     __tablename__ = "sync_jobs"
     id = Column(Integer, primary_key=True, index=True)
