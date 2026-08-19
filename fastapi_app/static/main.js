@@ -316,10 +316,11 @@ document.addEventListener('DOMContentLoaded', () => {
             document.querySelectorAll('.loading-state').forEach(el => el.remove());
             const response = await apiFetch('/api/projects');
             if (!response.ok) {
-                const errText = await response.text();
-                projectsContainer.innerHTML = `<div class="loading-state" style="color: var(--danger)">Error loading projects. Server returned ${response.status}: ${escapeHTML(errText)}</div>`;
-                return;
-            }
+                  if (response.status === 401) return; // Handled by apiFetch
+                  const errText = await response.text();
+                  projectsContainer.insertAdjacentHTML('afterbegin', `<div class="loading-state" style="color: var(--danger)">Error loading projects. Server returned ${response.status}: ${escapeHTML(errText)}</div>`);
+                  return;
+              }
             const data = await response.json();
             if (data.length === 0) {
                 const cptbody = document.getElementById('cc-projects-tbody'); if (cptbody) cptbody.innerHTML = '<tr><td colspan="6" style="text-align:center; padding: 20px;">No clusters found. Click + Add Project to start.</td></tr>';
@@ -742,7 +743,7 @@ if (donutCircle) {
             
             // Apply current filter
             const filterVal = document.getElementById('cc-status-filter')?.value || 'All';
-            const rows = tbody.querySelectorAll('tr');
+            const rows = tbody ? tbody.querySelectorAll('tr') : [];
             rows.forEach(r => {
                 if (filterVal !== 'All' && r.getAttribute('data-status') !== filterVal) {
                     r.style.display = 'none';
