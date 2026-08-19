@@ -258,8 +258,8 @@ document.addEventListener('DOMContentLoaded', () => {
         detailView.style.display = 'block';
         currentProjectId = proj.id;
         
-        document.getElementById('detail-proj-name').innerText = proj.name;
-        document.getElementById('detail-proj-desc').innerText = proj.description || 'No description';
+        const el_detail_proj_name = document.getElementById('detail-proj-name'); if(el_detail_proj_name) el_detail_proj_name.innerText = proj.name;
+        const el_detail_proj_desc = document.getElementById('detail-proj-desc'); if(el_detail_proj_desc) el_detail_proj_desc.innerText = proj.description || 'No description';
         
         renderNodes(proj.nodes);
     }
@@ -323,7 +323,7 @@ document.addEventListener('DOMContentLoaded', () => {
             const data = await response.json();
             if (data.length === 0) {
                 const cptbody = document.getElementById('cc-projects-tbody'); if (cptbody) cptbody.innerHTML = '<tr><td colspan="6" style="text-align:center; padding: 20px;">No clusters found. Click + Add Project to start.</td></tr>';
-                document.getElementById('cc-total-clusters').innerText = '0 Clusters';
+                const el_cc_total_clusters = document.getElementById('cc-total-clusters'); if(el_cc_total_clusters) el_cc_total_clusters.innerText = '0 Clusters';
                 return;
             }
 
@@ -405,8 +405,8 @@ document.addEventListener('DOMContentLoaded', () => {
                     clusterHoverTimeout = setTimeout(() => {
                     const ct = document.getElementById('cluster-hover-tooltip'); 
                     if (ct) { 
-                        document.getElementById('tt-cluster-id').innerText = proj.id; 
-                        document.getElementById('tt-cluster-name').innerText = proj.name; 
+                        const el_tt_cluster_id = document.getElementById('tt-cluster-id'); if(el_tt_cluster_id) el_tt_cluster_id.innerText = proj.id; 
+                        const el_tt_cluster_name = document.getElementById('tt-cluster-name'); if(el_tt_cluster_name) el_tt_cluster_name.innerText = proj.name; 
                         let vendor = 'PostgreSQL Streaming v18.4'; 
                         let vendorType = 'postgres';
                         let nameLower = proj.name.toLowerCase();
@@ -417,7 +417,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         else if (nameLower.includes('timescale')) { vendor = 'TimescaleDB v18'; vendorType = 'timescale'; }
                         else if (nameLower.includes('mssql')) { vendor = 'SQL Server v2022'; vendorType = 'mssql'; }
                         
-                        document.getElementById('tt-cluster-vendor').innerText = vendor; 
+                        const el_tt_cluster_vendor = document.getElementById('tt-cluster-vendor'); if(el_tt_cluster_vendor) el_tt_cluster_vendor.innerText = vendor; 
 
                         
                         
@@ -697,7 +697,7 @@ document.addEventListener('DOMContentLoaded', () => {
             });
             
             // Update Donut Chart
-            document.getElementById('cc-total-clusters').innerText = `${data.length} Clusters`;
+            const el_cc_total_clusters = document.getElementById('cc-total-clusters'); if(el_cc_total_clusters) el_cc_total_clusters.innerText = `${data.length} Clusters`;
             const el1 = document.getElementById('cc-donut-center-text'); if(el1) el1.innerText = operationalCount;
             
             const radius = 80;
@@ -716,7 +716,7 @@ if (donutCircle) {
                 document.getElementById('cc-donut-center-text').style.color = donutCircle.style.stroke;
                 if (donutTooltip && donutText) {
                     donutCircle.addEventListener('mouseenter', (e) => {
-                        donutText.innerText = `${operationalCount} Operational`;
+                        if(donutText) donutText.innerText = `${operationalCount} Operational`;
                         donutTooltip.style.display = 'block';
                     });
                     donutCircle.addEventListener('mousemove', (e) => {
@@ -820,11 +820,11 @@ if (donutCircle) {
                                 const msgBox = document.getElementById('ntt-message');
                                 const stat = document.getElementById('ntt-status');
                                 
-                                document.getElementById('ntt-hostname').innerText = data.hostname;
-                                document.getElementById('ntt-port').innerText = data.port;
-                                document.getElementById('ntt-role').innerText = data.role;
-                                document.getElementById('ntt-type').innerText = data.type;
-                                document.getElementById('ntt-cluster').innerText = data.cluster;
+                                const el_ntt_hostname = document.getElementById('ntt-hostname'); if(el_ntt_hostname) el_ntt_hostname.innerText = data.hostname;
+                                const el_ntt_port = document.getElementById('ntt-port'); if(el_ntt_port) el_ntt_port.innerText = data.port;
+                                const el_ntt_role = document.getElementById('ntt-role'); if(el_ntt_role) el_ntt_role.innerText = data.role;
+                                const el_ntt_type = document.getElementById('ntt-type'); if(el_ntt_type) el_ntt_type.innerText = data.type;
+                                const el_ntt_cluster = document.getElementById('ntt-cluster'); if(el_ntt_cluster) el_ntt_cluster.innerText = data.cluster;
                                 const nttb = document.getElementById('ntt-badge'); if(nttb) nttb.innerHTML = data.badge;
                                 
                                 // Update Logo
@@ -894,7 +894,7 @@ if (donutCircle) {
                     };
                 });
                 
-                document.getElementById('cc-total-nodes').innerText = allNodes.length + ' Nodes';
+                const el_cc_total_nodes = document.getElementById('cc-total-nodes'); if(el_cc_total_nodes) el_cc_total_nodes.innerText = allNodes.length + ' Nodes';
                 
                 const dnCenter = document.getElementById('nodes-donut-center-num');
                 if (dnCenter) dnCenter.innerText = allNodes.length;
@@ -910,7 +910,7 @@ if (donutCircle) {
                        const donutText = document.getElementById('donut-hover-text');
                        if (donutTooltip && donutText) {
                            dnSlice.addEventListener('mouseenter', (e) => {
-                               donutText.innerText = `${allNodes.length - shutDownCount} Operational`;
+                               if(donutText) donutText.innerText = `${allNodes.length - shutDownCount} Operational`;
                                donutTooltip.style.display = 'block';
                            });
                            dnSlice.addEventListener('mousemove', (e) => {
@@ -1354,8 +1354,8 @@ if (donutCircle) {
                 
                 // Update detail view if it's currently showing the edited project
                 if (currentProjectId == id && detailView && detailView.style.display !== 'none') {
-                    document.getElementById('detail-proj-name').innerText = name;
-                    document.getElementById('detail-proj-desc').innerText = desc || 'No description';
+                    const el_detail_proj_name = document.getElementById('detail-proj-name'); if(el_detail_proj_name) el_detail_proj_name.innerText = name;
+                    const el_detail_proj_desc = document.getElementById('detail-proj-desc'); if(el_detail_proj_desc) el_detail_proj_desc.innerText = desc || 'No description';
                 }
             } else {
                 alert(res.message || "Failed to update project.");
