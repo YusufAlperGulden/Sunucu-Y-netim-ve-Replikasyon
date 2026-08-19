@@ -1,10 +1,6 @@
-﻿import re
+﻿with open('fastapi_app/static/main.js', 'r', encoding='utf-8') as f:
+    js = f.read()
 
-html_path = 'fastapi_app/templates/index.html'
-with open(html_path, 'r', encoding='utf-8') as f:
-    content = f.read()
-
-backups_view = re.search(r'(<section id="backups-view".*?</section>)', content, re.DOTALL).group(1)
-opens = len(re.findall(r'<div', backups_view))
-closes = len(re.findall(r'</div>', backups_view))
-print(f"Backups view divs: opens={opens}, closes={closes}")
+idx = js.find('async function fetchBackups')
+if idx != -1:
+    print(js[idx:idx+600].encode('ascii', errors='replace').decode('ascii'))

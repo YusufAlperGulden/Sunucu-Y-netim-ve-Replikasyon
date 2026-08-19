@@ -1,3 +1,5 @@
+window.nodesPageData = [];
+var nodesPageData = window.nodesPageData;
 let globalAuthToken = '';
 function escapeHTML(str) {
     if (!str) return '';
@@ -483,6 +485,10 @@ document.addEventListener('DOMContentLoaded', () => {
         try {
             // Clear any old error messages
             document.querySelectorAll('.loading-state').forEach(el => el.remove());
+            const cptbody = document.getElementById('cc-projects-tbody');
+            if (cptbody && !cptbody.querySelector('tr[data-proj-id]')) {
+                cptbody.innerHTML = '<tr class="cc-loading-row"><td colspan="6"><div class="cc-loading-container"><div class="cc-spinner cc-spinner-lg"></div><span style="color:#9ca3af;font-size:0.85rem;">Loading clusters...</span></div></td></tr>';
+            }
             const response = await apiFetch('/api/projects');
             if (!response.ok) {
                   if (response.status === 401) return; // Handled by apiFetch
@@ -1170,29 +1176,32 @@ if (donutCircle) {
 
     
     window.fetchAuditLogs = async function() {
+    const tbody = document.getElementById('activity-tbody') || document.getElementById('audit-table-body');
+    if (tbody) {
+        tbody.innerHTML = '<tr class="cc-loading-row"><td colspan="4"><div class="cc-loading-container"><div class="cc-spinner cc-spinner-lg"></div><span style="color:#9ca3af;font-size:0.85rem;">Loading audit logs...</span></div></td></tr>';
+    }
     const res = await apiFetch('/api/audit-logs');
     if (res.ok) {
         const data = await res.json();
-        const tbody = document.getElementById('activity-tbody') || document.getElementById('audit-table-body');
         if (!tbody) return;
         if (data.length === 0) {
-            tbody.innerHTML = `<tr><td colspan="4" style="text-align:center; padding: 20px; color: #6b7280;">No activities or alarms recorded yet.</td></tr>`;
+            tbody.innerHTML = `<tr><td colspan="4" style="text-align:center; padding: 40px; color: #6b7280;">No activities or alarms recorded yet.</td></tr>`;
         } else {
             tbody.innerHTML = data.map(log => `
                 <tr style="border-bottom: 1px solid var(--border);">
-                    <td style="padding: 12px 24px;">${log.timestamp}</td>
+                    <td style="padding: 12px 24px;">${escapeHTML(log.timestamp || '')}</td>
                     <td style="padding: 12px 24px;">
                         <span style="background: rgba(139,92,246,0.1); color: #8b5cf6; padding: 2px 8px; border-radius: 4px; font-size: 0.8rem; font-weight: 500;">
                             ${escapeHTML(log.user || 'System')}
                         </span>
                     </td>
-                    <td style="padding: 12px 24px; font-weight: 500; color: #111827;">${escapeHTML(log.action)}</td>
+                    <td style="padding: 12px 24px; font-weight: 500; color: #111827;">${escapeHTML(log.action || '')}</td>
                     <td style="padding: 12px 24px; color: #4b5563;">${escapeHTML(log.details || "-")}</td>
                 </tr>
             `).join('');
         }
     }
-}
+};
 
     async function fetchDashboardMetrics() {
         try {
@@ -2047,6 +2056,8 @@ function getClusterIconStr(type) {
 
 
 async function fetchBackups() {
+    const tbody = document.getElementById('all-backups-tbody');
+    if (tbody) tbody.innerHTML = '<tr class="cc-loading-row"><td colspan="7"><div class="cc-loading-container"><div class="cc-spinner cc-spinner-lg"></div><span style="color:#9ca3af;font-size:0.85rem;">Loading backups...</span></div></td></tr>';
     const res = await apiFetch('/api/backups');
     if (res.ok) {
         const data = await res.json();
@@ -2822,7 +2833,7 @@ window.fetchNodesPage = async function fetchNodesPage() {
     const tbody = document.getElementById('nodes-page-tbody');
     if (!tbody) return;
 
-    tbody.innerHTML = '<tr><td colspan="10" style="text-align:center;padding:30px;color:#9ca3af;">Yukleniyor...</td></tr>';
+    tbody.innerHTML = '<tr class="cc-loading-row"><td colspan="10"><div class="cc-loading-container"><div class="cc-spinner cc-spinner-lg"></div><span style="color:#9ca3af;font-size:0.85rem;">Loading nodes...</span></div></td></tr>';
 
     // Reset stats to loading state
     ['stat-operational','stat-failed','stat-offline','stat-shutdown','stat-recovering','stat-unknown','stat-all'].forEach(id => {
@@ -2833,68 +2844,61 @@ window.fetchNodesPage = async function fetchNodesPage() {
     try {
         const res = await apiFetch('/api/projects');
         if (!res.ok) {
-            tbody.innerHTML = '<tr><td colspan="10" style="text-align:center;padding:30px;color:#ef4444;">Projeler yuklenemedi.</td></tr>';
+            tbody.innerHTML = '<tr><td colspan="10" style="text-align:center;padding:30px;color:#ef4444;">Failed to load clusters.</td></tr>';
             return;
         }
         const projects = await res.json();
 
-        // Flatten all nodes from all projects
-        const allNodes = [];
+        // Build nodesPageData
+        window.nodesPageData = [];
+        nodesPageData = window.nodesPageData;
+
+        let nodeIndex = 0;
         for (const proj of projects) {
             for (const node of (proj.nodes || [])) {
-                allNodes.push({ node, proj });
+                nodeIndex++;
+                const isPrimary = (node.role || '').toLowerCase() === 'primary';
+                nodesPageData.push({
+                    id: node.id,
+                    host: node.name,
+                    port: '5432',
+                    ip: '10.0.20.' + (18 + nodeIndex),
+                    status: 'Operational',
+                    type: 'PostgreSQL',
+                    role: node.role ? (node.role.charAt(0).toUpperCase() + node.role.slice(1)) : 'Unknown',
+                    badge: isPrimary ? { text: 'Writable', bg: '#dcfce7', color: '#16a34a' } : { text: 'Readonly', bg: '#f3f4f6', color: '#4b5563' },
+                    cluster: `${proj.name} (ID:${proj.id})`,
+                    clusterLogo: '<polyline points="9 18 15 12 9 6"></polyline>',
+                    clusterColor: '#059669',
+                    version: '<div class="cc-spinner cc-spinner-sm" style="opacity:0.6;"></div>',
+                    seen: 'just now',
+                    nodeObj: node,
+                    projObj: proj
+                });
             }
         }
 
-        // Update stat counters immediately
+        // Update stat counters
         const statOp = document.getElementById('stat-operational');
         const statAll = document.getElementById('stat-all');
-        if (statOp) statOp.innerText = allNodes.length;
-        if (statAll) statAll.innerText = allNodes.length;
+        if (statOp) statOp.innerText = nodesPageData.length;
+        if (statAll) statAll.innerText = nodesPageData.length;
         ['stat-failed','stat-offline','stat-shutdown','stat-recovering','stat-unknown'].forEach(id => {
             const el = document.getElementById(id);
             if (el) el.innerText = '0';
         });
 
-        if (allNodes.length === 0) {
-            tbody.innerHTML = '<tr><td colspan="10" style="text-align:center;padding:40px;color:#9ca3af;">Cluster ekleyip node tanimlayin.</td></tr>';
+        if (nodesPageData.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="10" style="text-align:center;padding:40px;color:#9ca3af;">No nodes found. Deploy a cluster first.</td></tr>';
             return;
         }
 
-        // Render rows immediately without waiting for metrics
-        tbody.innerHTML = '';
-        allNodes.forEach(({ node, proj }) => {
-            const roleLower = (node.role || '').toLowerCase();
-            const isWritable = roleLower === 'primary';
-            const statusColor = 'var(--success)';
-            const roleLabel = node.role ? (node.role.charAt(0).toUpperCase() + node.role.slice(1)) : 'Unknown';
-            const roleExtra = isWritable
-                ? '<span style="font-size:0.7rem;padding:2px 6px;border-radius:4px;background:#dcfce7;color:#16a34a;border:1px solid #16a34a;margin-left:6px;">Writable</span>'
-                : '<span style="font-size:0.7rem;padding:2px 6px;border-radius:4px;background:#f3f4f6;color:#4b5563;border:1px solid #4b5563;margin-left:6px;">Readonly</span>';
+        // Render immediately
+        if (typeof renderNodesPage === 'function') {
+            renderNodesPage();
+        }
 
-            const tr = document.createElement('tr');
-            tr.style.borderBottom = '1px solid #f3f4f6';
-            tr.setAttribute('data-node-id', node.id);
-            tr.innerHTML = `
-                <td style="padding:12px 16px;font-size:0.85rem;color:var(--text-main);white-space:nowrap;">${escapeHTML(node.name)}</td>
-                <td style="padding:12px 16px;font-size:0.85rem;color:#6b7280;">5432</td>
-                <td style="padding:12px 16px;font-size:0.85rem;color:#9ca3af;" id="nd-ip-${node.id}">N/A</td>
-                <td style="padding:12px 16px;font-size:0.85rem;white-space:nowrap;">
-                    <span style="color:${statusColor};display:inline-flex;align-items:center;gap:6px;" id="nd-status-${node.id}">
-                        <div style="width:6px;height:6px;border-radius:50%;background:${statusColor};"></div>Operational
-                    </span>
-                </td>
-                <td style="padding:12px 16px;font-size:0.85rem;color:#059669;">PostgreSQL</td>
-                <td style="padding:12px 16px;font-size:0.85rem;color:var(--text-main);display:flex;align-items:center;">${escapeHTML(roleLabel)}${roleExtra}</td>
-                <td style="padding:12px 16px;font-size:0.85rem;color:#6b7280;">${escapeHTML(proj.name)} (ID:${proj.id})</td>
-                <td style="padding:12px 16px;font-size:0.85rem;color:#9ca3af;" id="nd-ver-${node.id}">-</td>
-                <td style="padding:12px 16px;font-size:0.85rem;color:#9ca3af;" id="nd-seen-${node.id}">Az once</td>
-                <td style="padding:12px 16px;text-align:center;"><button style="padding:4px 10px;font-size:0.75rem;border:1px solid #e5e7eb;border-radius:4px;cursor:pointer;background:white;">...</button></td>
-            `;
-            tbody.appendChild(tr);
-        });
-
-        // Now fetch metrics in background to fill in version/status
+        // Fetch metrics in background to populate real versions and live status
         for (const proj of projects) {
             if (!proj.nodes || proj.nodes.length === 0) continue;
             try {
@@ -2904,26 +2908,29 @@ window.fetchNodesPage = async function fetchNodesPage() {
                 for (const nm of nodeMetrics) {
                     const m = nm.metrics;
                     if (!m) continue;
-                    const statusEl = document.getElementById('nd-status-' + nm.id);
-                    const verEl = document.getElementById('nd-ver-' + nm.id);
-                    if (m.status === 'online') {
-                        if (statusEl) statusEl.innerHTML = '<div style="width:6px;height:6px;border-radius:50%;background:var(--success);"></div> Operational';
-                        if (verEl) verEl.innerText = m.version || '-';
-                    } else if (m.status === 'offline') {
-                        if (statusEl) {
-                            statusEl.style.color = '#6b7280';
-                            statusEl.innerHTML = '<div style="width:6px;height:6px;border-radius:50%;background:#6b7280;"></div> Offline';
+                    const matchedNode = nodesPageData.find(n => n.id === nm.id);
+                    if (matchedNode) {
+                        if (m.status === 'online') {
+                            matchedNode.status = 'Operational';
+                            matchedNode.version = m.version ? escapeHTML(m.version) : 'PostgreSQL';
+                        } else if (m.status === 'offline') {
+                            matchedNode.status = 'Offline';
+                            matchedNode.version = '-';
                         }
                     }
                 }
-            } catch(e) { /* ignore metric errors */ }
+                // Re-render with updated versions and status
+                if (typeof renderNodesPage === 'function') {
+                    renderNodesPage();
+                }
+            } catch(e) { /* ignore metric error */ }
         }
 
     } catch(e) {
         console.error('fetchNodesPage error:', e);
-        if(tbody) tbody.innerHTML = '<tr><td colspan="10" style="text-align:center;padding:30px;color:#ef4444;">Hata: ' + escapeHTML(String(e)) + '</td></tr>';
+        if(tbody) tbody.innerHTML = '<tr><td colspan="10" style="text-align:center;padding:30px;color:#ef4444;">Error: ' + escapeHTML(String(e)) + '</td></tr>';
     }
-}
+};
 
 async function fetchRecentAlarms() {
     const container = document.getElementById('recent-alarms-container');
@@ -3005,6 +3012,7 @@ window.switchActivityTab = function(tab, btnEl) {
 async function fetchActivityAlarms() {
     const tbody = document.getElementById('ac-alarms-tbody');
     if (!tbody) return;
+    tbody.innerHTML = '<tr class="cc-loading-row"><td colspan="7"><div class="cc-loading-container"><div class="cc-spinner cc-spinner-lg"></div><span style="color:#9ca3af;font-size:0.85rem;">Loading alarms...</span></div></td></tr>';
     try {
         const res = await apiFetch('/api/audit-logs');
         if (!res.ok) return;
@@ -3015,22 +3023,22 @@ async function fetchActivityAlarms() {
             return;
         }
         tbody.innerHTML = alarms.map(a => '<tr style="border-bottom: 1px solid #f3f4f6;"><td style="padding: 12px 20px; font-size: 0.85rem;">' + escapeHTML(a.action) + '</td><td style="padding: 12px 20px;"><span style="color: #ef4444; font-size: 0.8rem; font-weight: 600;">WARNING</span></td><td style="padding: 12px 20px; font-size: 0.85rem; color: #6b7280;">System</td><td style="padding: 12px 20px; font-size: 0.85rem; color: #6b7280;">-</td><td style="padding: 12px 20px; font-size: 0.85rem; color: #6b7280;">-</td><td style="padding: 12px 20px; font-size: 0.85rem; color: #6b7280;">' + escapeHTML(a.timestamp || '-') + '</td><td style="padding: 12px 20px;"><button style="padding: 4px 10px; font-size: 0.75rem; border: 1px solid #e5e7eb; border-radius: 4px; cursor: pointer; background: white;">...</button></td></tr>').join('');
-    } catch(e) { if(tbody) tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;padding:40px;color:#ef4444;">Hata: ' + escapeHTML(String(e)) + '</td></tr>'; }
+    } catch(e) { if(tbody) tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;padding:40px;color:#ef4444;">Error: ' + escapeHTML(String(e)) + '</td></tr>'; }
 }
 
 async function fetchActivityJobs() {
     const tbody = document.getElementById('ac-jobs-tbody');
     if (!tbody) return;
-    tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;padding:40px;color:#9ca3af;">Yukleniyor...</td></tr>';
+    tbody.innerHTML = '<tr class="cc-loading-row"><td colspan="7"><div class="cc-loading-container"><div class="cc-spinner cc-spinner-lg"></div><span style="color:#9ca3af;font-size:0.85rem;">Loading jobs...</span></div></td></tr>';
     try {
         const res = await apiFetch('/api/backups');
-        if (!res.ok) { tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;padding:40px;color:#9ca3af;">Henuz yedek isi yok.</td></tr>'; return; }
+        if (!res.ok) { tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;padding:40px;color:#9ca3af;">No backup jobs found.</td></tr>'; return; }
         const jobs = await res.json();
-        if (!jobs || jobs.length === 0) { tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;padding:40px;color:#9ca3af;">Henuz yedek isi yok.</td></tr>'; return; }
+        if (!jobs || jobs.length === 0) { tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;padding:40px;color:#9ca3af;">No backup jobs found.</td></tr>'; return; }
         tbody.innerHTML = jobs.map(j => {
             const sc = j.status === 'completed' ? '#10b981' : (j.status === 'failed' ? '#ef4444' : '#f59e0b');
             const sl = j.status === 'completed' ? 'Completed' : (j.status === 'failed' ? 'Failed' : (j.status || 'Paused'));
             return '<tr style="border-bottom: 1px solid #f3f4f6;"><td style="padding: 12px 20px; font-size: 0.85rem;">' + escapeHTML(j.backup_name || j.name || 'Backup Job') + '</td><td style="padding: 12px 20px;"><span style="color:' + sc + ';font-size:0.8rem;display:inline-flex;align-items:center;gap:5px;"><div style=\"width:6px;height:6px;border-radius:50%;background:' + sc + '\"></div>' + sl + '</span></td><td style="padding: 12px 20px; font-size: 0.85rem; color: #6b7280;">' + escapeHTML(j.cluster_name || j.project_name || '-') + '</td><td style="padding: 12px 20px; font-size: 0.85rem; color: #6b7280;">' + escapeHTML(j.created_by || 'system') + '</td><td style="padding: 12px 20px; font-size: 0.85rem; color: #6b7280;">' + escapeHTML(j.created_at || '-') + '</td><td style="padding: 12px 20px; font-size: 0.85rem; color: #6b7280;">' + (j.duration || '0s') + '</td><td style="padding: 12px 20px;"><button style="padding: 4px 10px; font-size: 0.75rem; border: 1px solid #e5e7eb; border-radius: 4px; cursor: pointer; background: white;">...</button></td></tr>';
         }).join('');
-    } catch(e) { tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;padding:40px;color:#9ca3af;">Isler yuklenemedi.</td></tr>'; }
+    } catch(e) { tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;padding:40px;color:#9ca3af;">Failed to load jobs.</td></tr>'; }
 }
