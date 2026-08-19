@@ -219,7 +219,7 @@ document.addEventListener('DOMContentLoaded', () => {
             if(typeof fetchProfile === 'function') fetchProfile();
         } else if (hash === 'nodes-view') {
             if(typeof stopDashboardInterval === 'function') stopDashboardInterval();
-            if(typeof fetchNodesPage === 'function') fetchNodesPage();
+            window.fetchNodesPage();
         } else {
             if(typeof stopDashboardInterval === 'function') stopDashboardInterval();
         }
@@ -2800,7 +2800,7 @@ document.querySelector('button[onclick="document.getElementById(\'modal-create-b
 });
 
 
-async function fetchNodesPage() {
+window.fetchNodesPage = async function fetchNodesPage() {
     const tbody = document.getElementById('nodes-page-tbody');
     if (!tbody) return;
     
