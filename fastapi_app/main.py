@@ -100,6 +100,19 @@ def update_project(project_id: int, project: ProjectCreate, db: Session = Depend
     proj.name = project.name
     proj.description = project.description
     db.commit()
+    
+    # Check if there are project settings and apply them to the new node
+    from models import ProjectSettings
+    import json
+    ps = db.query(ProjectSettings).filter(ProjectSettings.project_id == project_id).first()
+    if ps:
+        try:
+            settings_data = json.loads(ps.settings_json)
+            safe_node = [{"id": new_node.id, "encrypted_url": new_node.encrypted_url}]
+            background_tasks.add_task(apply_postgres_settings, safe_node, settings_data)
+        except Exception as e:
+            print("Failed to dispatch settings apply for new node:", e)
+
     return {"success": True}
 
 
@@ -128,6 +141,19 @@ async def delete_node(node_id: int, db: Session = Depends(get_db)):
     audit = AuditLog(project_id=node.project_id, action="Node Deleted", details=f"ID: {node_id}, Name: {node.name}")
     db.add(audit)
     db.commit()
+    
+    # Check if there are project settings and apply them to the new node
+    from models import ProjectSettings
+    import json
+    ps = db.query(ProjectSettings).filter(ProjectSettings.project_id == project_id).first()
+    if ps:
+        try:
+            settings_data = json.loads(ps.settings_json)
+            safe_node = [{"id": new_node.id, "encrypted_url": new_node.encrypted_url}]
+            background_tasks.add_task(apply_postgres_settings, safe_node, settings_data)
+        except Exception as e:
+            print("Failed to dispatch settings apply for new node:", e)
+
     return {"success": True}
 
 @app.delete("/api/projects/{project_id}", dependencies=[Depends(verify_credentials)])
@@ -153,6 +179,19 @@ async def delete_project(project_id: int, db: Session = Depends(get_db)):
 
     db.delete(proj)
     db.commit()
+    
+    # Check if there are project settings and apply them to the new node
+    from models import ProjectSettings
+    import json
+    ps = db.query(ProjectSettings).filter(ProjectSettings.project_id == project_id).first()
+    if ps:
+        try:
+            settings_data = json.loads(ps.settings_json)
+            safe_node = [{"id": new_node.id, "encrypted_url": new_node.encrypted_url}]
+            background_tasks.add_task(apply_postgres_settings, safe_node, settings_data)
+        except Exception as e:
+            print("Failed to dispatch settings apply for new node:", e)
+
     return {"success": True}
 
 @app.get("/api/projects/{project_id}", dependencies=[Depends(verify_credentials)])
@@ -203,7 +242,7 @@ def get_project_detail(project_id: int, db: Session = Depends(get_db)):
     }
 
 @app.post("/api/projects/{project_id}/nodes", dependencies=[Depends(verify_credentials)])
-async def add_node(project_id: int, node: NodeCreate, db: Session = Depends(get_db)):
+async def add_node(project_id: int, node: NodeCreate, background_tasks: BackgroundTasks, db: Session = Depends(get_db)):
     if node.role.lower() not in ['primary', 'standby']:
         return JSONResponse(status_code=400, content={"success": False, "message": "Geçersiz rol. Sadece Primary veya Standby eklenebilir."})
 
@@ -236,6 +275,18 @@ async def add_node(project_id: int, node: NodeCreate, db: Session = Depends(get_
     db.add(audit)
     db.commit()
     
+    # Check if there are project settings and apply them to the new node
+    from models import ProjectSettings
+    import json
+    ps = db.query(ProjectSettings).filter(ProjectSettings.project_id == project_id).first()
+    if ps:
+        try:
+            settings_data = json.loads(ps.settings_json)
+            safe_node = [{"id": db_node.id, "encrypted_url": db_node.encrypted_url}]
+            background_tasks.add_task(apply_postgres_settings, safe_node, settings_data)
+        except Exception as e:
+            print("Failed to dispatch settings apply for new node:", e)
+
     return {"success": True, "message": "Node added securely."}
 
 @app.post("/api/projects/{project_id}/sync", status_code=202, dependencies=[Depends(verify_credentials)])
@@ -331,7 +382,7 @@ async def get_project_metrics(project_id: int, db: Session = Depends(get_db)):
     metrics_list = []
     for i, node in enumerate(proj.nodes):
         metrics_list.append({
-            'id': node.id,
+            'id': node['id'],
             'name': node.name,
             'role': node.role,
             'metrics': results[i]
@@ -460,15 +511,56 @@ def get_project_settings(project_id: int, db: Session = Depends(get_db)):
     except:
         return {}
 
+
+async def apply_postgres_settings(nodes, settings_data):
+    import asyncpg
+    from vault import decrypt
+    
+    # Define which settings map to actual PostgreSQL parameters
+    pg_params = [
+        'log_min_duration_statement',
+        'wal_level',
+        'max_replication_slots',
+        'max_wal_senders',
+        'shared_buffers',
+        'work_mem',
+        'max_connections'
+    ]
+    
+    for node in nodes:
+        db_url = decrypt(node['encrypted_url'])
+        try:
+            conn = await asyncpg.connect(db_url, timeout=5.0)
+            
+            for param in pg_params:
+                if param in settings_data and settings_data[param]:
+                    # Prevent SQL injection loosely by removing quotes
+                    safe_val = str(settings_data[param]).replace("'", "").strip()
+                    try:
+                        await conn.execute(f"ALTER SYSTEM SET {param} = '{safe_val}';")
+                    except Exception as e:
+                        print(f"Error setting {param} on node {node['id']}: {e}")
+                        
+            # Reload configuration (Note: some settings like shared_buffers require a full restart to take effect,
+            # but pg_reload_conf() is safe to call and applies dynamic ones immediately).
+            await conn.execute("SELECT pg_reload_conf();")
+            await conn.close()
+            print(f"Successfully applied settings to node {node['id']}")
+        except Exception as e:
+            print(f"Failed to connect and apply settings to node {node['id']}: {e}")
+
+
 @app.put("/api/projects/{project_id}/settings")
-async def update_project_settings(project_id: int, request: Request, db: Session = Depends(get_db)):
-    from models import ProjectSettings
+async def update_project_settings(project_id: int, request: Request, background_tasks: BackgroundTasks, db: Session = Depends(get_db)):
+    from models import ProjectSettings, DatabaseNode
     import json
     data = await request.json()
     
     ps = db.query(ProjectSettings).filter(ProjectSettings.project_id == project_id).first()
     if not ps:
-        ps = ProjectSettings(project_id=project_id, settings_json=json.dumps(data))
+        current_data = {}
+        current_data.update(data)
+        ps = ProjectSettings(project_id=project_id, settings_json=json.dumps(current_data))
         db.add(ps)
     else:
         # Merge settings
@@ -480,4 +572,12 @@ async def update_project_settings(project_id: int, request: Request, db: Session
         ps.settings_json = json.dumps(current_data)
         
     db.commit()
+    
+    # Fetch all nodes and apply PostgreSQL parameters asynchronously
+    nodes = db.query(DatabaseNode).filter(DatabaseNode.project_id == project_id).all()
+    if nodes:
+        # Pass a list of dicts to avoid DetachedInstanceError in background task
+        safe_nodes = [{"id": n.id, "encrypted_url": n.encrypted_url} for n in nodes]
+        background_tasks.add_task(apply_postgres_settings, safe_nodes, current_data)
+        
     return {"status": "ok"}

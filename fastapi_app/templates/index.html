@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Sunucu Yönetim ve Replikasyon</title>
-    <link rel="stylesheet" href="/static/style.css?v=18">
+    <link rel="stylesheet" href="/static/style.css?v=19">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 </head>
 <body>
@@ -1154,7 +1154,8 @@ Real OS metrics (CPU, RAM, Disk I/O) cannot be fetched directly from PostgreSQL 
                     
                     <h3 style="color: #4b5563; font-weight: 400; font-size: 1.4rem; margin-bottom: 16px;">What's New</h3>
                     <ul style="color: #4b5563; line-height: 1.7; padding-left: 20px; margin-bottom: 40px;">
-                        <li><span style="font-weight: 600;">Fix:</span> Uygulamaya yaplan nceki gncellemeler srasnda (Nodes listesinin deiimi srasnda) meydana gelen kk bir yazm hatasndan dolay arka plan animasyonlar (Baloncuklar) dhil tm etkileimlerin bozulmas (Syntax Error) sorunu dzeltildi.</li>
+                        <li><span style="font-weight: 600;">Feature:</span> PostgreSQL Fiziksel Entegrasyonu: "Settings" sekmesinde yer alan PostgreSQL motor parametreleri (shared_buffers, work_mem, max_connections, wal_level, max_replication_slots, log_min_duration_statement vb.) artk sadece veritabanmza kaydedilmekle kalmyor; arkaplanda alan dzenli bir Python isisi sayesinde ilgili kmenin tm Node'larna ngilizce ('ALTER SYSTEM SET...') SQL komutlar araclyla fiziksel olarak gnderilip 'SELECT pg_reload_conf()' komutuyla annda aktif ediliyor. Ayrnca gelecekte kkmeye eklenecek yeni sunuculara da bu proje ayarlarnn otomatik olarak yklenmesi iin eklemeler yapld.</li>
+<li><span style="font-weight: 600;">Fix:</span> Uygulamaya yaplan nceki gncellemeler srasnda (Nodes listesinin deiimi srasnda) meydana gelen kk bir yazm hatasndan dolay arka plan animasyonlar (Baloncuklar) dhil tm etkileimlerin bozulmas (Syntax Error) sorunu dzeltildi.</li>
 <li><span style="font-weight: 600;">Feature:</span> "Settings" ekrannda artk gerekten var olan PostgreSQL ayarlar (Long Query, Replication, Retention, System vb.) iin API balantlar kuruldu. Sol mendeki deerlere tklandnda tpk "Backup" ksmnda olduu gibi kendi API'lerinden gerek deerleri okuyup yanstan bir altyap eklendi ve baz sahte sekmeler (CmonDB, Controller) veritabanyla hibir ilgisi olmad iin mmknse tasarmdan gizlendi.</li>
 <li><span style="font-weight: 600;">Fix:</span> "Şeffaflık kuralları" gereğince, Settings menüsünde görsel bütünlük için tasarlanmış fakat henüz API altyapısı yazılmamış olan (Çalışmayan) sol ve üst sekme başlıklarına açıkça kırmızı renkle "[PLACEHOLDER]" uyarısı eklendi.</li>
 <li><span style="font-weight: 600;">Feature:</span> Sistem Altyapısı Değişimi: Kullanıcının talebi üzerine, Cluster detay sayfasına "Settings" (Sistem Ayarları) sekmesi ve veritabanına bu ayarları tutacak altyapı eklendi. Artık CMON ayarları, PostgreSQL pgBackRest şifrelemeleri ve Cloud yedekleme politikaları (retention) FAKE (sahte) olmayan ve gerçekten veritabanında saklanan, güncellenebilen ayarlardır. İlgili arkaplan işlemcileri yazıldığında bu ayarlara direkt entegre olacak şekilde tasarlandı.</li>
@@ -1424,7 +1425,7 @@ Real OS metrics (CPU, RAM, Disk I/O) cannot be fetched directly from PostgreSQL 
         </div>
     </div>
 
-    <script src="/static/main.js?v=18"></script>
+    <script src="/static/main.js?v=19"></script>
 
 
 
