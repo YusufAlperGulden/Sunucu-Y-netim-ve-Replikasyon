@@ -2750,3 +2750,30 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 });
+
+
+async function testSshConnection() {
+    if (!currentNodeIdToEdit) {
+        alert("Lütfen önce kaydedin.");
+        return;
+    }
+    const btn = document.querySelector('button[onclick="testSshConnection()"]');
+    const oldText = btn.innerText;
+    btn.innerText = "Testing...";
+    btn.disabled = true;
+    
+    try {
+        const res = await apiFetch(`/api/nodes/${currentNodeIdToEdit}/test-ssh`, { method: 'POST' });
+        const data = await res.json();
+        if (data.success) {
+            alert("✅ " + data.message);
+        } else {
+            alert("❌ " + data.message);
+        }
+    } catch (err) {
+        alert("Bağlantı hatası: " + err);
+    }
+    
+    btn.innerText = oldText;
+    btn.disabled = false;
+}
