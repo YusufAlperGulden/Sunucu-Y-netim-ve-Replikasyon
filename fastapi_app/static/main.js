@@ -310,7 +310,7 @@ document.addEventListener('DOMContentLoaded', () => {
             }
             const data = await response.json();
             if (data.length === 0) {
-                document.getElementById('cc-projects-tbody').innerHTML = '<tr><td colspan="6" style="text-align:center; padding: 20px;">No clusters found. Click + Add Project to start.</td></tr>';
+                const cptbody = document.getElementById('cc-projects-tbody'); if (cptbody) cptbody.innerHTML = '<tr><td colspan="6" style="text-align:center; padding: 20px;">No clusters found. Click + Add Project to start.</td></tr>';
                 document.getElementById('cc-total-clusters').innerText = '0 Clusters';
                 return;
             }
@@ -523,7 +523,7 @@ document.addEventListener('DOMContentLoaded', () => {
                             <div style="margin-top: 10px; font-size: 0.75rem; color: #9ca3af; display: flex; gap: 15px; justify-content: center;"><span>P - Primary</span><span>R - Replica</span><span>PB - PgBouncer</span><span>HA - HAProxy</span><span style="color:var(--success);">&#8226; Operational</span></div>`;
                         }
                         
-                        topoContainer.innerHTML = topoHtml;
+                        if(topoContainer) topoContainer.innerHTML = topoHtml;
 
                         const rect = tr.getBoundingClientRect(); 
                         ct.style.display = 'block'; 
@@ -719,7 +719,7 @@ if (donutCircle) {
             
             // Update Legend
             const warningCount = data.length - operationalCount;
-            document.getElementById('cc-donut-legend').innerHTML = `
+            const ccd = document.getElementById('cc-donut-legend'); if(ccd) ccd.innerHTML = `
                 <div style="display: flex; justify-content: space-between; font-size: 0.9rem;">
                     <span style="color: var(--success);">&#8226; ${operationalCount} Operational</span>
                 </div>
@@ -813,7 +813,7 @@ if (donutCircle) {
                                 document.getElementById('ntt-role').innerText = data.role;
                                 document.getElementById('ntt-type').innerText = data.type;
                                 document.getElementById('ntt-cluster').innerText = data.cluster;
-                                document.getElementById('ntt-badge').innerHTML = data.badge;
+                                const nttb = document.getElementById('ntt-badge'); if(nttb) nttb.innerHTML = data.badge;
                                 
                                 // Update Logo
                                 let logoHtml = '';
@@ -921,7 +921,7 @@ if (donutCircle) {
         } catch (error) {
             console.error("fetchProjects error:", error);
             const errDiv = document.getElementById('projects-container');
-            if (errDiv) errDiv.innerHTML = `<div class="loading-state" style="color: var(--danger)">Error loading projects. Exception: ${escapeHTML(error.toString())}</div>`;
+            if (errDiv) errDiv.innerHTML = `<div class="loading-state" style="color: var(--danger)">Error loading projects. Exception: ${escapeHTML(error.stack || error.toString())}</div>`;
         }
     }
 
