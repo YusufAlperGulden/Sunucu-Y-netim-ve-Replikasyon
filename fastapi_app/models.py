@@ -37,19 +37,14 @@ class Project(Base):
     replication_tables = Column(String(500), nullable=True) # E.g. 'vehicles, metadata'
     max_wal_lag_mb = Column(Integer, default=500) # Esnek limit ayar
     
-    # Replication Health Status
-    replication_health = Column(String(50), default="UNKNOWN") # HEALTHY, FAILED, UNKNOWN
-    
-    nodes = relationship("DatabaseNode", back_populates="project", cascade="all, delete-orphan")
-
-class DatabaseNode(Base):
-    __tablename__ = "nodes"
-    id = Column(Integer, primary_key=True, index=True)
-    project_id = Column(Integer, ForeignKey("projects.id", ondelete="CASCADE"))
-    role = Column(String(20)) # "primary" or "standby"
-    name = Column(String(100))
     # Şifrelenmiş veritabanı bağlantı metni
     encrypted_url = Column(String(500))
+    
+    # SSH Credentials for OS-level access
+    ssh_host = Column(String(255), nullable=True)
+    ssh_port = Column(Integer, default=22)
+    ssh_username = Column(String(255), default="root")
+    encrypted_ssh_credential = Column(String, nullable=True)
     
     project = relationship("Project", back_populates="nodes")
     
