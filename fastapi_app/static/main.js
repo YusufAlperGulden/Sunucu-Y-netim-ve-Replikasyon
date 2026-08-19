@@ -212,14 +212,33 @@ document.addEventListener('DOMContentLoaded', () => {
             if(typeof stopDashboardInterval === 'function') stopDashboardInterval();
         } else if (hash === 'settings-view') {
             if(typeof stopDashboardInterval === 'function') stopDashboardInterval();
-        } else if (hash === 'dashboard-view') {
-            if(typeof startDashboardInterval === 'function') startDashboardInterval();
         } else {
             if(typeof stopDashboardInterval === 'function') stopDashboardInterval();
         }
     }
     
     window.addEventListener('hashchange', handleRouting);
+
+    
+    // Initialize cluster tabs
+    document.querySelectorAll('.cluster-tab').forEach(tab => {
+        tab.addEventListener('click', (e) => {
+            e.preventDefault();
+            document.querySelectorAll('.cluster-tab').forEach(t => t.classList.remove('active'));
+            document.querySelectorAll('.tab-content').forEach(c => c.style.display = 'none');
+            
+            tab.classList.add('active');
+            const targetId = 'tab-content-' + tab.dataset.tab;
+            const targetEl = document.getElementById(targetId);
+            if (targetEl) targetEl.style.display = 'block';
+
+            if (tab.dataset.tab === 'dashboards') {
+                if(typeof startDashboardInterval === 'function') startDashboardInterval();
+            } else {
+                if(typeof stopDashboardInterval === 'function') stopDashboardInterval();
+            }
+        });
+    });
 
     sidebarLinks.forEach(link => {
         link.addEventListener('click', (e) => {
@@ -262,6 +281,10 @@ document.addEventListener('DOMContentLoaded', () => {
         const el_detail_proj_desc = document.getElementById('detail-proj-desc'); if(el_detail_proj_desc) el_detail_proj_desc.innerText = proj.description || 'No description';
         
         renderNodes(proj.nodes);
+        
+        // Ensure "Dashboards" tab is active by default
+        const dashTab = document.querySelector('.cluster-tab[data-tab="dashboards"]');
+        if(dashTab) dashTab.click();
     }
 
     function renderNodes(nodes) {
@@ -345,13 +368,18 @@ document.addEventListener('DOMContentLoaded', () => {
                       
                       let a = document.createElement('div');
                       
-                      a.className = "submenu-item"; a.onclick = (e) => {
+                      a.className = "submenu-item"; a.onclick = async (e) => {
                             e.preventDefault();
-                            if (window.location.hash !== '#dashboard-view') {
-                                window.location.hash = 'dashboard-view';
-                            } else {
-                                handleRouting();
+                            if (window.location.hash !== '#projects-view') {
+                                window.location.hash = 'projects-view';
                             }
+                            try {
+                                const res = await apiFetch(`/api/projects/${proj.id}`);
+                                if (res.ok) {
+                                    showDetailView(await res.json());
+                                    refreshCurrentProject();
+                                }
+                            } catch(err) { console.error(err); }
                         };
                       a.innerHTML = `<span style="color: ${color}; font-size: 1.2rem; line-height: 1;">&#8226;</span> <span style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 150px;">${proj.name}</span>`;
                       submenu.appendChild(a);
