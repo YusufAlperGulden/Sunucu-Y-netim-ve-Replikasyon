@@ -389,7 +389,7 @@ async def get_project_metrics(project_id: int, db: Session = Depends(get_db)):
               'encrypted_ssh_credential': node.encrypted_ssh_credential,
               'metric_table': proj.metric_table
           }
-          tasks.append(get_server_metrics(node_dict, project_id=proj.id))
+        tasks.append(get_server_metrics(node_dict, project_id=proj.id))
         
     results = await asyncio.gather(*tasks)
     
