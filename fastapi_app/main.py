@@ -229,7 +229,11 @@ def get_project_detail(project_id: int, db: Session = Depends(get_db)):
             "port": port,
             "type": db_type,
             "status": "Operational",
-            "version": "16.4" # Or fetch from DB if available
+            "version": "16.4", # Or fetch from DB if available
+            "ssh_host": n.ssh_host,
+            "ssh_port": n.ssh_port,
+            "ssh_username": n.ssh_username,
+            "has_ssh_credential": bool(n.encrypted_ssh_credential)
         })
     return {
         "id": proj.id, 
