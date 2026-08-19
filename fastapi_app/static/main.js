@@ -407,14 +407,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         
                         document.getElementById('tt-cluster-vendor').innerText = vendor; 
 
-                        // Determine if there is a disabled node
-                        let disabledNode = null;
-                        if (proj.nodes && proj.nodes.length > 0) {
-                           // For demonstration, let's randomly pick one node to be shutdown if the status is Warning
-                           if (proj.sync_status === 'FAILED' || proj.nodesCount < 2) {
-                               disabledNode = proj.nodes[0];
-                           }
-                        }
+                        
                         
                         // Determine if there is a disabled node
                           let msg = null;
