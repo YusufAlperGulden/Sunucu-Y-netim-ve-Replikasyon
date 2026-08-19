@@ -347,3 +347,26 @@ body {
     fill: #ffffff !important;
     stroke: var(--success) !important;
 }
+
+.cluster-tab {
+    text-decoration: none;
+    color: #6b7280;
+    padding-bottom: 12px;
+    margin-bottom: -1px;
+    font-weight: 500;
+}
+.cluster-tab:hover {
+    color: #374151;
+}
+.cluster-tab.active {
+    color: #6366f1;
+    border-bottom: 2px solid #6366f1;
+}
+.cluster-subtab {
+    text-decoration: none;
+    color: #6b7280;
+    font-weight: 500;
+}
+.cluster-subtab:hover {
+    color: #374151;
+}

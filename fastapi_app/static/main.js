@@ -2223,3 +2223,106 @@ let currentSortCol = null;
     renderNodesPage();
 });
 
+
+
+    let previousMetrics = {};
+    let detailMetricsInterval = null;
+    let currentDetailProj = null; // to calculate TPS
+    
+    async function refreshClusterDetailMetrics(proj) {
+        if (!proj) return;
+        
+        // Populate node list immediately with basic data
+        const tbodyNode = document.querySelector('#node-list-table tbody');
+        if (tbodyNode) {
+            tbodyNode.innerHTML = proj.nodes.map(n => {
+                const ip = n.url ? (n.url.split('@')[1] || '').split(':')[0] : 'Unknown';
+                const port = n.url ? (n.url.split(':')[2] || '').split('/')[0] : '5432';
+                return `
+                    <tr style="border-bottom: 1px solid var(--border);">
+                        <td style="padding: 10px 0; color: #111827;">${n.name}</td>
+                        <td style="padding: 10px 0;">${port}</td>
+                        <td style="padding: 10px 0;">${ip}</td>
+                        <td style="padding: 10px 0; color: #10b981;">&#8226; Operational</td>
+                        <td style="padding: 10px 0; color: #6366f1;">PostgreSQL</td>
+                        <td style="padding: 10px 0;">${n.role}</td>
+                        <td style="padding: 10px 0;" id="nodelist-ver-${n.id}">Loading...</td>
+                    </tr>
+                `;
+            }).join('');
+            
+            document.getElementById('stat-all').innerText = proj.nodes.length;
+            document.getElementById('stat-operational').innerText = proj.nodes.length; // Simplified for now
+        }
+        
+        try {
+            const res = await apiFetch(`/api/projects/${proj.id}/metrics`);
+            if (!res.ok) return;
+            const metricsData = await res.json();
+            
+            const tbodyPg = document.querySelector('#pg-overview-table tbody');
+            if (tbodyPg) {
+                tbodyPg.innerHTML = '';
+                
+                metricsData.forEach(nodeData => {
+                    const m = nodeData.metrics;
+                    if (!m) return;
+                    
+                    // Update node list version
+                    const verTd = document.getElementById(`nodelist-ver-${nodeData.id}`);
+                    if(verTd) verTd.innerText = m.version || 'Unknown';
+                    
+                    // Calculate rates
+                    let tps = 0, sel = 0, ins = 0, upd = 0, del = 0;
+                    const now = Date.now();
+                    const prev = previousMetrics[nodeData.id];
+                    
+                    if (prev && m.commits_raw !== undefined) {
+                        const elapsed = (now - prev.time) / 1000;
+                        if (elapsed > 0) {
+                            const diffCommits = m.commits_raw - prev.commits_raw;
+                            const diffRollbacks = m.rollbacks_raw - prev.rollbacks_raw;
+                            tps = ((diffCommits + diffRollbacks) / elapsed).toFixed(2);
+                            
+                            sel = ((m.tup_fetched - prev.tup_fetched) / elapsed).toFixed(2);
+                            ins = ((m.tup_inserted - prev.tup_inserted) / elapsed).toFixed(2);
+                            upd = ((m.tup_updated - prev.tup_updated) / elapsed).toFixed(2);
+                            del = ((m.tup_deleted - prev.tup_deleted) / elapsed).toFixed(2);
+                        }
+                    }
+                    
+                    // Save for next calculation
+                    if (m.commits_raw !== undefined) {
+                        previousMetrics[nodeData.id] = {
+                            time: now,
+                            commits_raw: m.commits_raw,
+                            rollbacks_raw: m.rollbacks_raw,
+                            tup_fetched: m.tup_fetched,
+                            tup_inserted: m.tup_inserted,
+                            tup_updated: m.tup_updated,
+                            tup_deleted: m.tup_deleted
+                        };
+                    }
+                    
+                    const ip = "Unknown IP"; // Ideally from node url
+                    const row = `
+                        <tr style="border-bottom: 1px solid var(--border);">
+                            <td style="padding: 10px 0; color: #111827;">${nodeData.name}</td>
+                            <td style="padding: 10px 0; color: #10b981;">Up</td>
+                            <td style="padding: 10px 0;">${tps}</td>
+                            <td style="padding: 10px 0;">${sel}</td>
+                            <td style="padding: 10px 0;">${ins}</td>
+                            <td style="padding: 10px 0;">${upd}</td>
+                            <td style="padding: 10px 0;">${del}</td>
+                            <td style="padding: 10px 0;">${m.connections || 0}</td>
+                            <td style="padding: 10px 0; color: #10b981;">${m.active_conn || 0}</td>
+                            <td style="padding: 10px 0; color: #10b981;">${m.cache_hit || '100%'}</td>
+                        </tr>
+                    `;
+                    tbodyPg.innerHTML += row;
+                });
+            }
+        } catch (e) {
+            console.error(e);
+        }
+    }

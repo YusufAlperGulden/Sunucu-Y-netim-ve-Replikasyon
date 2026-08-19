@@ -311,7 +311,7 @@ async def get_server_metrics(encrypted_url: str, project_id: int = None, role: s
             active_conn = conn_row['active'] if conn_row else 0
             max_conn = conn_row['max'] if conn_row else 100
             
-            stat_row = await conn.fetchrow('SELECT blks_hit, blks_read, xact_commit, xact_rollback FROM pg_stat_database WHERE datname = current_database()')
+            stat_row = await conn.fetchrow('SELECT blks_hit, blks_read, xact_commit, xact_rollback, tup_fetched, tup_inserted, tup_updated, tup_deleted FROM pg_stat_database WHERE datname = current_database()')
             if stat_row:
                 total_blks = stat_row['blks_hit'] + stat_row['blks_read']
                 cache_hit = (stat_row['blks_hit'] / total_blks * 100) if total_blks > 0 else 100.0
