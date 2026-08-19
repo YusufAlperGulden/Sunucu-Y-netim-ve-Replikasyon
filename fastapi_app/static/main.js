@@ -1275,8 +1275,10 @@ if (donutCircle) {
                               const el = document.getElementById("metric-" + node.id + "-" + k);
                               if(el) el.innerText = '-';
                           });
-{ const TMP_EL = document.getElementById("metric-" + node.id + "-uptime"); if(TMP_EL) {                         TMP_EL.innerText = m.uptime; } }
-{ const TMP_EL = document.getElementById("metric-" + node.id + "-plates"); if(TMP_EL) {                         TMP_EL.innerText = m.plates; } }
+
+                      // Show error reason under the offline badge
+                      const errEl = document.getElementById("metric-" + node.id + "-status");
+                      if(errEl && m.error) errEl.title = m.error;
                     } else {
                         document.getElementById("metric-" + node.id + "-status").className = 'status-badge status-offline';
 { const TMP_EL = document.getElementById("metric-" + node.id + "-status"); if(TMP_EL) {                         TMP_EL.innerText = 'Çevrimdışı'; } }
