@@ -680,3 +680,20 @@ def test_ssh_connection(node_id: int, db: Session = Depends(get_db)):
                 return {"success": False, "message": f"Connected, but command failed: {stderr}"}
     except Exception as e:
         return {"success": False, "message": f"SSH Connection failed: {str(e)}"}
+
+
+@app.get("/api/debug-db")
+def debug_db(db: Session = Depends(get_db)):
+    from sqlalchemy import text
+    try:
+        res = db.execute(text("SELECT column_name FROM information_schema.columns WHERE table_name='database_nodes';"))
+        columns = [row[0] for row in res.fetchall()]
+        
+        # Test project 2 query directly
+        proj = db.query(Project).filter(Project.id == 2).first()
+        node_count = len(proj.nodes) if proj else -1
+        
+        return {"columns": columns, "proj_2_nodes": node_count}
+    except Exception as e:
+        import traceback
+        return {"error": str(e), "traceback": traceback.format_exc()}
