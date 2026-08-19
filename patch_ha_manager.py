@@ -1,29 +1,33 @@
-﻿import re
+﻿with open('fastapi_app/ha_manager.py', 'r', encoding='utf-8') as f:
+    ha = f.read()
 
-ha_path = 'fastapi_app/ha_manager.py'
-with open(ha_path, 'r', encoding='utf-8') as f:
-    content = f.read()
+target = """            stat_row = await conn.fetchrow('SELECT blks_hit, blks_read, xact_commit, xact_rollback, tup_fetched, tup_inserted, tup_updated, tup_deleted FROM pg_stat_database WHERE datname = current_database()')
+            if stat_row:
+                total_blks = stat_row['blks_hit'] + stat_row['blks_read']
+                cache_hit = (stat_row['blks_hit'] / total_blks * 100) if total_blks > 0 else 100.0
+                commits = stat_row['xact_commit']
+                rollbacks = stat_row['xact_rollback']
+            else:
+                cache_hit, commits, rollbacks = 100.0, 0, 0"""
 
-# Fix the xact format (currently has encoding issues)
-content = re.sub(
-    r"'xact': f'\{commits\}.*?/ \{rollbacks\}.*?',",
-    "'xact': f'{commits} / {rollbacks}',",
-    content
-)
+replacement = """            stat_row = await conn.fetchrow('SELECT blks_hit, blks_read, xact_commit, xact_rollback, tup_fetched, tup_inserted, tup_updated, tup_deleted FROM pg_stat_database WHERE datname = current_database()')
+            if stat_row:
+                total_blks = (stat_row['blks_hit'] or 0) + (stat_row['blks_read'] or 0)
+                cache_hit = (stat_row['blks_hit'] / total_blks * 100) if total_blks > 0 else 100.0
+                commits = stat_row['xact_commit'] or 0
+                rollbacks = stat_row['xact_rollback'] or 0
+                tup_fetched = stat_row['tup_fetched'] or 0
+                tup_inserted = stat_row['tup_inserted'] or 0
+                tup_updated = stat_row['tup_updated'] or 0
+                tup_deleted = stat_row['tup_deleted'] or 0
+            else:
+                cache_hit, commits, rollbacks = 100.0, 0, 0
+                tup_fetched, tup_inserted, tup_updated, tup_deleted = 0, 0, 0, 0"""
 
-# Also make sure 'row_count' is exposed in addition to 'plates' 
-content = content.replace(
-    "'plates': plates_count,",
-    "'plates': plates_count,\n                  'row_count': plates_count,"
-)
-
-# Fix the storage to display MB for large sizes
-old_storage = "'storage': f'{int(db_size_kb)} kB',"
-new_storage = """'storage': f'{db_size_kb/1024:.1f} MB' if db_size_kb > 1024 else f'{int(db_size_kb)} kB',"""
-
-if old_storage in content:
-    content = content.replace(old_storage, new_storage)
-
-with open(ha_path, 'w', encoding='utf-8') as f:
-    f.write(content)
-print("Fixed ha_manager.py return values")
+if target in ha:
+    ha = ha.replace(target, replacement, 1)
+    with open('fastapi_app/ha_manager.py', 'w', encoding='utf-8') as f:
+        f.write(ha)
+    print("Successfully patched ha_manager.py")
+else:
+    print("Target block not found in ha_manager.py")
