@@ -211,7 +211,7 @@ document.addEventListener('DOMContentLoaded', () => {
         } else if (hash === 'projects-view') {
             if(typeof showProjectsView === 'function') showProjectsView();
             if(typeof stopDashboardInterval === 'function') stopDashboardInterval();
-        } else if (hash === 'audit-logs-view') {
+        } else if (hash === 'activity-view' || hash === 'audit-logs-view') {
             if (typeof window.fetchAuditLogs === 'function') window.fetchAuditLogs();
             if(typeof stopDashboardInterval === 'function') stopDashboardInterval();
         } else if (hash === 'settings-view') {
@@ -1146,69 +1146,29 @@ if (donutCircle) {
 
     
     window.fetchAuditLogs = async function() {
-
-        const tbody = document.getElementById('audit-table-body');
-        if(!tbody) return;
-        
-        tbody.innerHTML = '<tr><td colspan="6" style="padding: 16px 24px; text-align: center; color: var(--text-muted);">Loading logs...</td></tr>';
-        
-        try {
-            const res = await apiFetch('/api/audit-logs');
-            if (!res.ok) {
-                const errText = await res.text();
-                tbody.innerHTML = `<tr><td colspan="6" style="padding: 16px 24px; text-align: center; color: var(--danger);">Failed to load logs: ${escapeHTML(errText)}</td></tr>`;
-                return;
-            }
-            const data = await res.json();
-            
-            if (data.length === 0) {
-                tbody.innerHTML = `
-                    <tr>
-                        <td colspan="6" style="padding: 60px 20px; text-align: center;">
-                            <svg width="72" height="72" viewBox="0 0 24 24" fill="#e5e7eb" stroke="none" style="margin-bottom: 24px;">
-                                <path d="M10 4H4c-1.1 0-1.99.9-1.99 2L2 18c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V8c0-1.1-.9-2-2-2h-8l-2-2z"/>
-                            </svg>
-                            <div style="color: #4b5563; font-size: 0.95rem; font-weight: 400; margin-bottom: 16px;">No audit log entries match your current filters.</div>
-                            <a href="#" style="color: var(--primary); font-size: 0.9rem; text-decoration: none; font-weight: 500;">Clear all filters</a>
-                        </td>
-                    </tr>
-                `;
-                return;
-            }
-            
-            tbody.innerHTML = '';
-            data.forEach(log => {
-                const tr = document.createElement('tr');
-                tr.style.borderBottom = '1px solid var(--glass-border)';
-                
-                let timeStr = log.timestamp;
-                if (timeStr) {
-                    const d = new Date(timeStr);
-                    timeStr = d.toISOString().replace('T', ' ').substring(0, 19) + ' +03';
-                } else {
-                    timeStr = 'Unknown';
-                }
-                
-                let type = "system";
-                let actionLower = log.action ? log.action.toLowerCase() : "";
-                if(actionLower.includes('login') || actionLower.includes('auth')) type = "authentication";
-                else if(actionLower.includes('project') || actionLower.includes('create') || actionLower.includes('delete')) type = "project_management";
-                
-                let actionStr = log.action || "Unknown action";
-                if (log.details) {
-                    actionStr += " - " + log.details;
-                }
-                
-                tr.innerHTML = `
-                    <td style="padding: 16px 24px; font-size: 0.85rem; color: #111827;">${escapeHTML(timeStr)}</td>
-                    <td style="padding: 16px 24px; font-size: 0.85rem; color: #374151;">${escapeHTML(actionStr)}</td>
-                    <td style="padding: 16px 24px; font-size: 0.85rem; color: #374151;">${escapeHTML(type)}</td>
-                    <td style="padding: 16px 24px; font-size: 0.85rem; color: #374151;">admin@sunucu.local</td>
-                    <td style="padding: 16px 24px; font-size: 0.85rem; color: #374151;">127.0.0.1</td>
-                    <td style="padding: 16px 24px; font-size: 0.85rem; color: #374151;">${log.project_id ? "Project ID: " + log.project_id : "N/A"}</td>
-                `;
-                if (tbody) { tbody.appendChild(tr); }
-            });
+    const res = await apiFetch('/api/audit-logs');
+    if (res.ok) {
+        const data = await res.json();
+        const tbody = document.getElementById('activity-tbody') || document.getElementById('audit-table-body');
+        if (!tbody) return;
+        if (data.length === 0) {
+            tbody.innerHTML = `<tr><td colspan="4" style="text-align:center; padding: 20px; color: #6b7280;">No activities or alarms recorded yet.</td></tr>`;
+        } else {
+            tbody.innerHTML = data.map(log => `
+                <tr style="border-bottom: 1px solid var(--border);">
+                    <td style="padding: 12px 24px;">${log.timestamp}</td>
+                    <td style="padding: 12px 24px;">
+                        <span style="background: rgba(139,92,246,0.1); color: #8b5cf6; padding: 2px 8px; border-radius: 4px; font-size: 0.8rem; font-weight: 500;">
+                            ${escapeHTML(log.user || 'System')}
+                        </span>
+                    </td>
+                    <td style="padding: 12px 24px; font-weight: 500; color: #111827;">${escapeHTML(log.action)}</td>
+                    <td style="padding: 12px 24px; color: #4b5563;">${escapeHTML(log.details || "-")}</td>
+                </tr>
+            `).join('');
+        }
+    }
+});
             
         } catch (e) {
             tbody.innerHTML = `<tr><td colspan="6" style="padding: 16px 24px; text-align: center; color: var(--danger);">Network error fetching logs.</td></tr>`;

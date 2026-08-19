@@ -38,9 +38,23 @@ def verify_credentials(credentials: HTTPBasicCredentials = Depends(security)):
 async def lifespan(app: FastAPI):
     # Startup
     print("Application startup complete.")
-        
+    from sqlalchemy import text
+    from models import engine
+    with engine.begin() as conn:
+        for stmt in [
+            "ALTER TABLE nodes ADD COLUMN ssh_host VARCHAR(255)",
+            "ALTER TABLE nodes ADD COLUMN ssh_port INTEGER DEFAULT 22",
+            "ALTER TABLE nodes ADD COLUMN ssh_username VARCHAR(255) DEFAULT 'root'",
+            "ALTER TABLE nodes ADD COLUMN encrypted_ssh_credential VARCHAR",
+            "ALTER TABLE audit_logs ADD COLUMN username VARCHAR(50) DEFAULT 'system'"
+        ]:
+            try:
+                conn.execute(text(stmt))
+            except Exception:
+                pass
     yield
     # Shutdown
+
 
 app = FastAPI(title="Sunucu Yönetim ve Replikasyon", lifespan=lifespan)
 
@@ -334,8 +348,8 @@ async def sync_replication(project_id: int, db: Session = Depends(get_db)):
 @app.get('/api/audit-logs', dependencies=[Depends(verify_credentials)])
 def get_audit_logs(db: Session = Depends(get_db)):
     from models import AuditLog
-    logs = db.query(AuditLog).order_by(AuditLog.timestamp.desc()).limit(50).all()
-    return [{'id': l.id, 'project_id': l.project_id, 'timestamp': l.timestamp.isoformat() if l.timestamp else None, 'action': l.action, 'details': l.details} for l in logs]
+    logs = db.query(AuditLog).order_by(AuditLog.timestamp.desc()).limit(100).all()
+    return [{'id': l.id, 'project_id': l.project_id, 'timestamp': l.timestamp.strftime("%Y-%m-%d %H:%M:%S") if l.timestamp else "-", 'action': l.action, 'details': l.details, 'user': l.username or "System"} for l in logs]
 
 class SettingsUpdate(BaseModel):
     max_wal_lag_mb: int

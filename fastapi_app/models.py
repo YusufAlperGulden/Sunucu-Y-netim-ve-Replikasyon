@@ -96,6 +96,7 @@ class AuditLog(Base):
     timestamp = Column(DateTime, default=datetime.datetime.utcnow)
     action = Column(String(255))
     details = Column(String(500))
+    username = Column(String(50), nullable=True, default="system")
 
     project = relationship("Project")
 
