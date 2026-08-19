@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Sunucu Yönetim ve Replikasyon</title>
-    <link rel="stylesheet" href="/static/style.css?v=49">
+    <link rel="stylesheet" href="/static/style.css?v=50">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 </head>
 <body>
@@ -1213,7 +1213,8 @@ Real OS metrics (CPU, RAM, Disk I/O) cannot be fetched directly from PostgreSQL 
                 <!-- Left Sidebar -->
                 <div style="width: 250px; border-right: 1px solid #e5e7eb; padding: 32px 24px; display: flex; flex-direction: column; gap: 16px; font-size: 0.9rem; background: #fafafa;">
                     <div style="color: #c026d3; font-weight: 600; margin-bottom: 8px;">Release Notes</div>
-                    <a href="#changelog-view" onclick="event.preventDefault(); document.getElementById('v1-4-2').scrollIntoView({behavior:'smooth'}); document.querySelectorAll('#changelog-view .cl-sidebar-link').forEach(e=>e.style.fontWeight='normal'); this.style.fontWeight='bold';" class="cl-sidebar-link" style="color: #4b5563; text-decoration: none; font-weight: bold;">v1.4.2 (Latest)</a>
+                    <a href="#changelog-view" onclick="event.preventDefault(); document.getElementById('v1-4-3').scrollIntoView({behavior:'smooth'}); document.querySelectorAll('#changelog-view .cl-sidebar-link').forEach(e=>e.style.fontWeight='normal'); this.style.fontWeight='bold';" class="cl-sidebar-link" style="color: #4b5563; text-decoration: none; font-weight: bold;">v1.4.3 (Latest)</a>
+                    <a href="#changelog-view" onclick="event.preventDefault(); document.getElementById('v1-4-2').scrollIntoView({behavior:'smooth'}); document.querySelectorAll('#changelog-view .cl-sidebar-link').forEach(e=>e.style.fontWeight='normal'); this.style.fontWeight='bold';" class="cl-sidebar-link" style="color: #4b5563; text-decoration: none;">v1.4.2</a>
                     <a href="#changelog-view" onclick="event.preventDefault(); document.getElementById('v1-4-1').scrollIntoView({behavior:'smooth'}); document.querySelectorAll('#changelog-view .cl-sidebar-link').forEach(e=>e.style.fontWeight='normal'); this.style.fontWeight='bold';" class="cl-sidebar-link" style="color: #4b5563; text-decoration: none;">v1.4.1</a>
                     <a href="#changelog-view" onclick="event.preventDefault();" style="color: #9ca3af; text-decoration: none; display: flex; justify-content: space-between; margin-top: 12px; cursor: default;" title="Archived versions coming soon">Archived <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"></polyline></svg></a>
                 </div>
@@ -1224,7 +1225,7 @@ Real OS metrics (CPU, RAM, Disk I/O) cannot be fetched directly from PostgreSQL 
                     <h1 style="color: #4b5563; font-weight: 300; font-size: 2.2rem; margin-bottom: 24px;">Release Notes</h1>
                     <p style="color: #4b5563; line-height: 1.6; margin-bottom: 40px; font-size: 1.05rem;">Use this page as your guide to stay up to date on the latest enhancements and changes, ensuring you can make the most of ClusterControl's powerful capabilities.</p>
                     
-                    <h2 id="v1-4-2" style="color: #4b5563; font-weight: 300; font-size: 1.8rem; margin-bottom: 20px; border-top: 1px solid #e5e7eb; padding-top: 32px;">v1.4.2</h2>
+                                        <h2 id="v1-4-3" style="color: #4b5563; font-weight: 300; font-size: 1.8rem; margin-bottom: 20px; border-top: 1px solid #e5e7eb; padding-top: 32px;">v1.4.3</h2>
                     
                     <h3 id="release-cycle" style="color: #4b5563; font-weight: 400; font-size: 1.4rem; margin-bottom: 16px;">Release cycle</h3>
                     <p style="color: #4b5563; margin-bottom: 16px; line-height: 1.6;">We highly advise you to keep up to date with the latest version for the following reasons:</p>
@@ -1236,10 +1237,16 @@ Real OS metrics (CPU, RAM, Disk I/O) cannot be fetched directly from PostgreSQL 
                     
                     <h3 id="whats-new" style="color: #4b5563; font-weight: 400; font-size: 1.4rem; margin-bottom: 16px;">What's New</h3>
                     <ul style="color: #4b5563; line-height: 1.7; padding-left: 20px; margin-bottom: 40px;">
+                        <li><span style="font-weight: 600;">Fix (Nodes View):</span> Nodes sayfasında düğümlerin listelenmesini engelleyen çift döngü ve eski closure referansı temizlendi. Tüm cluster'lardaki sunucular (Primary &amp; Standby) anında stat kartlarına (Operational, Failed, Offline vb.) ve envanter tablosuna gerçek zamanlı olarak bağlandı.</li>
                         <li><span style="font-weight: 600;">Feature (Audit Log Search &amp; Export):</span> Audit Log sekmesine anlık <b>Arama Çubuğu (Search Bar)</b>, <b>Filtre Sıfırlama ("Clear all filters")</b>, <b>Yenileme (Refresh)</b> ve ClusterControl formatında birebir uyumlu <b>CSV Dışa Aktarma ("Export CSV")</b> özelliği eklendi.</li>
                         <li><span style="font-weight: 600;">UI/UX (Loading Animation):</span> ClusterControl tasarımı ile birebir uyumlu <b>Circular Loading Spinner (Dönen Dairesel Animasyon)</b> tüm tablolara, kartlara ve yükleme durumlarına eklendi. Ham metin ("Yükleniyor...") yerine zarif dönen çember animasyonu gösterilmektedir.</li>
                         <li><span style="font-weight: 600;">Feature (Activity Center):</span> Activity Center ekranı orijinal ClusterControl yapısına uygun olarak 4 sekmeye ayrıldı: <b>Alarms</b>, <b>Jobs</b> (Yedekleme ve sistem işleri), <b>Audit Log</b> (Kullanıcı eylem ve denetim kayıtları) ve <b>Watchlists (Beta)</b>.</li>
-                        <li><span style="font-weight: 600;">Feature (Nodes View):</span> Nodes ekranı tüm cluster'lardaki aktif veritabanı düğümlerini anında listeleyen, durum filtreleme kartları (Operational, Failed, Offline vb.) ve canlı PostgreSQL sürüm kontrolü ile donatılmış gerçek zamanlı envanter tablosuna kavuşturuldu.</li>
+                        <li><span style="font-weight: 600;">Fix (Replication &amp; Metrics):</span> Frankfurt (Ana Sunucu) ve Londra (Yedek Sunucu) Neon PostgreSQL veritabanı bağlantı şifreleri ve SSL parametreleri otomatik senkronize edilerek TPS, Ping, Storage ve Ana Tablo (vehicles) kayıt sayısı canlı metrikleri bağlandı.</li>
+                    </ul>
+
+                    <h2 id="v1-4-2" style="color: #4b5563; font-weight: 300; font-size: 1.8rem; margin-bottom: 20px; border-top: 1px solid #e5e7eb; padding-top: 32px;">v1.4.2</h2>
+                    <ul style="color: #4b5563; line-height: 1.7; padding-left: 20px; margin-bottom: 40px;">
+<li><span style="font-weight: 600;">Feature (Nodes View):</span> Nodes ekranı tüm cluster'lardaki aktif veritabanı düğümlerini anında listeleyen, durum filtreleme kartları (Operational, Failed, Offline vb.) ve canlı PostgreSQL sürüm kontrolü ile donatılmış gerçek zamanlı envanter tablosuna kavuşturuldu.</li>
                         <li><span style="font-weight: 600;">Fix (Replication & Metrics):</span> Frankfurt (Ana Sunucu) ve Londra (Yedek Sunucu) Neon PostgreSQL veritabanı bağlantı şifreleri ve SSL parametreleri otomatik senkronize edilerek TPS, Ping, Storage ve Ana Tablo (vehicles) kayıt sayısı canlı metrikleri bağlandı.</li>
                         <li><span style="font-weight: 600;">zellik 4:</span> <b>User Management (Kullanc Ynetimi)</b> motoru aktif edildi. Veritaban desteki <code style="background: rgba(255,255,255,0.1); padding: 2px 4px; border-radius: 4px;">User</code> modeli oluturuldu, ifreler bcrypt ile hashlendi ve kullanc silme/ekleme ilemleri yapld.</li>
 <li><span style="font-weight: 600;">Hotfix 3 (Final):</span> Python <code style="background: rgba(255,255,255,0.1); padding: 2px 4px; border-radius: 4px;">AttributeError</code> hatas zld. "models.py" ierisindeki snf tanmna eklenmesi unutulan stun deikenleri (ssh_host) koda dahil edildi. Tm zellikler %100 istikrarl alyor.</li>
@@ -1254,7 +1261,7 @@ Real OS metrics (CPU, RAM, Disk I/O) cannot be fetched directly from PostgreSQL 
 <li><span style="font-weight: 600;">Fix:</span> "ift Giri Ekran (Double Login Prompt)" sorunu zld. Sayfa yklendiinde arka planda yaplan yetki kontrollerinin (API 401 dnleri) tarayc tarafndan yanl anlalp kendi varsaylan "Oturum an" uyarsn kartmas engellendi. Artk gvenlik bal sadece arka planda nlenip direkt olarak tasarladmz gvenli ve k giri ekranna (Balonlu ekran) ynlendiriliyor.</li>
 <li><span style="font-weight: 600;">Feature:</span> "Settings" ekranndaki arama ubuu (Search Bar) aktifleitirildi. Artk "Search by parameter, value, description" ksmna herhangi bir anahtar kelime yazdnzda, o ana kadar sol mendeki hangi kategoride olduunuza baklmakszn tm PostgreSQL parametreleri (isimleri, deeri ve aklamalar) iinde dinamik arama yaplp sonular annda ekrana yansyor.</li>
 <li><span style="font-weight: 600;">Fix:</span> "Settings" (Ayarlar) sayfasndaki sahte etiketlerin kaldrlmas/gizlenmesi ileminde meydana gelen kk bir HTML kapan etiketi kaymas nedeniyle 'User management' ve 'Backups' sayfalarnn saa doru kayarak yapsnn bozulmas (UI Bug) sorunu dzeltildi. Artk tm ekranlar ana gvdeye tam oturuyor.</li>
-<li><span style="font-weight: 600;">Fix:</span> Uygulama srm geikmesi (Render Cache) nedeniyle "Clusters" sayfasnda tklanan projelerin yeni ekranda/sekmede almayp i ie gemesi sorunu son v=49 srmyle tamamen zld. Eer u an kullanyorsanz sayfay tamamen yenileyip (CTRL+F5) dzeldiini grebilirsiniz.</li>
+<li><span style="font-weight: 600;">Fix:</span> Uygulama srm geikmesi (Render Cache) nedeniyle "Clusters" sayfasnda tklanan projelerin yeni ekranda/sekmede almayp i ie gemesi sorunu son v=50 srmyle tamamen zld. Eer u an kullanyorsanz sayfay tamamen yenileyip (CTRL+F5) dzeldiini grebilirsiniz.</li>
 <li><span style="font-weight: 600;">Feature:</span> PostgreSQL Fiziksel Entegrasyonu: "Settings" sekmesinde yer alan PostgreSQL motor parametreleri (shared_buffers, work_mem, max_connections, wal_level, max_replication_slots, log_min_duration_statement vb.) artk sadece veritabanmza kaydedilmekle kalmyor; arkaplanda alan dzenli bir Python isisi sayesinde ilgili kmenin tm Node'larna ngilizce ('ALTER SYSTEM SET...') SQL komutlar araclyla fiziksel olarak gnderilip 'SELECT pg_reload_conf()' komutuyla annda aktif ediliyor. Ayrnca gelecekte kkmeye eklenecek yeni sunuculara da bu proje ayarlarnn otomatik olarak yklenmesi iin eklemeler yapld.</li>
 <li><span style="font-weight: 600;">Fix:</span> Uygulamaya yaplan nceki gncellemeler srasnda (Nodes listesinin deiimi srasnda) meydana gelen kk bir yazm hatasndan dolay arka plan animasyonlar (Baloncuklar) dhil tm etkileimlerin bozulmas (Syntax Error) sorunu dzeltildi.</li>
 <li><span style="font-weight: 600;">Feature:</span> "Settings" ekrannda artk gerekten var olan PostgreSQL ayarlar (Long Query, Replication, Retention, System vb.) iin API balantlar kuruldu. Sol mendeki deerlere tklandnda tpk "Backup" ksmnda olduu gibi kendi API'lerinden gerek deerleri okuyup yanstan bir altyap eklendi ve baz sahte sekmeler (CmonDB, Controller) veritabanyla hibir ilgisi olmad iin mmknse tasarmdan gizlendi.</li>
@@ -1293,11 +1300,12 @@ Real OS metrics (CPU, RAM, Disk I/O) cannot be fetched directly from PostgreSQL 
                 <div style="width: 250px; border-left: 1px solid #e5e7eb; padding: 32px 24px; font-size: 0.85rem; background: #fafafa;">
                     <div style="color: #9ca3af; margin-bottom: 16px;">Table of contents</div>
                     <div style="display: flex; flex-direction: column; gap: 12px; color: #4b5563;">
-                        <a href="#changelog-view" onclick="event.preventDefault(); document.getElementById('v1-4-2').scrollIntoView({behavior:'smooth'});" style="color: inherit; text-decoration: none; font-weight: 500;">v1.4.2 Release</a>
+                        <a href="#changelog-view" onclick="event.preventDefault(); document.getElementById('v1-4-3').scrollIntoView({behavior:'smooth'});" style="color: inherit; text-decoration: none; font-weight: 500;">v1.4.3 Release</a>
                         <div style="margin-left: 12px; display: flex; flex-direction: column; gap: 8px;">
                             <a href="#changelog-view" onclick="event.preventDefault(); document.getElementById('release-cycle').scrollIntoView({behavior:'smooth'});" style="color: inherit; text-decoration: none;">Release cycle</a>
                             <a href="#changelog-view" onclick="event.preventDefault(); document.getElementById('whats-new').scrollIntoView({behavior:'smooth'});" style="color: inherit; text-decoration: none;">What's New</a>
                         </div>
+                        <a href="#changelog-view" onclick="event.preventDefault(); document.getElementById('v1-4-2').scrollIntoView({behavior:'smooth'});" style="color: inherit; text-decoration: none; font-weight: 500;">v1.4.2 Release</a>
                         <a href="#changelog-view" onclick="event.preventDefault(); document.getElementById('v1-4-1').scrollIntoView({behavior:'smooth'});" style="color: inherit; text-decoration: none; font-weight: 500;">v1.4.1 Release</a>
                     </div>
                 </div>
@@ -1567,7 +1575,7 @@ Real OS metrics (CPU, RAM, Disk I/O) cannot be fetched directly from PostgreSQL 
         </div>
     </div>
 
-    <script src="/static/main.js?v=49"></script>
+    <script src="/static/main.js?v=50"></script>
 
 
 
