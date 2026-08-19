@@ -13,7 +13,17 @@ async function apiFetch(url, options = {}) {
     if (globalAuthToken) {
         options.headers['Authorization'] = 'Basic ' + globalAuthToken;
     }
-    return fetch(url, options);
+    const res = await fetch(url, options);
+    if (res.status === 401) {
+        // Show login screen if unauthorized
+        const loginScreen = document.getElementById('login-screen');
+        if(loginScreen) {
+            loginScreen.style.display = 'flex';
+        }
+        localStorage.removeItem('auth_token');
+        globalAuthToken = null;
+    }
+    return res;
 }
 document.addEventListener('DOMContentLoaded', () => {
 
@@ -302,6 +312,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
     async function fetchProjects() {
         try {
+            // Clear any old error messages
+            document.querySelectorAll('.loading-state').forEach(el => el.remove());
             const response = await apiFetch('/api/projects');
             if (!response.ok) {
                 const errText = await response.text();
@@ -680,8 +692,8 @@ document.addEventListener('DOMContentLoaded', () => {
                     document.getElementById('modal-edit-project').style.display = 'flex';
                 });
 
-                document.getElementById('cc-clusters-list').appendChild(clusterCard);
-                tbody.appendChild(tr);
+                if (document.getElementById('cc-clusters-list')) { document.getElementById('cc-clusters-list').appendChild(clusterCard); }
+                if (tbody) { tbody.appendChild(tr); }
             });
             
             // Update Donut Chart
@@ -1044,7 +1056,7 @@ if (donutCircle) {
                     <td style="padding: 16px 24px; font-size: 0.85rem; color: #374151;">127.0.0.1</td>
                     <td style="padding: 16px 24px; font-size: 0.85rem; color: #374151;">${log.project_id ? "Project ID: " + log.project_id : "N/A"}</td>
                 `;
-                tbody.appendChild(tr);
+                if (tbody) { tbody.appendChild(tr); }
             });
             
         } catch (e) {
@@ -1849,7 +1861,7 @@ document.addEventListener('DOMContentLoaded', () => {
             if (tbody.firstChild) {
                 tbody.insertBefore(tr, tbody.firstChild);
             } else {
-                tbody.appendChild(tr);
+                if (tbody) { tbody.appendChild(tr); }
             }
             
             closeReportModal();
@@ -2000,7 +2012,7 @@ const usersData = [
                     <button style="background: transparent; border: 1px solid var(--border); border-radius: 4px; padding: 4px 8px; cursor: pointer; color: #6b7280;">...</button>
                 </td>
             `;
-            tbody.appendChild(tr);
+            if (tbody) { tbody.appendChild(tr); }
         });
         
         // Update Sort Arrows
@@ -2216,7 +2228,7 @@ let currentSortCol = null;
                 <td style="padding: 16px 16px; font-size: 0.8rem; color: #6b7280; white-space: nowrap; text-align: right;">${n.seen}</td>
                 <td style="padding: 16px 16px; font-size: 0.85rem; text-align: center;"><button style="background: none; border: 1px solid var(--border); padding: 4px 8px; border-radius: 4px; cursor: pointer;">...</button></td>
             `;
-            tbody.appendChild(tr);
+            if (tbody) { tbody.appendChild(tr); }
         });
     }
 

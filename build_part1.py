@@ -1,0 +1,36 @@
+﻿# -*- coding: utf-8 -*-
+import sys
+
+unified_html = """<div id="settings-view" class="view-section" style="display: none;">
+                <div style="background: var(--glass-bg); border-radius: 8px; border: 1px solid var(--border); box-shadow: 0 4px 6px rgba(0,0,0,0.05); min-height: 500px; display: flex; flex-direction: column;">
+                    
+                    <!-- Horizontal Tab Bar -->
+                    <div style="display: flex; gap: 24px; padding: 0 24px; border-bottom: 1px solid var(--glass-border); font-size: 0.9rem; overflow-x: auto;">
+                        <div class="settings-tab" onclick="switchSettingsTab('profile')" id="tab-profile" style="padding: 16px 0; color: #3a1c94; font-weight: 500; border-bottom: 2px solid #3a1c94; cursor: pointer;">Profile</div>
+                        <div class="settings-tab" onclick="switchSettingsTab('cloud')" id="tab-cloud" style="padding: 16px 0; color: var(--text-main); cursor: pointer;">Cloud storage credentials</div>
+                        <div class="settings-tab" onclick="switchSettingsTab('notifications')" id="tab-notifications" style="padding: 16px 0; color: var(--text-main); cursor: pointer;">Notification services</div>
+                        <div class="settings-tab" onclick="switchSettingsTab('certificates')" id="tab-certificates" style="padding: 16px 0; color: var(--text-main); cursor: pointer;">Certificate management</div>
+                        <div class="settings-tab" onclick="switchSettingsTab('license')" id="tab-license" style="padding: 16px 0; color: var(--text-main); cursor: pointer;">License</div>
+                        <div class="settings-tab" onclick="switchSettingsTab('addons')" id="tab-addons" style="padding: 16px 0; color: var(--text-main); cursor: pointer;">Addons</div>
+                        <div class="settings-tab" onclick="switchSettingsTab('diagnostics')" id="tab-diagnostics" style="padding: 16px 0; color: var(--text-main); cursor: pointer;">Diagnostics</div>
+                    </div>
+
+                    <!-- Profile Content -->
+                    <div id="settings-content-profile" class="settings-content-pane" style="flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 40px;">
+                        <div style="width: 90px; height: 90px; border-radius: 50%; background: #ffebeb; color: #e50000; display: flex; align-items: center; justify-content: center; font-size: 2.2rem; font-weight: 400; margin-bottom: 20px;">SK</div>
+                        <div style="font-size: 2rem; font-weight: 500; color: var(--text-main); margin-bottom: 4px;">Stajyer Kullanıcı</div>
+                        <div style="font-size: 1rem; color: var(--text-muted); margin-bottom: 30px;">stajyer@tp.com</div>
+                        <div style="display: flex; flex-direction: column; gap: 12px; font-size: 0.95rem; margin-bottom: 40px; color: var(--text-secondary);">
+                            <div style="display: flex; gap: 8px; justify-content: center;"><span style="color: var(--text-muted); width: 80px; text-align: right;">Time zone:</span><span style="width: 180px;">UTC</span></div>
+                            <div style="display: flex; gap: 8px; justify-content: center;"><span style="color: var(--text-muted); width: 80px; text-align: right;">Username:</span><span style="width: 180px; font-weight: 500;">stajyer@tp.com</span></div>
+                            <div style="display: flex; gap: 8px; justify-content: center;"><span style="color: var(--text-muted); width: 80px; text-align: right;">Team:</span><span style="width: 180px;">admins</span></div>
+                            <div style="display: flex; gap: 8px; justify-content: center;"><span style="color: var(--text-muted); width: 80px; text-align: right;">Origin:</span><span style="width: 180px;">cmon</span></div>
+                        </div>
+                        <div style="display: flex; flex-direction: column; align-items: center; gap: 16px;">
+                            <button style="background: #3a1c94; color: white; border: none; border-radius: 6px; padding: 10px 24px; font-size: 0.95rem; cursor: pointer;">Settings</button>
+                            <a href="#" style="color: #3a1c94; text-decoration: none; font-size: 0.95rem;">Change password</a>
+                        </div>
+                    </div>
+"""
+with open('unified.part1', 'w', encoding='utf-8') as f:
+    f.write(unified_html)
