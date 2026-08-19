@@ -698,7 +698,7 @@ document.addEventListener('DOMContentLoaded', () => {
             
             // Update Donut Chart
             const el_cc_total_clusters = document.getElementById('cc-total-clusters'); if(el_cc_total_clusters) el_cc_total_clusters.innerText = `${data.length} Clusters`;
-            const el1 = document.getElementById('cc-donut-center-text'); if(el1) el1.innerText = operationalCount;
+{ const TMP_EL = document.getElementById('cc-donut-center-text'); if(TMP_EL) {             const el1 = TMP_EL; if(el1) el1.innerText = operationalCount; } }
             
             const radius = 80;
             const circumference = 2 * Math.PI * radius; // ~502.6
@@ -1143,20 +1143,20 @@ if (donutCircle) {
                     const m = node.metrics;
                     if(m && m.ping !== undefined) {
                         document.getElementById("metric-" + node.id + "-status").className = 'status-badge status-online';
-                        document.getElementById("metric-" + node.id + "-status").innerText = 'Aktif';
+{ const TMP_EL = document.getElementById("metric-" + node.id + "-status"); if(TMP_EL) {                         TMP_EL.innerText = 'Aktif'; } }
                         
-                        document.getElementById("metric-" + node.id + "-ping").innerText = m.ping;
-                        document.getElementById("metric-" + node.id + "-lag").innerText = m.lag;
-                        document.getElementById("metric-" + node.id + "-storage").innerText = m.storage;
-                        document.getElementById("metric-" + node.id + "-conn").innerText = m.connections;
-                        document.getElementById("metric-" + node.id + "-xact").innerText = m.xact;
-                        document.getElementById("metric-" + node.id + "-cache").innerText = m.cache_hit;
-                        document.getElementById("metric-" + node.id + "-version").innerText = m.version;
-                        document.getElementById("metric-" + node.id + "-uptime").innerText = m.uptime;
-                        document.getElementById("metric-" + node.id + "-plates").innerText = m.plates;
+{ const TMP_EL = document.getElementById("metric-" + node.id + "-ping"); if(TMP_EL) {                         TMP_EL.innerText = m.ping; } }
+{ const TMP_EL = document.getElementById("metric-" + node.id + "-lag"); if(TMP_EL) {                         TMP_EL.innerText = m.lag; } }
+{ const TMP_EL = document.getElementById("metric-" + node.id + "-storage"); if(TMP_EL) {                         TMP_EL.innerText = m.storage; } }
+{ const TMP_EL = document.getElementById("metric-" + node.id + "-conn"); if(TMP_EL) {                         TMP_EL.innerText = m.connections; } }
+{ const TMP_EL = document.getElementById("metric-" + node.id + "-xact"); if(TMP_EL) {                         TMP_EL.innerText = m.xact; } }
+{ const TMP_EL = document.getElementById("metric-" + node.id + "-cache"); if(TMP_EL) {                         TMP_EL.innerText = m.cache_hit; } }
+{ const TMP_EL = document.getElementById("metric-" + node.id + "-version"); if(TMP_EL) {                         TMP_EL.innerText = m.version; } }
+{ const TMP_EL = document.getElementById("metric-" + node.id + "-uptime"); if(TMP_EL) {                         TMP_EL.innerText = m.uptime; } }
+{ const TMP_EL = document.getElementById("metric-" + node.id + "-plates"); if(TMP_EL) {                         TMP_EL.innerText = m.plates; } }
                     } else {
                         document.getElementById("metric-" + node.id + "-status").className = 'status-badge status-offline';
-                        document.getElementById("metric-" + node.id + "-status").innerText = 'Çevrimdışı';
+{ const TMP_EL = document.getElementById("metric-" + node.id + "-status"); if(TMP_EL) {                         TMP_EL.innerText = 'Çevrimdışı'; } }
                     }
                 });
             });
@@ -1231,29 +1231,29 @@ if (donutCircle) {
             const res = await apiFetch(`/api/nodes/${nodeId}/metrics`);
             if(!res.ok) {
                 document.getElementById('modal-metric-status').className = 'status-badge status-offline';
-                document.getElementById('modal-metric-status').innerText = 'Hata (502)';
+{ const TMP_EL = document.getElementById('modal-metric-status'); if(TMP_EL) {                 TMP_EL.innerText = 'Hata (502)'; } }
                 return;
             }
             const data = await res.json();
             
             if(!data || data.status !== 'online') {
                 document.getElementById('modal-metric-status').className = 'status-badge status-offline';
-                document.getElementById('modal-metric-status').innerText = 'Offline';
+{ const TMP_EL = document.getElementById('modal-metric-status'); if(TMP_EL) {                 TMP_EL.innerText = 'Offline'; } }
                 return;
             }
             
             document.getElementById('modal-metric-status').className = 'status-badge status-online';
-            document.getElementById('modal-metric-status').innerText = 'Aktif';
+{ const TMP_EL = document.getElementById('modal-metric-status'); if(TMP_EL) {             TMP_EL.innerText = 'Aktif'; } }
             
-            document.getElementById('modal-metric-ping').innerText = data.ping || '-';
-            document.getElementById('modal-metric-lag').innerText = data.lag || '0ms';
-            document.getElementById('modal-metric-storage').innerText = data.storage || '-';
-            document.getElementById('modal-metric-conn').innerText = data.connections || '-';
-            document.getElementById('modal-metric-xact').innerText = data.xact || '-';
-            document.getElementById('modal-metric-cache').innerText = data.cache_hit || '-';
-            document.getElementById('modal-metric-uptime').innerText = data.uptime || '-';
-            document.getElementById('modal-metric-version').innerText = data.version || '-';
-            document.getElementById('modal-metric-plates').innerText = data.plates || 'N/A';
+{ const TMP_EL = document.getElementById('modal-metric-ping'); if(TMP_EL) {             TMP_EL.innerText = data.ping || '-'; } }
+{ const TMP_EL = document.getElementById('modal-metric-lag'); if(TMP_EL) {             TMP_EL.innerText = data.lag || '0ms'; } }
+{ const TMP_EL = document.getElementById('modal-metric-storage'); if(TMP_EL) {             TMP_EL.innerText = data.storage || '-'; } }
+{ const TMP_EL = document.getElementById('modal-metric-conn'); if(TMP_EL) {             TMP_EL.innerText = data.connections || '-'; } }
+{ const TMP_EL = document.getElementById('modal-metric-xact'); if(TMP_EL) {             TMP_EL.innerText = data.xact || '-'; } }
+{ const TMP_EL = document.getElementById('modal-metric-cache'); if(TMP_EL) {             TMP_EL.innerText = data.cache_hit || '-'; } }
+{ const TMP_EL = document.getElementById('modal-metric-uptime'); if(TMP_EL) {             TMP_EL.innerText = data.uptime || '-'; } }
+{ const TMP_EL = document.getElementById('modal-metric-version'); if(TMP_EL) {             TMP_EL.innerText = data.version || '-'; } }
+{ const TMP_EL = document.getElementById('modal-metric-plates'); if(TMP_EL) {             TMP_EL.innerText = data.plates || 'N/A'; } }
             
         } catch(e) {
             console.error("Modal metrics fetch error:", e);
@@ -1268,10 +1268,10 @@ if (donutCircle) {
         
         // Reset metrics UI
         document.getElementById('modal-metric-status').className = 'status-badge status-offline';
-        document.getElementById('modal-metric-status').innerText = 'Loading...';
+{ const TMP_EL = document.getElementById('modal-metric-status'); if(TMP_EL) {         TMP_EL.innerText = 'Loading...'; } }
         const spinnerHtml = '<svg class="spinner" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 1 1-6.219-8.56"></path></svg> Yükleniyor...';
         ['ping', 'lag', 'storage', 'conn', 'xact', 'cache', 'uptime', 'version', 'plates'].forEach(m => {
-            document.getElementById(`modal-metric-${m}`).innerHTML = spinnerHtml;
+{ const TMP_EL = document.getElementById(`modal-metric-${m}`); if(TMP_EL) {             TMP_EL.innerHTML = spinnerHtml; } }
         });
         
         modalEditNode.style.display = 'flex';
