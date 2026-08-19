@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Sunucu Yönetim ve Replikasyon</title>
-    <link rel="stylesheet" href="/static/style.css?v=19">
+    <link rel="stylesheet" href="/static/style.css?v=20">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 </head>
 <body>
@@ -948,17 +948,7 @@ Real OS metrics (CPU, RAM, Disk I/O) cannot be fetched directly from PostgreSQL 
             <div class="settings-sidebar-item" data-category="System" style="color: #4b5563; font-size: 0.85rem; cursor: pointer; padding-left: 13px;">System</div>
             <div class="settings-sidebar-item" data-category="Threshold" style="color: #4b5563; font-size: 0.85rem; cursor: pointer; padding-left: 13px;">Threshold</div>
         </div>
-            <div style="color: #4b5563; font-size: 0.85rem; cursor: default; padding-left: 13px; opacity: 0.7;">Cluster <br><span style="font-size: 0.65rem; color: #ef4444; font-weight: bold;">[PLACEHOLDER]</span></div>
-            <div style="color: #4b5563; font-size: 0.85rem; cursor: default; padding-left: 13px; opacity: 0.7;">CmonDB <br><span style="font-size: 0.65rem; color: #ef4444; font-weight: bold;">[PLACEHOLDER]</span></div>
-            <div style="color: #4b5563; font-size: 0.85rem; cursor: default; padding-left: 13px; opacity: 0.7;">Controller <br><span style="font-size: 0.65rem; color: #ef4444; font-weight: bold;">[PLACEHOLDER]</span></div>
-            <div style="color: #4b5563; font-size: 0.85rem; cursor: default; padding-left: 13px; opacity: 0.7;">Long Query <br><span style="font-size: 0.65rem; color: #ef4444; font-weight: bold;">[PLACEHOLDER]</span></div>
-            <div style="color: #4b5563; font-size: 0.85rem; cursor: default; padding-left: 13px; opacity: 0.7;">Replication <br><span style="font-size: 0.65rem; color: #ef4444; font-weight: bold;">[PLACEHOLDER]</span></div>
-            <div style="color: #4b5563; font-size: 0.85rem; cursor: default; padding-left: 13px; opacity: 0.7;">Retention <br><span style="font-size: 0.65rem; color: #ef4444; font-weight: bold;">[PLACEHOLDER]</span></div>
-            <div style="color: #4b5563; font-size: 0.85rem; cursor: default; padding-left: 13px; opacity: 0.7;">Sampling <br><span style="font-size: 0.65rem; color: #ef4444; font-weight: bold;">[PLACEHOLDER]</span></div>
-            <div style="color: #4b5563; font-size: 0.85rem; cursor: default; padding-left: 13px; opacity: 0.7;">Swapping <br><span style="font-size: 0.65rem; color: #ef4444; font-weight: bold;">[PLACEHOLDER]</span></div>
-            <div style="color: #4b5563; font-size: 0.85rem; cursor: default; padding-left: 13px; opacity: 0.7;">System <br><span style="font-size: 0.65rem; color: #ef4444; font-weight: bold;">[PLACEHOLDER]</span></div>
-            <div style="color: #4b5563; font-size: 0.85rem; cursor: default; padding-left: 13px; opacity: 0.7;">Threshold <br><span style="font-size: 0.65rem; color: #ef4444; font-weight: bold;">[PLACEHOLDER]</span></div>
-        </div>
+            
         
         <!-- Main content area -->
         <div style="flex: 1; background: white; border: 1px solid var(--border); border-radius: 8px; overflow: hidden;">
@@ -1154,7 +1144,9 @@ Real OS metrics (CPU, RAM, Disk I/O) cannot be fetched directly from PostgreSQL 
                     
                     <h3 style="color: #4b5563; font-weight: 400; font-size: 1.4rem; margin-bottom: 16px;">What's New</h3>
                     <ul style="color: #4b5563; line-height: 1.7; padding-left: 20px; margin-bottom: 40px;">
-                        <li><span style="font-weight: 600;">Feature:</span> PostgreSQL Fiziksel Entegrasyonu: "Settings" sekmesinde yer alan PostgreSQL motor parametreleri (shared_buffers, work_mem, max_connections, wal_level, max_replication_slots, log_min_duration_statement vb.) artk sadece veritabanmza kaydedilmekle kalmyor; arkaplanda alan dzenli bir Python isisi sayesinde ilgili kmenin tm Node'larna ngilizce ('ALTER SYSTEM SET...') SQL komutlar araclyla fiziksel olarak gnderilip 'SELECT pg_reload_conf()' komutuyla annda aktif ediliyor. Ayrnca gelecekte kkmeye eklenecek yeni sunuculara da bu proje ayarlarnn otomatik olarak yklenmesi iin eklemeler yapld.</li>
+                        <li><span style="font-weight: 600;">Fix:</span> "Settings" (Ayarlar) sayfasndaki sahte etiketlerin kaldrlmas/gizlenmesi ileminde meydana gelen kk bir HTML kapan etiketi kaymas nedeniyle 'User management' ve 'Backups' sayfalarnn saa doru kayarak yapsnn bozulmas (UI Bug) sorunu dzeltildi. Artk tm ekranlar ana gvdeye tam oturuyor.</li>
+<li><span style="font-weight: 600;">Fix:</span> Uygulama srm geikmesi (Render Cache) nedeniyle "Clusters" sayfasnda tklanan projelerin yeni ekranda/sekmede almayp i ie gemesi sorunu son v=20 srmyle tamamen zld. Eer u an kullanyorsanz sayfay tamamen yenileyip (CTRL+F5) dzeldiini grebilirsiniz.</li>
+<li><span style="font-weight: 600;">Feature:</span> PostgreSQL Fiziksel Entegrasyonu: "Settings" sekmesinde yer alan PostgreSQL motor parametreleri (shared_buffers, work_mem, max_connections, wal_level, max_replication_slots, log_min_duration_statement vb.) artk sadece veritabanmza kaydedilmekle kalmyor; arkaplanda alan dzenli bir Python isisi sayesinde ilgili kmenin tm Node'larna ngilizce ('ALTER SYSTEM SET...') SQL komutlar araclyla fiziksel olarak gnderilip 'SELECT pg_reload_conf()' komutuyla annda aktif ediliyor. Ayrnca gelecekte kkmeye eklenecek yeni sunuculara da bu proje ayarlarnn otomatik olarak yklenmesi iin eklemeler yapld.</li>
 <li><span style="font-weight: 600;">Fix:</span> Uygulamaya yaplan nceki gncellemeler srasnda (Nodes listesinin deiimi srasnda) meydana gelen kk bir yazm hatasndan dolay arka plan animasyonlar (Baloncuklar) dhil tm etkileimlerin bozulmas (Syntax Error) sorunu dzeltildi.</li>
 <li><span style="font-weight: 600;">Feature:</span> "Settings" ekrannda artk gerekten var olan PostgreSQL ayarlar (Long Query, Replication, Retention, System vb.) iin API balantlar kuruldu. Sol mendeki deerlere tklandnda tpk "Backup" ksmnda olduu gibi kendi API'lerinden gerek deerleri okuyup yanstan bir altyap eklendi ve baz sahte sekmeler (CmonDB, Controller) veritabanyla hibir ilgisi olmad iin mmknse tasarmdan gizlendi.</li>
 <li><span style="font-weight: 600;">Fix:</span> "Şeffaflık kuralları" gereğince, Settings menüsünde görsel bütünlük için tasarlanmış fakat henüz API altyapısı yazılmamış olan (Çalışmayan) sol ve üst sekme başlıklarına açıkça kırmızı renkle "[PLACEHOLDER]" uyarısı eklendi.</li>
@@ -1425,7 +1417,7 @@ Real OS metrics (CPU, RAM, Disk I/O) cannot be fetched directly from PostgreSQL 
         </div>
     </div>
 
-    <script src="/static/main.js?v=19"></script>
+    <script src="/static/main.js?v=20"></script>
 
 
 

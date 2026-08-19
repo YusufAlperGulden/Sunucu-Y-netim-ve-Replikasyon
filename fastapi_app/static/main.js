@@ -204,7 +204,11 @@ document.addEventListener('DOMContentLoaded', () => {
         const view = document.getElementById(hash);
         if (view) view.style.display = 'block';
         
-        if (hash === 'projects-view') {
+        if (hash === 'project-detail-view') {
+            document.querySelectorAll('.view-section').forEach(section => section.style.display = 'none');
+            const dv = document.getElementById('project-detail-view');
+            if(dv) dv.style.display = 'block';
+        } else if (hash === 'projects-view') {
             if(typeof showProjectsView === 'function') showProjectsView();
             if(typeof stopDashboardInterval === 'function') stopDashboardInterval();
         } else if (hash === 'audit-logs-view') {
@@ -298,7 +302,10 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function showDetailView(proj) {
+        window.location.hash = 'project-detail-view';
         projectsContainer.style.display = 'none';
+        const clustersView = document.getElementById('clusters-view');
+        if (clustersView) clustersView.style.display = 'none';
         detailView.style.display = 'block';
         currentProjectId = proj.id;
         
@@ -1472,7 +1479,7 @@ if (donutCircle) {
     });
     
     // Navigation
-    btnBackProjects.addEventListener('click', () => { window.location.hash = 'projects-view'; });
+    btnBackProjects.addEventListener('click', () => { window.location.hash = 'clusters-view'; });
 
     // Form: Edit Project
     btnCloseEditProjModal.addEventListener('click', () => modalEditProj.style.display = 'none');
@@ -2237,12 +2244,7 @@ const usersData = [
 
 // --- NODES PAGE MANAGEMENT ---
 document.addEventListener('DOMContentLoaded', () => {
-    const nodesPageData = [
-        { host: 'plaka-master-node', port: '5432', ip: '192.168.1.10', status: 'Operational', type: 'PostgreSQL', role: 'Primary', badge: {text: 'Writable', color: '#16a34a', bg: '#dcfce7'}, cluster: 'Araç Plaka Takip Sistemi', clusterLogo: '<ellipse cx="12" cy="5" rx="9" ry="3"></ellipse><path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3"></path><path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5"></path>', clusterColor: '#3b82f6', version: '18.4', seen: 'in 1 minute' },
-        { host: 'plaka-replica-node', port: '5432', ip: '192.168.1.11', status: 'Operational', type: 'PostgreSQL', role: 'Replica', badge: {text: 'Readonly', color: '#4b5563', bg: '#f3f4f6'}, cluster: 'Araç Plaka Takip Sistemi', clusterLogo: '<ellipse cx="12" cy="5" rx="9" ry="3"></ellipse><path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3"></path><path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5"></path>', clusterColor: '#3b82f6', version: '18.4', seen: 'in 1 minute' },
-        { host: 'email-master-node', port: '5432', ip: '10.0.0.50', status: 'Operational', type: 'PostgreSQL', role: 'Primary', badge: {text: 'Writable', color: '#16a34a', bg: '#dcfce7'}, cluster: 'E-mail Okuma Programı', clusterLogo: '<path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline>', clusterColor: '#1f2937', version: '16.4', seen: 'in 2 minutes' },
-        { host: 'email-replica-node', port: '5432', ip: '10.0.0.51', status: 'Operational', type: 'PostgreSQL', role: 'Replica', badge: {text: 'Readonly', color: '#4b5563', bg: '#f3f4f6'}, cluster: 'E-mail Okuma Programı', clusterLogo: '<path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline>', clusterColor: '#1f2937', version: '16.4', seen: 'in 2 minutes' }
-    ];
+    
 
 
     let currentFilter = 'All';
