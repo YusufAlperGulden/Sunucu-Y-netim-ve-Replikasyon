@@ -2605,3 +2605,18 @@ document.addEventListener('DOMContentLoaded', () => {
             targetTab.classList.add('active-tab');
         }
     };
+
+
+    // Add search listener for settings
+    const settingsSearchInput = document.getElementById('settings-search-input');
+    if (settingsSearchInput) {
+        settingsSearchInput.addEventListener('input', () => {
+            // Debounce or just load directly since data fetch is fast or we could cache it, 
+            // but for simplicity we'll just call loadSettings
+            // Actually it hits API every time. Let's debounce it slightly or just do it.
+            if (window.settingsSearchTimeout) clearTimeout(window.settingsSearchTimeout);
+            window.settingsSearchTimeout = setTimeout(() => {
+                loadSettings();
+            }, 300);
+        });
+    }
