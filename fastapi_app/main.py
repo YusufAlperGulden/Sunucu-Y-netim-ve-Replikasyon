@@ -686,7 +686,7 @@ def test_ssh_connection(node_id: int, db: Session = Depends(get_db)):
 def debug_db(db: Session = Depends(get_db)):
     from sqlalchemy import text
     try:
-        res = db.execute(text("SELECT column_name FROM information_schema.columns WHERE table_name='database_nodes';"))
+        res = db.execute(text("SELECT column_name FROM information_schema.columns WHERE table_name='nodes';"))
         columns = [row[0] for row in res.fetchall()]
         
         # Test project 2 query directly
