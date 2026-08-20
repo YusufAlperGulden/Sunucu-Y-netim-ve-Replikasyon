@@ -193,7 +193,7 @@ document.addEventListener('DOMContentLoaded', () => {
         let hash = window.location.hash.substring(1) || 'projects-view';
         
         // If hash is a changelog section anchor (e.g. v1-4-2), show changelog-view and scroll
-        const changelogAnchors = ['v1-7-0', 'v1-6-4', 'v1-6-3', 'v1-6-2', 'v1-6-1', 'v1-6-0', 'v1-5-9', 'v1-5-8', 'v1-5-7', 'v1-5-6', 'v1-5-5', 'v1-5-4', 'v1-5-3', 'v1-5-2', 'v1-5-1', 'v1-5-0', 'v1-4-9', 'v1-4-8', 'v1-4-7', 'v1-4-6', 'v1-4-5', 'v1-4-4', 'v1-4-3', 'v1-4-2', 'v1-4-1', 'release-cycle', 'whats-new'];
+        const changelogAnchors = ['v1-7-2', 'v1-7-1', 'v1-7-0', 'v1-6-4', 'v1-6-3', 'v1-6-2', 'v1-6-1', 'v1-6-0', 'v1-5-9', 'v1-5-8', 'v1-5-7', 'v1-5-6', 'v1-5-5', 'v1-5-4', 'v1-5-3', 'v1-5-2', 'v1-5-1', 'v1-5-0', 'v1-4-9', 'v1-4-8', 'v1-4-7', 'v1-4-6', 'v1-4-5', 'v1-4-4', 'v1-4-3', 'v1-4-2', 'v1-4-1', 'release-cycle', 'whats-new'];
         if (changelogAnchors.includes(hash)) {
             document.querySelectorAll('.view-section').forEach(s => s.style.display = 'none');
             const cv = document.getElementById('changelog-view');
@@ -1390,12 +1390,18 @@ window.exportAuditLogsCsv = function() {
                         const projColor = colors[proj.id % colors.length] || 'var(--primary)';
                         
                         const headerHtml = `
-                            <div style="display: flex; justify-content: space-between; align-items: flex-start; border-bottom: 1px solid var(--border); padding-bottom: 12px; margin-bottom: 20px;">
+                            <div class="dash-node-header" data-proj-id="${proj.id}" style="display: flex; justify-content: space-between; align-items: flex-start; border-bottom: 1px solid var(--border); padding-bottom: 12px; margin-bottom: 20px; cursor: pointer;" title="Click to view Node List for ${escapeHTML(proj.name)}">
                                 <div>
                                     <div style="font-size: 0.8rem; color: ${projColor}; text-transform: uppercase; font-weight: bold; margin-bottom: 4px;">${escapeHTML(proj.name)}</div>
                                     <h2 style="margin: 0; font-size: 1.2rem;">${escapeHTML(node.name)} <span style="font-size: 0.9rem; font-weight: normal; color: var(--text-muted);">(${escapeHTML(node.role)})</span></h2>
                                 </div>
-                                <span class="status-badge status-offline" id="metric-${node.id}-status">Offline</span>
+                                <div style="display:flex;flex-direction:column;align-items:flex-end;gap:6px;">
+                                    <span class="status-badge status-offline" id="metric-${node.id}-status">Offline</span>
+                                    <span style="font-size:0.75rem;color:#3a1c94;font-weight:500;display:flex;align-items:center;gap:3px;">
+                                        View nodes
+                                        <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"></polyline></svg>
+                                    </span>
+                                </div>
                             </div>
                         `;
                         
@@ -1417,6 +1423,24 @@ window.exportAuditLogsCsv = function() {
                             </div>
                         `;
                         col.innerHTML = headerHtml + metricsHtml;
+
+                        // ── Click header → navigate to Clusters > Nodes > Node List ──
+                        const headerEl = col.querySelector('.dash-node-header');
+                        if (headerEl) {
+                            headerEl.addEventListener('click', () => {
+                                // Find the full project object from allProjs
+                                const targetProj = allProjs.find(p => p.id === proj.id);
+                                if (!targetProj) return;
+                                // Open project detail view
+                                showDetailView(targetProj);
+                                // After rendering, switch to Nodes tab
+                                setTimeout(() => {
+                                    const nodesTab = document.querySelector('.cluster-tab[data-tab="nodes"]');
+                                    if (nodesTab) nodesTab.click();
+                                }, 80);
+                            });
+                        }
+
                         container.appendChild(col);
                     }
                     

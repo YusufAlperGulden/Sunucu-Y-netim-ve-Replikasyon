@@ -371,3 +371,17 @@ body {
 .cluster-subtab:hover {
     color: #374151;
 }
+
+/* Home screen node card header — clickable, navigates to Node List */
+.dash-node-header {
+    transition: background 0.15s ease;
+    border-radius: 6px 6px 0 0;
+    padding: 8px 4px;
+    margin: -8px -4px 0 -4px;
+}
+.dash-node-header:hover {
+    background: #f5f3ff;
+}
+.dash-node-header:hover h2 {
+    color: #3a1c94;
+}
