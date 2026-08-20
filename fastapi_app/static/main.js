@@ -1868,7 +1868,39 @@ window.exportAuditLogsCsv = function() {
         });
     }
 
-    // Button: Refresh Logs
+    // Button: Remove Cluster
+    const btnRemoveCluster = document.getElementById('btn-remove-cluster');
+    if (btnRemoveCluster) {
+        btnRemoveCluster.addEventListener('click', async () => {
+            if (!currentProjectId) return;
+            const projName = document.getElementById('detail-proj-name')?.innerText || `ID: ${currentProjectId}`;
+            if (!confirm(`"${projName}" cluster'ını kalıcı olarak silmek istediğinizden emin misiniz?\n\nBu işlem geri alınamaz. Tüm node kayıtları da silinecektir.`)) return;
+
+            btnRemoveCluster.innerText = 'Siliniyor...';
+            btnRemoveCluster.disabled = true;
+
+            try {
+                const res = await apiFetch(`/api/projects/${currentProjectId}`, { method: 'DELETE' });
+                if (res.ok) {
+                    // Go back to projects list
+                    currentProjectId = null;
+                    window.location.hash = 'projects-view';
+                    await fetchProjects();
+                    alert(`"${projName}" cluster'ı başarıyla silindi.`);
+                } else {
+                    const data = await res.json().catch(() => ({}));
+                    alert('Silme hatası: ' + (data.detail || res.statusText));
+                    btnRemoveCluster.innerText = 'Remove Cluster';
+                    btnRemoveCluster.disabled = false;
+                }
+            } catch (err) {
+                alert('Sunucu bağlantı hatası.');
+                btnRemoveCluster.innerText = 'Remove Cluster';
+                btnRemoveCluster.disabled = false;
+            }
+        });
+    }
+
     const btnRefreshLogs = document.getElementById('btn-refresh-logs');
     if(btnRefreshLogs) {
         btnRefreshLogs?.addEventListener('click', window.fetchAuditLogs);
