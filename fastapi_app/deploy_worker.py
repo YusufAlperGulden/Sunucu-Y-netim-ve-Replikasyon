@@ -1,4 +1,4 @@
-﻿"""
+"""
 deploy_worker.py -- PostgreSQL Streaming Replication Deployment Automation
 """
 import ast
@@ -79,12 +79,12 @@ def _install_postgresql_debian(ssh, version, sudo, job_id):
     major = version.split(".")[0]
     _append_log(job_id, "Ubuntu/Debian: PostgreSQL " + major + " kuruluyor...")
     cmds = [
-        sudo + " apt-get update -qq",
-        sudo + " apt-get install -y curl ca-certificates gnupg lsb-release",
-        "curl -fsSL https://www.postgresql.org/media/keys/ACCC4CF8.asc | " + sudo + " gpg --dearmor -o /usr/share/keyrings/postgresql-keyring.gpg 2>/dev/null || true",
+        sudo + " DEBIAN_FRONTEND=noninteractive apt-get update -qq",
+        sudo + " DEBIAN_FRONTEND=noninteractive apt-get install -y -q curl ca-certificates gnupg lsb-release",
+        "curl -fsSL https://www.postgresql.org/media/keys/ACCC4CF8.asc | " + sudo + " gpg --dearmor --yes -o /usr/share/keyrings/postgresql-keyring.gpg 2>/dev/null || true",
         "echo \"deb [signed-by=/usr/share/keyrings/postgresql-keyring.gpg] https://apt.postgresql.org/pub/repos/apt $(lsb_release -cs)-pgdg main\" | " + sudo + " tee /etc/apt/sources.list.d/pgdg.list",
-        sudo + " apt-get update -qq",
-        sudo + " apt-get install -y postgresql-" + major + " postgresql-client-" + major,
+        sudo + " DEBIAN_FRONTEND=noninteractive apt-get update -qq",
+        sudo + " DEBIAN_FRONTEND=noninteractive apt-get install -y -q -o Dpkg::Options::=\"--force-confdef\" -o Dpkg::Options::=\"--force-confold\" postgresql-" + major + " postgresql-client-" + major,
     ]
     for cmd in cmds:
         _, stderr, rc = _run(ssh, cmd, job_id, sudo=sudo)
@@ -103,7 +103,7 @@ def _install_postgresql_rhel(ssh, version, sudo, job_id):
     cmds = [
         sudo + " " + pkg + " install -y https://download.postgresql.org/pub/repos/yum/reporpms/EL-$(rpm -E %{rhel})-x86_64/pgdg-redhat-repo-latest.noarch.rpm 2>/dev/null || true",
         sudo + " " + pkg + " module disable -y postgresql 2>/dev/null || true",
-        sudo + " " + pkg + " install -y postgresql" + major + "-server postgresql" + major,
+        sudo + " " + pkg + " install -y -q postgresql" + major + "-server postgresql" + major,
         sudo + " /usr/pgsql-" + major + "/bin/postgresql-" + major + "-setup initdb 2>/dev/null || true",
     ]
     for cmd in cmds:
