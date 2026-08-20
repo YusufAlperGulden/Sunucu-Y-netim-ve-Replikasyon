@@ -1716,6 +1716,12 @@ window.exportAuditLogsCsv = function() {
         const role = document.getElementById('node-role').value;
         const url = document.getElementById('node-url').value.trim();
 
+        // SSH Credentials (opsiyonel)
+        const sshHost     = (document.getElementById('node-ssh-host')?.value || '').trim();
+        const sshPort     = parseInt(document.getElementById('node-ssh-port')?.value || '22') || 22;
+        const sshUser     = (document.getElementById('node-ssh-user')?.value || 'root').trim();
+        const sshPassword = (document.getElementById('node-ssh-password')?.value || '').trim();
+
         if (!name) {
             alert('Sunucu adı boş bırakılamaz.');
             return;
@@ -1729,16 +1735,28 @@ window.exportAuditLogsCsv = function() {
         btnSubmitNode.disabled = true;
 
         try {
+            const payload = { role, name, url };
+            // SSH bilgileri girilmişse payload'a ekle
+            if (sshHost) {
+                payload.ssh_host = sshHost;
+                payload.ssh_port = sshPort;
+                payload.ssh_username = sshUser || 'root';
+                if (sshPassword) payload.ssh_password = sshPassword;
+            }
+
             const response = await apiFetch(`/api/projects/${currentProjectId}/nodes`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ role, name, url })
+                body: JSON.stringify(payload)
             });
             const res = await response.json();
             
             if (response.ok && res.success) {
                 modalAddNode.style.display = 'none';
                 formAddNode.reset();
+                // SSH section'ı kapat
+                const sshSection = document.getElementById('node-ssh-section');
+                if (sshSection) sshSection.style.display = 'none';
                 refreshCurrentProject();
             } else {
                 alert(res.detail || res.message || "Sunucu eklenemedi. Bilgileri kontrol ediniz.");

@@ -175,6 +175,11 @@ class NodeCreate(BaseModel):
     role: str
     name: str
     url: str
+    # SSH Credentials (opsiyonel — sağlanırsa gerçek pg_dump çalışır)
+    ssh_host: str | None = None
+    ssh_port: int = 22
+    ssh_username: str = "root"
+    ssh_password: str | None = None   # Şifre veya key içeriği; AES-256 şifreli saklanır
 
 @app.get("/", response_class=HTMLResponse)
 async def read_root(request: Request):
@@ -411,6 +416,16 @@ async def add_node(project_id: int, node: NodeCreate, background_tasks: Backgrou
     # 2. SAVE (Vault Encryption)
     db_node = DatabaseNode(project_id=proj.id, role=node.role, name=node.name)
     db_node.set_url(node.url) # AES-256 encrypts the url
+
+    # SSH Credentials (opsiyonel)
+    if node.ssh_host and node.ssh_host.strip():
+        db_node.ssh_host = node.ssh_host.strip()
+        db_node.ssh_port = node.ssh_port or 22
+        db_node.ssh_username = node.ssh_username or "root"
+        if node.ssh_password and node.ssh_password.strip():
+            from vault import encrypt as _enc
+            db_node.encrypted_ssh_credential = _enc(node.ssh_password)
+    
     db.add(db_node)
     
     from models import AuditLog
@@ -546,6 +561,11 @@ async def get_project_metrics(project_id: int, db: Session = Depends(get_db)):
 
 class NodeUpdate(BaseModel):
     url: str
+    # SSH Credentials (opsiyonel)
+    ssh_host: str | None = None
+    ssh_port: int = 22
+    ssh_username: str = "root"
+    ssh_password: str | None = None
 
 @app.get('/api/nodes/{node_id}/url', dependencies=[Depends(verify_credentials)])
 def get_node_url(node_id: int, db: Session = Depends(get_db)):
@@ -575,6 +595,20 @@ async def update_node_url(node_id: int, update: NodeUpdate, db: Session = Depend
         return JSONResponse(status_code=400, content={'success': False, 'message': 'Connection test failed. Sunucuya ulaşılamıyor.'})
     
     node.set_url(update.url)
+
+    # SSH Credentials güncelle (opsiyonel — boş gönderilirse silinmez)
+    if update.ssh_host and update.ssh_host.strip():
+        node.ssh_host = update.ssh_host.strip()
+        node.ssh_port = update.ssh_port or 22
+        node.ssh_username = update.ssh_username or "root"
+        if update.ssh_password and update.ssh_password.strip():
+            from vault import encrypt as _enc2
+            node.encrypted_ssh_credential = _enc2(update.ssh_password)
+    elif update.ssh_host == "":
+        # Açıkça boş gönderilirse SSH bilgilerini temizle
+        node.ssh_host = None
+        node.encrypted_ssh_credential = None
+
     db.commit()
     return {'success': True, 'message': 'Node updated securely.'}
 
