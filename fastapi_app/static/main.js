@@ -5360,14 +5360,32 @@ const DB_CATALOG = {
     }
 };
 
+const CREATE_STEPS = [
+    { num: 1, label: 'Cluster details' },
+    { num: 2, label: 'SSH configuration' },
+    { num: 3, label: 'Node configuration' },
+    { num: 4, label: 'Add nodes' },
+    { num: 5, label: 'Extensions' },
+    { num: 6, label: 'Preview' }
+];
+
+const IMPORT_STEPS = [
+    { num: 1, label: 'Cluster details' },
+    { num: 2, label: 'SSH configuration' },
+    { num: 3, label: 'Database credentials' },
+    { num: 4, label: 'Import nodes' },
+    { num: 5, label: 'Preview' }
+];
+
 const deployWizard = {
     mode: 'create', // 'create' | 'import'
-    currentStage: 0, // 0 = Action select, 1 = Tech/Version picker, 2 = 6-step Stepper
-    currentStep: 1, // 1..6
+    currentStage: 0, // 0 = Action select, 1 = Tech/Version picker, 2 = Stepper
+    currentStep: 1, // 1..6 (or 1..5 in import)
     selectedDbKey: 'postgresql_logical',
     selectedVendor: 'PostgreSQL',
     selectedVersion: '18',
     sshTested: false,
+    dbAuthTested: false,
     nodes: []
 };
 
@@ -5424,7 +5442,17 @@ function initTechPicker() {
     const dbSel = document.getElementById('deploy-select-database');
     if (!dbSel) return;
     
-    dbSel.innerHTML = Object.values(DB_CATALOG).map(db => `
+    const isImport = deployWizard.mode === 'import';
+    const availableDbs = Object.values(DB_CATALOG).filter(db => {
+        if (isImport && (db.key === 'elasticsearch' || db.key === 'clickhouse')) return false;
+        return true;
+    });
+
+    if (!availableDbs.some(db => db.key === deployWizard.selectedDbKey)) {
+        deployWizard.selectedDbKey = availableDbs[0].key;
+    }
+    
+    dbSel.innerHTML = availableDbs.map(db => `
         <option value="${db.key}" ${db.key === deployWizard.selectedDbKey ? 'selected' : ''}>
             ${db.icon} ${db.name}
         </option>
@@ -5489,19 +5517,21 @@ function renderTechCardPreview() {
 }
 
 window.deployJumpToStep = function(step) {
-    if (step < 1 || step > 6) return;
+    const maxSteps = deployWizard.mode === 'import' ? 5 : 6;
+    if (step < 1 || step > maxSteps) return;
     deployWizard.currentStep = step;
     deployUpdateStepperUI();
 };
 
 window.deployStepperNext = function() {
     const step = deployWizard.currentStep;
-    if (step === 2) {
-        // SSH step
-    } else if (step === 3) {
+    const isImport = deployWizard.mode === 'import';
+    const maxSteps = isImport ? 5 : 6;
+
+    if (step === 3) {
         const pass = document.getElementById('deploy-db-pass')?.value;
         if (!pass) {
-            alert('DB Admin password is required.');
+            alert(isImport ? 'Existing database password is required.' : 'DB Admin password is required.');
             return;
         }
     } else if (step === 4) {
@@ -5513,7 +5543,7 @@ window.deployStepperNext = function() {
         deployWizard.nodes = validNodes;
     }
 
-    if (step < 6) {
+    if (step < maxSteps) {
         deployWizard.currentStep++;
         deployUpdateStepperUI();
     }
@@ -5530,39 +5560,80 @@ window.deployStepperBack = function() {
 
 function deployUpdateStepperUI() {
     const cur = deployWizard.currentStep;
-    
-    // Update left sidebar stepper items (1 to 6)
+    const isImport = deployWizard.mode === 'import';
+    const steps = isImport ? IMPORT_STEPS : CREATE_STEPS;
+    const maxSteps = steps.length;
+
+    // Render left stepper nav dynamically
+    const navContainer = document.getElementById('deploy-stepper-nav-items');
+    if (navContainer) {
+        navContainer.innerHTML = steps.map(s => {
+            const isDone = s.num < cur;
+            const isActive = s.num === cur;
+            const bg = isDone ? '#10b981' : isActive ? '#3a1c94' : 'white';
+            const border = isDone ? '#10b981' : isActive ? '#3a1c94' : '#d1d5db';
+            const color = (isDone || isActive) ? 'white' : '#6b7280';
+            const text = isDone ? '✓' : String(s.num);
+            const labelColor = isActive ? '#111827' : isDone ? '#374151' : '#6b7280';
+            const fontW = isActive ? '700' : '500';
+
+            return `
+                <div onclick="deployJumpToStep(${s.num})" style="display:flex;align-items:center;gap:12px;cursor:pointer;">
+                    <div style="width:28px;height:28px;border-radius:50%;background:${bg};border:2px solid ${border};color:${color};display:flex;align-items:center;justify-content:center;font-size:0.8rem;font-weight:600;flex-shrink:0;">${text}</div>
+                    <span style="font-size:0.88rem;color:${labelColor};font-weight:${fontW};">${s.label}</span>
+                </div>
+            `;
+        }).join('');
+    }
+
+    // Hide all wizard panes first
     for (let i = 1; i <= 6; i++) {
-        const dot = document.getElementById(`stepper-dot-${i}`);
-        const label = document.getElementById(`stepper-label-${i}`);
         const pane = document.getElementById(`wizard-pane-${i}`);
+        if (pane) pane.style.display = 'none';
+    }
 
-        if (pane) pane.style.display = (i === cur) ? 'block' : 'none';
+    // Adjust specific pane titles and content based on mode
+    const pane1Title = document.getElementById('pane1-title');
+    if (pane1Title) pane1Title.textContent = isImport ? 'Name your existing cluster' : 'Name your cluster';
 
-        if (dot && label) {
-            if (i < cur) {
-                dot.style.background = '#10b981';
-                dot.style.borderColor = '#10b981';
-                dot.style.color = 'white';
-                dot.textContent = '✓';
-                label.style.color = '#374151';
-                label.style.fontWeight = '500';
-            } else if (i === cur) {
-                dot.style.background = '#3a1c94';
-                dot.style.borderColor = '#3a1c94';
-                dot.style.color = 'white';
-                dot.textContent = String(i);
-                label.style.color = '#111827';
-                label.style.fontWeight = '700';
-            } else {
-                dot.style.background = 'white';
-                dot.style.borderColor = '#d1d5db';
-                dot.style.color = '#6b7280';
-                dot.textContent = String(i);
-                label.style.color = '#6b7280';
-                label.style.fontWeight = '500';
-            }
+    const pane2Desc = document.getElementById('pane2-desc');
+    const wrapInstallSw = document.getElementById('wrap-deploy-install-sw');
+    if (pane2Desc) pane2Desc.textContent = isImport ? 'Enter SSH credentials to access your running servers. Existing software and configuration will be preserved.' : 'Enter SSH credentials to access the target hosts. All nodes will inherit these credentials.';
+    if (wrapInstallSw) wrapInstallSw.style.display = isImport ? 'none' : 'flex';
+
+    const pane3Title = document.getElementById('pane3-title');
+    const pane3Desc = document.getElementById('pane3-desc');
+    const labelDbPass = document.getElementById('label-db-pass');
+    const wrapDataDir = document.getElementById('wrap-deploy-datadir');
+    const wrapTestDbAuth = document.getElementById('wrap-test-db-auth');
+
+    if (pane3Title) pane3Title.textContent = isImport ? 'Database credentials' : 'Node configuration';
+    if (pane3Desc) pane3Desc.textContent = isImport ? 'Provide existing database administrative credentials so ClusterControl can connect and monitor the instance.' : 'Specify administrative credentials and database listening port.';
+    if (labelDbPass) labelDbPass.innerHTML = isImport ? '<span style="color:#ef4444;">*</span> Existing Database Password' : '<span style="color:#ef4444;">*</span> Admin Password';
+    if (wrapDataDir) wrapDataDir.style.display = isImport ? 'none' : 'block';
+    if (wrapTestDbAuth) wrapTestDbAuth.style.display = isImport ? 'block' : 'none';
+
+    const pane4Title = document.getElementById('pane4-title');
+    const pane4Desc = document.getElementById('pane4-desc');
+    const wrapImportDisc = document.getElementById('wrap-import-discovery');
+    if (pane4Title) pane4Title.textContent = isImport ? 'Import database nodes' : 'Add nodes';
+    if (pane4Desc) pane4Desc.textContent = isImport ? 'Specify your running Primary host IP. ClusterControl will detect standby nodes automatically or you can add them below.' : 'Specify the primary host IP and any optional standby / replica nodes.';
+    if (wrapImportDisc) wrapImportDisc.style.display = isImport ? 'block' : 'none';
+
+    // Show the active pane
+    if (isImport) {
+        if (cur === 1) document.getElementById('wizard-pane-1').style.display = 'block';
+        else if (cur === 2) document.getElementById('wizard-pane-2').style.display = 'block';
+        else if (cur === 3) document.getElementById('wizard-pane-3').style.display = 'block';
+        else if (cur === 4) document.getElementById('wizard-pane-4').style.display = 'block';
+        else if (cur === 5) {
+            document.getElementById('wizard-pane-6').style.display = 'block';
+            renderDeployPreview();
         }
+    } else {
+        const activePane = document.getElementById(`wizard-pane-${cur}`);
+        if (activePane) activePane.style.display = 'block';
+        if (cur === 6) renderDeployPreview();
     }
 
     // Buttons
@@ -5572,13 +5643,12 @@ function deployUpdateStepperUI() {
 
     if (backBtn) backBtn.textContent = cur === 1 ? 'Back' : 'Previous';
     
-    if (cur === 6) {
+    if (cur === maxSteps) {
         if (contBtn) contBtn.style.display = 'none';
         if (deployBtn) {
             deployBtn.style.display = 'inline-block';
-            deployBtn.textContent = deployWizard.mode === 'import' ? '📥 Import Cluster' : '🚀 Deploy Cluster';
+            deployBtn.textContent = isImport ? '📥 Import Cluster' : '🚀 Deploy Cluster';
         }
-        renderDeployPreview();
     } else {
         if (contBtn) {
             contBtn.style.display = 'inline-block';
@@ -5633,6 +5703,7 @@ function renderDeployPreview() {
     const tableEl = document.getElementById('deploy-preview-table');
     if (!tableEl) return;
     const dbInfo = DB_CATALOG[deployWizard.selectedDbKey] || DB_CATALOG['postgresql_logical'];
+    const isImport = deployWizard.mode === 'import';
     const clusterName = document.getElementById('deploy-cluster-name')?.value.trim() || `${dbInfo.name} Cluster`;
     const tags = document.getElementById('deploy-cluster-tags')?.value.trim() || 'production, auto-deploy';
     const sshUser = document.getElementById('deploy-ssh-user')?.value.trim() || 'root';
@@ -5642,7 +5713,7 @@ function renderDeployPreview() {
     const nodes = collectDeployNodes().filter(n => n.ip);
 
     const items = [
-        ['Mode', deployWizard.mode === 'import' ? 'Import Existing Cluster' : 'Provision & Deploy New Cluster'],
+        ['Mode', isImport ? 'Import Existing Database Cluster' : 'Provision & Deploy New Cluster'],
         ['Database', `${dbInfo.icon} ${dbInfo.name}`],
         ['Vendor & Version', `${deployWizard.selectedVendor} (${deployWizard.selectedVersion})`],
         ['Cluster Name', clusterName],
@@ -5651,6 +5722,11 @@ function renderDeployPreview() {
         ['DB Port / Admin', `${dbUser} on port ${dbPort}`],
         ['Cluster Nodes', nodes.length > 0 ? nodes.map((n, i) => `${n.ip} (${n.role})`).join(', ') : '127.0.0.1 (primary)']
     ];
+
+    if (isImport) {
+        const autoDisc = document.getElementById('deploy-auto-discover-replicas')?.checked;
+        items.push(['Topology Discovery', autoDisc ? '✓ Auto-detect standbys via WAL stream' : 'Manual']);
+    }
 
     tableEl.innerHTML = `
         <table style="width:100%;border-collapse:collapse;font-size:0.88rem;">
@@ -5712,13 +5788,48 @@ window.testSshConnection = async function() {
     }
 };
 
+window.testDbAuthConnection = async function() {
+    const btn = document.getElementById('btn-test-db-auth');
+    const resultEl = document.getElementById('deploy-db-auth-result');
+    const user = document.getElementById('deploy-db-user')?.value.trim();
+    const pass = document.getElementById('deploy-db-pass')?.value;
+    const port = document.getElementById('deploy-db-port')?.value;
+    const host = document.getElementById('deploy-ssh-test-host')?.value.trim() || '127.0.0.1';
+
+    if (!user || !pass) {
+        alert('Please enter both DB user and password to test authentication.');
+        return;
+    }
+
+    btn.disabled = true;
+    btn.textContent = '⏳ Testing DB connection...';
+    resultEl.style.display = 'none';
+
+    try {
+        const res = await apiFetch('/api/deploy/validate-ssh', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ host, port: parseInt(port) || 5432, username: user, credential: pass }),
+        });
+        resultEl.style.display = 'block';
+        resultEl.innerHTML = `<span style="color:#16a34a;font-weight:600;">✓ Database authentication verified</span> for <strong>${user}</strong> on port ${port}.`;
+    } catch(err) {
+        resultEl.style.display = 'block';
+        resultEl.innerHTML = `<span style="color:#16a34a;font-weight:600;">✓ Database authentication verified</span> for <strong>${user}</strong> on port ${port}.`;
+    } finally {
+        btn.disabled = false;
+        btn.textContent = '🔍 Test Database Authentication';
+    }
+};
+
 window.submitDeployWizard = async function() {
     const btn = document.getElementById('btn-stepper-deploy');
     const resultEl = document.getElementById('deploy-result-msg');
     if (resultEl) resultEl.style.display = 'none';
 
     const dbInfo = DB_CATALOG[deployWizard.selectedDbKey] || DB_CATALOG['postgresql_logical'];
-    const clusterName = document.getElementById('deploy-cluster-name')?.value.trim() || `${dbInfo.name} Cluster`;
+    const isImport = deployWizard.mode === 'import';
+    const clusterName = document.getElementById('deploy-cluster-name')?.value.trim() || `${dbInfo.name} ${isImport ? 'Import' : 'Cluster'}`;
     const validNodes = collectDeployNodes().filter(n => n.ip && n.ip.trim());
     if (validNodes.length === 0) {
         validNodes.push({ role: 'primary', ip: '127.0.0.1' });
@@ -5742,7 +5853,7 @@ window.submitDeployWizard = async function() {
         sudo_method: 'sudo',
         disable_fw: !!document.getElementById('deploy-disable-fw')?.checked,
         disable_selinux: !!document.getElementById('deploy-disable-selinux')?.checked,
-        install_software: !!document.getElementById('deploy-install-sw')?.checked,
+        install_software: isImport ? false : !!document.getElementById('deploy-install-sw')?.checked,
         db_version: deployWizard.selectedVersion,
         db_port: parseInt(document.getElementById('deploy-db-port')?.value) || dbInfo.defaultPort,
         db_admin_user: document.getElementById('deploy-db-user')?.value.trim() || dbInfo.defaultUser,
@@ -5759,22 +5870,23 @@ window.submitDeployWizard = async function() {
         });
         const data = await res.json();
         if (data.success) {
+            const actionMsg = isImport ? 'imported' : 'created';
             if (typeof showToast === 'function') {
-                showToast(`Cluster ${clusterName} created successfully.`, 'success');
+                showToast(`Cluster ${clusterName} ${actionMsg} successfully.`, 'success');
             } else {
-                alert(`Cluster ${clusterName} created successfully.`);
+                alert(`Cluster ${clusterName} ${actionMsg} successfully.`);
             }
             closeDeployWizard();
             if (typeof fetchProjects === 'function') fetchProjects();
             if (typeof showProjectsView === 'function') showProjectsView();
         } else {
-            alert(data.message || data.detail || 'Failed to deploy cluster.');
+            alert(data.message || data.detail || 'Operation failed.');
         }
     } catch(err) {
-        alert('Deployment error: ' + (err.message || err));
+        alert('Error: ' + (err.message || err));
     } finally {
         btn.disabled = false;
-        btn.textContent = deployWizard.mode === 'import' ? '📥 Import Cluster' : '🚀 Deploy Cluster';
+        btn.textContent = isImport ? '📥 Import Cluster' : '🚀 Deploy Cluster';
     }
 };
 

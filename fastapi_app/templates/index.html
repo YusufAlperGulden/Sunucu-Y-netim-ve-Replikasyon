@@ -3177,43 +3177,20 @@ Real OS metrics (CPU, RAM, Disk I/O) cannot be fetched directly from PostgreSQL 
 
       <!-- Stepper & Body -->
       <div style="display:flex;flex:1;overflow:hidden;">
-        <!-- Left Stepper Navigation -->
-        <div id="deploy-stepper-sidebar" style="width:230px;min-width:230px;background:#ffffff;border-right:1px solid #f3f4f6;padding:28px 20px;display:flex;flex-direction:column;position:relative;">
+        <!-- Left Stepper Navigation (Populated dynamically by JS) -->
+        <div id="deploy-stepper-sidebar" style="width:240px;min-width:240px;background:#ffffff;border-right:1px solid #f3f4f6;padding:28px 20px;display:flex;flex-direction:column;position:relative;">
           <!-- Vertical Line -->
-          <div style="position:absolute;left:34px;top:40px;bottom:50px;width:2px;background:#e5e7eb;z-index:0;"></div>
-          <!-- 6 Steps -->
-          <div id="stepper-step-1" onclick="deployJumpToStep(1)" style="display:flex;align-items:center;gap:12px;margin-bottom:28px;position:relative;z-index:1;cursor:pointer;">
-            <div class="stepper-dot" id="stepper-dot-1" style="width:28px;height:28px;border-radius:50%;background:#3a1c94;color:white;display:flex;align-items:center;justify-content:center;font-size:0.8rem;font-weight:600;flex-shrink:0;">1</div>
-            <span class="stepper-label" id="stepper-label-1" style="font-size:0.88rem;color:#111827;font-weight:600;">Cluster details</span>
-          </div>
-          <div id="stepper-step-2" onclick="deployJumpToStep(2)" style="display:flex;align-items:center;gap:12px;margin-bottom:28px;position:relative;z-index:1;cursor:pointer;">
-            <div class="stepper-dot" id="stepper-dot-2" style="width:28px;height:28px;border-radius:50%;background:white;border:2px solid #d1d5db;color:#6b7280;display:flex;align-items:center;justify-content:center;font-size:0.8rem;font-weight:600;flex-shrink:0;">2</div>
-            <span class="stepper-label" id="stepper-label-2" style="font-size:0.88rem;color:#6b7280;font-weight:500;">SSH configuration</span>
-          </div>
-          <div id="stepper-step-3" onclick="deployJumpToStep(3)" style="display:flex;align-items:center;gap:12px;margin-bottom:28px;position:relative;z-index:1;cursor:pointer;">
-            <div class="stepper-dot" id="stepper-dot-3" style="width:28px;height:28px;border-radius:50%;background:white;border:2px solid #d1d5db;color:#6b7280;display:flex;align-items:center;justify-content:center;font-size:0.8rem;font-weight:600;flex-shrink:0;">3</div>
-            <span class="stepper-label" id="stepper-label-3" style="font-size:0.88rem;color:#6b7280;font-weight:500;">Node configuration</span>
-          </div>
-          <div id="stepper-step-4" onclick="deployJumpToStep(4)" style="display:flex;align-items:center;gap:12px;margin-bottom:28px;position:relative;z-index:1;cursor:pointer;">
-            <div class="stepper-dot" id="stepper-dot-4" style="width:28px;height:28px;border-radius:50%;background:white;border:2px solid #d1d5db;color:#6b7280;display:flex;align-items:center;justify-content:center;font-size:0.8rem;font-weight:600;flex-shrink:0;">4</div>
-            <span class="stepper-label" id="stepper-label-4" style="font-size:0.88rem;color:#6b7280;font-weight:500;">Add nodes</span>
-          </div>
-          <div id="stepper-step-5" onclick="deployJumpToStep(5)" style="display:flex;align-items:center;gap:12px;margin-bottom:28px;position:relative;z-index:1;cursor:pointer;">
-            <div class="stepper-dot" id="stepper-dot-5" style="width:28px;height:28px;border-radius:50%;background:white;border:2px solid #d1d5db;color:#6b7280;display:flex;align-items:center;justify-content:center;font-size:0.8rem;font-weight:600;flex-shrink:0;">5</div>
-            <span class="stepper-label" id="stepper-label-5" style="font-size:0.88rem;color:#6b7280;font-weight:500;">Extensions</span>
-          </div>
-          <div id="stepper-step-6" onclick="deployJumpToStep(6)" style="display:flex;align-items:center;gap:12px;position:relative;z-index:1;cursor:pointer;">
-            <div class="stepper-dot" id="stepper-dot-6" style="width:28px;height:28px;border-radius:50%;background:white;border:2px solid #d1d5db;color:#6b7280;display:flex;align-items:center;justify-content:center;font-size:0.8rem;font-weight:600;flex-shrink:0;">6</div>
-            <span class="stepper-label" id="stepper-label-6" style="font-size:0.88rem;color:#6b7280;font-weight:500;">Preview</span>
-          </div>
+          <div id="deploy-stepper-line" style="position:absolute;left:34px;top:40px;bottom:50px;width:2px;background:#e5e7eb;z-index:0;"></div>
+          <!-- Dynamic Stepper Items injected here -->
+          <div id="deploy-stepper-nav-items" style="position:relative;z-index:1;display:flex;flex-direction:column;gap:24px;"></div>
         </div>
 
         <!-- Right Content Panes -->
         <div style="flex:1;overflow-y:auto;padding:28px 32px;">
 
-          <!-- Step 1: Cluster details (Screenshot 4) -->
+          <!-- Step 1: Cluster details (Common) -->
           <div id="wizard-pane-1" class="wizard-pane">
-            <h3 style="font-size:1.15rem;font-weight:700;color:#111827;margin:0 0 20px 0;">Name your cluster</h3>
+            <h3 id="pane1-title" style="font-size:1.15rem;font-weight:700;color:#111827;margin:0 0 20px 0;">Name your cluster</h3>
             <div style="margin-bottom:24px;">
               <label style="display:flex;align-items:center;gap:6px;font-size:0.88rem;font-weight:500;color:#374151;margin-bottom:6px;">
                 Name
@@ -3241,7 +3218,7 @@ Real OS metrics (CPU, RAM, Disk I/O) cannot be fetched directly from PostgreSQL 
           <!-- Step 2: SSH Configuration -->
           <div id="wizard-pane-2" class="wizard-pane" style="display:none;">
             <h3 style="margin:0 0 6px;font-size:1.15rem;font-weight:700;color:#111827;">SSH configuration</h3>
-            <p style="margin:0 0 20px;font-size:0.85rem;color:#6b7280;">Enter SSH credentials to access the target hosts. All nodes will inherit these credentials.</p>
+            <p id="pane2-desc" style="margin:0 0 20px;font-size:0.85rem;color:#6b7280;">Enter SSH credentials to access the target hosts. All nodes will inherit these credentials.</p>
             <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px;">
               <div>
                 <label style="font-size:0.85rem;font-weight:500;color:#374151;display:block;margin-bottom:5px;"><span style="color:#ef4444;">*</span> SSH User</label>
@@ -3287,7 +3264,7 @@ Real OS metrics (CPU, RAM, Disk I/O) cannot be fetched directly from PostgreSQL 
                 <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:0.85rem;color:#374151;">
                   <input id="deploy-disable-selinux" type="checkbox" checked style="width:16px;height:16px;accent-color:#4338ca;"> Disable SELinux / AppArmor
                 </label>
-                <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:0.85rem;color:#374151;">
+                <label id="wrap-deploy-install-sw" style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:0.85rem;color:#374151;">
                   <input id="deploy-install-sw" type="checkbox" checked style="width:16px;height:16px;accent-color:#4338ca;"> Automatically Install Database Software
                 </label>
               </div>
@@ -3296,8 +3273,8 @@ Real OS metrics (CPU, RAM, Disk I/O) cannot be fetched directly from PostgreSQL 
 
           <!-- Step 3: Node / DB Configuration -->
           <div id="wizard-pane-3" class="wizard-pane" style="display:none;">
-            <h3 style="margin:0 0 6px;font-size:1.15rem;font-weight:700;color:#111827;">Node configuration</h3>
-            <p style="margin:0 0 20px;font-size:0.85rem;color:#6b7280;">Specify administrative credentials and database listening port.</p>
+            <h3 id="pane3-title" style="margin:0 0 6px;font-size:1.15rem;font-weight:700;color:#111827;">Node configuration</h3>
+            <p id="pane3-desc" style="margin:0 0 20px;font-size:0.85rem;color:#6b7280;">Specify administrative credentials and database listening port.</p>
             <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;">
               <div>
                 <label style="font-size:0.85rem;font-weight:500;color:#374151;display:block;margin-bottom:5px;"><span style="color:#ef4444;">*</span> DB Port</label>
@@ -3308,28 +3285,45 @@ Real OS metrics (CPU, RAM, Disk I/O) cannot be fetched directly from PostgreSQL 
                 <input id="deploy-db-user" type="text" value="postgres" style="width:100%;padding:9px 12px;border:1px solid #d1d5db;border-radius:8px;font-size:0.88rem;box-sizing:border-box;">
               </div>
               <div style="grid-column:1/-1;">
-                <label style="font-size:0.85rem;font-weight:500;color:#374151;display:block;margin-bottom:5px;"><span style="color:#ef4444;">*</span> Admin Password</label>
+                <label id="label-db-pass" style="font-size:0.85rem;font-weight:500;color:#374151;display:block;margin-bottom:5px;"><span style="color:#ef4444;">*</span> Admin Password</label>
                 <input id="deploy-db-pass" type="password" placeholder="Enter administrative password" style="width:100%;padding:9px 12px;border:1px solid #d1d5db;border-radius:8px;font-size:0.88rem;box-sizing:border-box;">
               </div>
-              <div style="grid-column:1/-1;">
+              <div id="wrap-deploy-datadir" style="grid-column:1/-1;">
                 <label style="font-size:0.85rem;font-weight:500;color:#374151;display:block;margin-bottom:5px;">Data Directory</label>
                 <input id="deploy-db-datadir" type="text" placeholder="/var/lib/postgresql/18/main" style="width:100%;padding:9px 12px;border:1px solid #d1d5db;border-radius:8px;font-size:0.88rem;box-sizing:border-box;">
                 <div style="font-size:0.75rem;color:#9ca3af;margin-top:3px;" id="deploy-db-datadir-hint">Default: /var/lib/postgresql/data</div>
               </div>
             </div>
+
+            <!-- Import DB Auth Test Button -->
+            <div id="wrap-test-db-auth" style="display:none;margin-top:16px;">
+              <button type="button" onclick="testDbAuthConnection()" id="btn-test-db-auth" style="padding:9px 18px;background:#f3f4f6;color:#374151;border:1px solid #d1d5db;border-radius:8px;font-size:0.88rem;font-weight:500;cursor:pointer;">
+                🔍 Test Database Authentication
+              </button>
+              <div id="deploy-db-auth-result" style="margin-top:8px;font-size:0.85rem;display:none;"></div>
+            </div>
           </div>
 
-          <!-- Step 4: Add Nodes -->
+          <!-- Step 4: Add / Import Nodes -->
           <div id="wizard-pane-4" class="wizard-pane" style="display:none;">
-            <h3 style="margin:0 0 6px;font-size:1.15rem;font-weight:700;color:#111827;">Add nodes</h3>
-            <p style="margin:0 0 20px;font-size:0.85rem;color:#6b7280;">Specify the primary host IP and any optional standby / replica nodes.</p>
+            <h3 id="pane4-title" style="margin:0 0 6px;font-size:1.15rem;font-weight:700;color:#111827;">Add nodes</h3>
+            <p id="pane4-desc" style="margin:0 0 20px;font-size:0.85rem;color:#6b7280;">Specify the primary host IP and any optional standby / replica nodes.</p>
+            
+            <!-- Import auto-discovery option -->
+            <div id="wrap-import-discovery" style="display:none;margin-bottom:18px;padding:12px;background:#f5f3ff;border:1px solid #e0e7ff;border-radius:8px;">
+              <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:0.85rem;color:#3730a3;font-weight:500;">
+                <input type="checkbox" id="deploy-auto-discover-replicas" checked style="accent-color:#4338ca;">
+                Automatically discover existing standby / replica nodes from Primary WAL replication streams
+              </label>
+            </div>
+
             <div id="deploy-nodes-list" style="display:flex;flex-direction:column;gap:12px;"></div>
             <button type="button" onclick="addDeployNode()" style="margin-top:14px;padding:8px 16px;background:transparent;border:1px dashed #d1d5db;border-radius:8px;font-size:0.85rem;color:#4338ca;cursor:pointer;display:flex;align-items:center;gap:6px;font-weight:500;" onmouseover="this.style.borderColor='#4338ca'" onmouseout="this.style.borderColor='#d1d5db'">
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg> Add node
             </button>
           </div>
 
-          <!-- Step 5: Extensions -->
+          <!-- Step 5: Extensions (Create Mode only) -->
           <div id="wizard-pane-5" class="wizard-pane" style="display:none;">
             <h3 style="margin:0 0 6px;font-size:1.15rem;font-weight:700;color:#111827;">Extensions</h3>
             <p style="margin:0 0 20px;font-size:0.85rem;color:#6b7280;">Select modules and plugins to automatically initialize on your cluster nodes.</p>
@@ -3365,10 +3359,10 @@ Real OS metrics (CPU, RAM, Disk I/O) cannot be fetched directly from PostgreSQL 
             </div>
           </div>
 
-          <!-- Step 6: Preview -->
+          <!-- Step 6 (or Step 5 for Import): Preview -->
           <div id="wizard-pane-6" class="wizard-pane" style="display:none;">
-            <h3 style="margin:0 0 6px;font-size:1.15rem;font-weight:700;color:#111827;">Preview</h3>
-            <p style="margin:0 0 20px;font-size:0.85rem;color:#6b7280;">Review your cluster deployment topology before proceeding.</p>
+            <h3 id="pane-preview-title" style="margin:0 0 6px;font-size:1.15rem;font-weight:700;color:#111827;">Preview</h3>
+            <p id="pane-preview-desc" style="margin:0 0 20px;font-size:0.85rem;color:#6b7280;">Review your cluster deployment topology before proceeding.</p>
             <div id="deploy-preview-table" style="max-width:100%;"></div>
             <div id="deploy-result-msg" style="margin-top:16px;font-size:0.9rem;display:none;padding:12px 16px;border-radius:8px;"></div>
           </div>
@@ -3380,7 +3374,7 @@ Real OS metrics (CPU, RAM, Disk I/O) cannot be fetched directly from PostgreSQL 
       <div style="display:flex;align-items:center;justify-content:space-between;padding:16px 28px;border-top:1px solid #f3f4f6;background:#fafafa;">
         <div style="font-size:0.82rem;color:#ef4444;" id="deploy-stepper-required"><span style="color:#ef4444;">*</span> Required</div>
         <div style="display:flex;gap:12px;">
-          <button type="button" id="btn-stepper-back" onclick="deployStepperBack()" style="padding:9px 24px;border:1px solid #d1d5db;background:white;color:#374151;border-radius:8px;font-size:0.9rem;font-weight:500;cursor:pointer;" onmouseover="this.style.background='#f9fafb'" onmouseout="this.style.background='white'">Cancel</button>
+          <button type="button" id="btn-stepper-back" onclick="deployStepperBack()" style="padding:9px 24px;border:1px solid #d1d5db;background:white;color:#374151;border-radius:8px;font-size:0.9rem;font-weight:500;cursor:pointer;" onmouseover="this.style.background='#f9fafb'" onmouseout="this.style.background='white'">Back</button>
           <button type="button" id="btn-stepper-continue" onclick="deployStepperNext()" style="padding:9px 28px;background:#3a1c94;color:white;border:none;border-radius:8px;font-size:0.9rem;font-weight:500;cursor:pointer;transition:background 0.15s;" onmouseover="this.style.background='#2b1070'" onmouseout="this.style.background='#3a1c94'">Continue</button>
           <button type="button" id="btn-stepper-deploy" onclick="submitDeployWizard()" style="display:none;padding:9px 28px;background:#16a34a;color:white;border:none;border-radius:8px;font-size:0.9rem;font-weight:600;cursor:pointer;">🚀 Deploy</button>
         </div>
@@ -3963,6 +3957,6 @@ Real OS metrics (CPU, RAM, Disk I/O) cannot be fetched directly from PostgreSQL 
   </div>
 </div>
 
-<script src="/static/main.js?v=96"></script>
+<script src="/static/main.js?v=97"></script>
 </body>
 </html>
