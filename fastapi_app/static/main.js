@@ -1657,12 +1657,12 @@ window.exportAuditLogsCsv = function() {
     });
     
     // Navigation
-    btnBackProjects.addEventListener('click', () => { window.location.hash = 'clusters-view'; });
+    btnBackProjects?.addEventListener('click', () => { window.location.hash = 'clusters-view'; });
 
     // Form: Edit Project
-    btnCloseEditProjModal.addEventListener('click', () => modalEditProj.style.display = 'none');
+    btnCloseEditProjModal?.addEventListener('click', () => { if(modalEditProj) modalEditProj.style.display = 'none'; });
     
-    formEditProj.addEventListener('submit', async (e) => {
+    formEditProj?.addEventListener('submit', async (e) => {
         e.preventDefault();
         const id = document.getElementById('edit-proj-id').value;
         const name = document.getElementById('edit-proj-name').value.trim();
@@ -1701,7 +1701,7 @@ window.exportAuditLogsCsv = function() {
     });
 
     // Form: Add Project
-    formAddProj.addEventListener('submit', async (e) => {
+    formAddProj?.addEventListener('submit', async (e) => {
         e.preventDefault();
         const name = document.getElementById('proj-name').value.trim();
         const desc = document.getElementById('proj-desc').value.trim();
@@ -1732,7 +1732,7 @@ window.exportAuditLogsCsv = function() {
     });
 
     // Form: Add Node
-    formAddNode.addEventListener('submit', async (e) => {
+    formAddNode?.addEventListener('submit', async (e) => {
         e.preventDefault();
         if (!currentProjectId) return;
 
@@ -1794,7 +1794,7 @@ window.exportAuditLogsCsv = function() {
     });
 
     // Button: Sync Replication
-    btnSyncReplication.addEventListener('click', async () => {
+    btnSyncReplication?.addEventListener('click', async () => {
         if (!currentProjectId) return;
         
         btnSyncReplication.innerText = "Starting...";
