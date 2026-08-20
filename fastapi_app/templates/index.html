@@ -1591,11 +1591,39 @@ Real OS metrics (CPU, RAM, Disk I/O) cannot be fetched directly from PostgreSQL 
     transform-origin: top right;
 }
 
+/* ---- ALARMS SLIDE-DOWN PANEL ANIMATION ---- */
+@keyframes ccAlarmsSlideDown {
+    0% {
+        opacity: 0;
+        transform: translateY(-12px);
+    }
+    100% {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+@keyframes ccAlarmsSlideUp {
+    0% {
+        opacity: 1;
+        transform: translateY(0);
+    }
+    100% {
+        opacity: 0;
+        transform: translateY(-10px);
+    }
+}
+.cc-alarms-panel-in {
+    animation: ccAlarmsSlideDown 0.2s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+.cc-alarms-panel-out {
+    animation: ccAlarmsSlideUp 0.15s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
 </style>
         </div>
     </div>
 
-    <script src="/static/main.js?v=93"></script>
+    <script src="/static/main.js?v=94"></script>
 
 
 
@@ -3495,6 +3523,6 @@ Real OS metrics (CPU, RAM, Disk I/O) cannot be fetched directly from PostgreSQL 
   </div>
 </div>
 
-<script src="/static/main.js?v=93"></script>
+<script src="/static/main.js?v=94"></script>
 </body>
 </html>

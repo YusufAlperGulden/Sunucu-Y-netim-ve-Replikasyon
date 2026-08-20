@@ -3026,20 +3026,45 @@ let isAlarmsPanelOpen = false;
 
 window.toggleAlarmsPanel = function(event) {
     if (event) event.stopPropagation();
+    if (typeof closeProfileMenu === 'function') closeProfileMenu();
     const panel = document.getElementById('panel-header-alarms');
     if (!panel) return;
-    isAlarmsPanelOpen = !isAlarmsPanelOpen;
-    panel.style.display = isAlarmsPanelOpen ? 'block' : 'none';
-    if (isAlarmsPanelOpen) {
+    
+    const isOpen = panel.style.display !== 'none' && !panel.classList.contains('cc-alarms-panel-out');
+    if (isOpen) {
+        closeAlarmsPanel();
+    } else {
+        panel.style.display = 'block';
+        panel.classList.remove('cc-alarms-panel-out');
+        panel.classList.add('cc-alarms-panel-in');
+        isAlarmsPanelOpen = true;
         loadHeaderAlarms();
     }
 };
 
 window.closeAlarmsPanel = function() {
     const panel = document.getElementById('panel-header-alarms');
-    if (panel) panel.style.display = 'none';
+    if (!panel || panel.style.display === 'none') return;
+    panel.classList.remove('cc-alarms-panel-in');
+    panel.classList.add('cc-alarms-panel-out');
+    setTimeout(() => {
+        if (panel.classList.contains('cc-alarms-panel-out')) {
+            panel.style.display = 'none';
+        }
+    }, 160);
     isAlarmsPanelOpen = false;
 };
+
+// Close alarms panel when clicking outside anywhere on the page
+document.addEventListener('click', function(e) {
+    const panel = document.getElementById('panel-header-alarms');
+    const trigger = document.getElementById('btn-header-alarms');
+    if (panel && panel.style.display !== 'none' && !panel.classList.contains('cc-alarms-panel-out')) {
+        if (!panel.contains(e.target) && !trigger?.contains(e.target)) {
+            closeAlarmsPanel();
+        }
+    }
+});
 
 window.switchAlarmSubtab = function(tab) {
     const tabs = ['alarms', 'jobs', 'audit'];
@@ -5428,6 +5453,7 @@ async function submitDeployWizard() {
 
 function toggleProfileMenu(e) {
     if (e) e.stopPropagation();
+    if (typeof closeAlarmsPanel === 'function') closeAlarmsPanel();
     const dd = document.getElementById('profile-dropdown');
     if (!dd) return;
     const isOpen = dd.style.display !== 'none' && !dd.classList.contains('cc-profile-popup-out');
