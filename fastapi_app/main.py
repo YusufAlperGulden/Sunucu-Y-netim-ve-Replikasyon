@@ -68,183 +68,193 @@ def verify_credentials(credentials: HTTPBasicCredentials = Depends(security)):
 
     raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Incorrect credentials", headers={"WWW-Authenticate": "Bearer"})
 
+def run_background_db_init():
+    """Run table creation, schema migrations, and sync in a background thread without blocking port binding."""
+    try:
+        from sqlalchemy import text
+        from models import engine, Base, SessionLocal, Project, DatabaseNode
+        import os as _os
+
+        _reports_dir = _os.path.join(_os.path.dirname(_os.path.abspath(__file__)), "reports")
+        _os.makedirs(_reports_dir, exist_ok=True)
+
+        Base.metadata.create_all(bind=engine)
+
+        for stmt in [
+            "ALTER TABLE nodes ADD COLUMN IF NOT EXISTS ssh_host VARCHAR(255)",
+            "ALTER TABLE nodes ADD COLUMN IF NOT EXISTS ssh_port INTEGER DEFAULT 22",
+            "ALTER TABLE nodes ADD COLUMN IF NOT EXISTS ssh_username VARCHAR(255) DEFAULT 'root'",
+            "ALTER TABLE nodes ADD COLUMN IF NOT EXISTS encrypted_ssh_credential VARCHAR",
+            "ALTER TABLE audit_logs ADD COLUMN IF NOT EXISTS username VARCHAR(50) DEFAULT 'system'",
+            "ALTER TABLE users ADD COLUMN IF NOT EXISTS email VARCHAR(255)",
+            "ALTER TABLE users ADD COLUMN IF NOT EXISTS first_name VARCHAR(100)",
+            "ALTER TABLE users ADD COLUMN IF NOT EXISTS last_name VARCHAR(100)",
+            "ALTER TABLE users ADD COLUMN IF NOT EXISTS timezone VARCHAR(50) DEFAULT 'UTC'",
+            "ALTER TABLE deploy_jobs ADD COLUMN IF NOT EXISTS log_output TEXT",
+            """CREATE TABLE IF NOT EXISTS cloud_credentials (
+                id SERIAL PRIMARY KEY,
+                provider VARCHAR(50) NOT NULL,
+                label VARCHAR(100) NOT NULL,
+                encrypted_key_id VARCHAR(500),
+                encrypted_secret VARCHAR(500),
+                bucket VARCHAR(255),
+                region VARCHAR(100),
+                created_at TIMESTAMP DEFAULT NOW()
+            )""",
+            """CREATE TABLE IF NOT EXISTS notification_services (
+                id SERIAL PRIMARY KEY,
+                service_type VARCHAR(50) NOT NULL,
+                label VARCHAR(100) NOT NULL,
+                encrypted_settings VARCHAR(2000),
+                active BOOLEAN DEFAULT TRUE,
+                created_at TIMESTAMP DEFAULT NOW()
+            )""",
+            """CREATE TABLE IF NOT EXISTS certificates (
+                id SERIAL PRIMARY KEY,
+                node_id INTEGER REFERENCES nodes(id) ON DELETE CASCADE,
+                cert_type VARCHAR(50) DEFAULT 'TLS',
+                common_name VARCHAR(255),
+                subject_alt_names VARCHAR(500),
+                expires_at TIMESTAMP,
+                issuer VARCHAR(255),
+                file_path VARCHAR(500),
+                created_at TIMESTAMP DEFAULT NOW()
+            )""",
+            """CREATE TABLE IF NOT EXISTS ldap_configs (
+                id SERIAL PRIMARY KEY,
+                label VARCHAR(100) NOT NULL,
+                server_url VARCHAR(255) NOT NULL,
+                base_dn VARCHAR(255) NOT NULL,
+                bind_user VARCHAR(255),
+                encrypted_bind_pass VARCHAR(500),
+                user_filter VARCHAR(255) DEFAULT '(objectClass=person)',
+                active BOOLEAN DEFAULT TRUE,
+                created_at TIMESTAMP DEFAULT NOW()
+            )""",
+            """CREATE TABLE IF NOT EXISTS addon_settings (
+                id SERIAL PRIMARY KEY,
+                addon_key VARCHAR(100) UNIQUE NOT NULL,
+                enabled BOOLEAN DEFAULT FALSE,
+                api_url VARCHAR(500),
+                extra_json VARCHAR(1000),
+                updated_at TIMESTAMP DEFAULT NOW()
+            )""",
+            """CREATE TABLE IF NOT EXISTS ops_controllers (
+                id SERIAL PRIMARY KEY,
+                name VARCHAR(100) NOT NULL,
+                url VARCHAR(255) NOT NULL,
+                encrypted_api_token VARCHAR(500),
+                status VARCHAR(50) DEFAULT 'ONLINE',
+                is_primary BOOLEAN DEFAULT FALSE,
+                version VARCHAR(50) DEFAULT '2.5.0',
+                cluster_count INTEGER DEFAULT 0,
+                created_at TIMESTAMP DEFAULT NOW(),
+                updated_at TIMESTAMP DEFAULT NOW()
+            )""",
+            """CREATE TABLE IF NOT EXISTS kube_clusters (
+                id SERIAL PRIMARY KEY,
+                name VARCHAR(100) NOT NULL,
+                encrypted_kubeconfig TEXT NOT NULL,
+                api_server_url VARCHAR(255),
+                status VARCHAR(50) DEFAULT 'CONNECTED',
+                namespace VARCHAR(100) DEFAULT 'default',
+                nodes_count INTEGER DEFAULT 1,
+                pods_count INTEGER DEFAULT 0,
+                operator_installed VARCHAR(100) DEFAULT 'CloudNativePG',
+                last_synced_at TIMESTAMP DEFAULT NOW(),
+                created_at TIMESTAMP DEFAULT NOW()
+            )""",
+            "ALTER TABLE backup_jobs ADD COLUMN IF NOT EXISTS node_id INTEGER REFERENCES nodes(id) ON DELETE SET NULL",
+            "ALTER TABLE backup_jobs ADD COLUMN IF NOT EXISTS db_type VARCHAR(50) DEFAULT 'postgresql'",
+            "ALTER TABLE backup_jobs ADD COLUMN IF NOT EXISTS backup_host VARCHAR(255)",
+            "ALTER TABLE backup_jobs ADD COLUMN IF NOT EXISTS backup_method VARCHAR(50) DEFAULT 'pgdumpall'",
+            "ALTER TABLE backup_jobs ADD COLUMN IF NOT EXISTS dump_type VARCHAR(50) DEFAULT 'Schema And Data'",
+            "ALTER TABLE backup_jobs ADD COLUMN IF NOT EXISTS compression BOOLEAN DEFAULT TRUE",
+            "ALTER TABLE backup_jobs ADD COLUMN IF NOT EXISTS compression_level INTEGER DEFAULT 6",
+            "ALTER TABLE backup_jobs ADD COLUMN IF NOT EXISTS retention_days INTEGER DEFAULT 31",
+            "ALTER TABLE backup_jobs ADD COLUMN IF NOT EXISTS enable_encryption BOOLEAN DEFAULT FALSE",
+            "ALTER TABLE backup_jobs ADD COLUMN IF NOT EXISTS enable_partial BOOLEAN DEFAULT FALSE",
+            "ALTER TABLE backup_jobs ADD COLUMN IF NOT EXISTS storage_location VARCHAR(100) DEFAULT 'Store on controller'",
+            "ALTER TABLE backup_jobs ADD COLUMN IF NOT EXISTS storage_directory VARCHAR(500) DEFAULT '/var/lib/backups'",
+            "ALTER TABLE backup_jobs ADD COLUMN IF NOT EXISTS backup_subdirectory VARCHAR(255) DEFAULT 'BACKUP-%i'",
+            "ALTER TABLE backup_jobs ADD COLUMN IF NOT EXISTS cloud_credential_id INTEGER REFERENCES cloud_credentials(id) ON DELETE SET NULL",
+            "ALTER TABLE backup_jobs ADD COLUMN IF NOT EXISTS file_path VARCHAR(1000)",
+            "ALTER TABLE backup_jobs ADD COLUMN IF NOT EXISTS error_msg TEXT",
+            """CREATE TABLE IF NOT EXISTS alarm_records (
+                id SERIAL PRIMARY KEY,
+                title VARCHAR(255) NOT NULL,
+                severity VARCHAR(50) DEFAULT 'WARNING',
+                category VARCHAR(100) DEFAULT 'Cluster',
+                cluster_name VARCHAR(255),
+                hostname VARCHAR(255),
+                message TEXT,
+                is_muted BOOLEAN DEFAULT FALSE,
+                created_at TIMESTAMP DEFAULT NOW()
+            )""",
+        ]:
+            try:
+                with engine.begin() as conn:
+                    conn.execute(text(stmt))
+            except Exception:
+                pass
+
+        # Auto-sync Neon URLs
+        try:
+            from vault import encrypt, decrypt
+            db = SessionLocal()
+            try:
+                projects = db.query(Project).all()
+                for proj in projects:
+                    p_name = (proj.name or '').lower()
+                    if 'email' in p_name or 'e-mail' in p_name:
+                        proj.metric_table = 'emails'
+                    elif 'plaka' in p_name or 'araç' in p_name:
+                        proj.metric_table = 'vehicles'
+                        
+                    nodes = proj.nodes
+                    if len(nodes) >= 2:
+                        primary_nodes = [n for n in nodes if n.role and n.role.lower() == 'primary']
+                        standby_nodes = [n for n in nodes if n.role and n.role.lower() == 'standby']
+                        
+                        FRANKFURT_URL = "postgresql://neondb_owner:npg_mONv8dTcRuZ2@ep-rapid-star-aszbsk55.c-4.eu-central-1.aws.neon.tech/neondb?sslmode=require&channel_binding=require"
+                        YEDEK_URL = "postgresql://neondb_owner:npg_GtTYZs3elJU0@ep-bold-leaf-zatatmr6.c-2.eu-west-2.aws.neon.tech/neondb?sslmode=require&channel_binding=require"
+                        
+                        for node in primary_nodes:
+                            current = decrypt(node.encrypted_url) if node.encrypted_url else None
+                            if current != FRANKFURT_URL:
+                                node.encrypted_url = encrypt(FRANKFURT_URL)
+                        
+                        for node in standby_nodes:
+                            current = decrypt(node.encrypted_url) if node.encrypted_url else None
+                            if current != YEDEK_URL:
+                                node.encrypted_url = encrypt(YEDEK_URL)
+                                
+                db.commit()
+            finally:
+                db.close()
+        except Exception as e:
+            print(f"Neon URL sync error: {e}")
+        print("Database background migrations and initialization complete.")
+    except Exception as e:
+        print(f"Background DB init warning: {e}")
+
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    # Startup
-    print("Application startup complete.")
-    from sqlalchemy import text
-    from models import engine, Base
-    import os as _os
-    # Ensure reports directory exists
-    _reports_dir = _os.path.join(_os.path.dirname(_os.path.abspath(__file__)), "reports")
-    _os.makedirs(_reports_dir, exist_ok=True)
-
-    # Create ALL ORM-mapped tables if they don't exist yet
-    # (safe to call repeatedly — uses CREATE TABLE IF NOT EXISTS internally)
-    Base.metadata.create_all(bind=engine)
-
-    for stmt in [
-        "ALTER TABLE nodes ADD COLUMN IF NOT EXISTS ssh_host VARCHAR(255)",
-        "ALTER TABLE nodes ADD COLUMN IF NOT EXISTS ssh_port INTEGER DEFAULT 22",
-        "ALTER TABLE nodes ADD COLUMN IF NOT EXISTS ssh_username VARCHAR(255) DEFAULT 'root'",
-        "ALTER TABLE nodes ADD COLUMN IF NOT EXISTS encrypted_ssh_credential VARCHAR",
-        "ALTER TABLE audit_logs ADD COLUMN IF NOT EXISTS username VARCHAR(50) DEFAULT 'system'",
-        "ALTER TABLE users ADD COLUMN IF NOT EXISTS email VARCHAR(255)",
-        "ALTER TABLE users ADD COLUMN IF NOT EXISTS first_name VARCHAR(100)",
-        "ALTER TABLE users ADD COLUMN IF NOT EXISTS last_name VARCHAR(100)",
-        "ALTER TABLE users ADD COLUMN IF NOT EXISTS timezone VARCHAR(50) DEFAULT 'UTC'",
-        "ALTER TABLE deploy_jobs ADD COLUMN IF NOT EXISTS log_output TEXT",
-        # New tables — CREATE IF NOT EXISTS is safe to re-run
-        """CREATE TABLE IF NOT EXISTS cloud_credentials (
-            id SERIAL PRIMARY KEY,
-            provider VARCHAR(50) NOT NULL,
-            label VARCHAR(100) NOT NULL,
-            encrypted_key_id VARCHAR(500),
-            encrypted_secret VARCHAR(500),
-            bucket VARCHAR(255),
-            region VARCHAR(100),
-            created_at TIMESTAMP DEFAULT NOW()
-        )""",
-        """CREATE TABLE IF NOT EXISTS notification_services (
-            id SERIAL PRIMARY KEY,
-            service_type VARCHAR(50) NOT NULL,
-            label VARCHAR(100) NOT NULL,
-            encrypted_settings VARCHAR(2000),
-            active BOOLEAN DEFAULT TRUE,
-            created_at TIMESTAMP DEFAULT NOW()
-        )""",
-        """CREATE TABLE IF NOT EXISTS certificates (
-            id SERIAL PRIMARY KEY,
-            node_id INTEGER REFERENCES nodes(id) ON DELETE CASCADE,
-            cert_type VARCHAR(50) DEFAULT 'TLS',
-            common_name VARCHAR(255),
-            subject_alt_names VARCHAR(500),
-            expires_at TIMESTAMP,
-            issuer VARCHAR(255),
-            file_path VARCHAR(500),
-            created_at TIMESTAMP DEFAULT NOW()
-        )""",
-        """CREATE TABLE IF NOT EXISTS ldap_configs (
-            id SERIAL PRIMARY KEY,
-            label VARCHAR(100) NOT NULL,
-            server_url VARCHAR(255) NOT NULL,
-            base_dn VARCHAR(255) NOT NULL,
-            bind_user VARCHAR(255),
-            encrypted_bind_pass VARCHAR(500),
-            user_filter VARCHAR(255) DEFAULT '(objectClass=person)',
-            active BOOLEAN DEFAULT TRUE,
-            created_at TIMESTAMP DEFAULT NOW()
-        )""",
-        """CREATE TABLE IF NOT EXISTS addon_settings (
-            id SERIAL PRIMARY KEY,
-            addon_key VARCHAR(100) UNIQUE NOT NULL,
-            enabled BOOLEAN DEFAULT FALSE,
-            api_url VARCHAR(500),
-            extra_json VARCHAR(1000),
-            updated_at TIMESTAMP DEFAULT NOW()
-        )""",
-        """CREATE TABLE IF NOT EXISTS ops_controllers (
-            id SERIAL PRIMARY KEY,
-            name VARCHAR(100) NOT NULL,
-            url VARCHAR(255) NOT NULL,
-            encrypted_api_token VARCHAR(500),
-            status VARCHAR(50) DEFAULT 'ONLINE',
-            is_primary BOOLEAN DEFAULT FALSE,
-            version VARCHAR(50) DEFAULT '2.5.0',
-            cluster_count INTEGER DEFAULT 0,
-            created_at TIMESTAMP DEFAULT NOW(),
-            updated_at TIMESTAMP DEFAULT NOW()
-        )""",
-        """CREATE TABLE IF NOT EXISTS kube_clusters (
-            id SERIAL PRIMARY KEY,
-            name VARCHAR(100) NOT NULL,
-            encrypted_kubeconfig TEXT NOT NULL,
-            api_server_url VARCHAR(255),
-            status VARCHAR(50) DEFAULT 'CONNECTED',
-            namespace VARCHAR(100) DEFAULT 'default',
-            nodes_count INTEGER DEFAULT 1,
-            pods_count INTEGER DEFAULT 0,
-            operator_installed VARCHAR(100) DEFAULT 'CloudNativePG',
-            last_synced_at TIMESTAMP DEFAULT NOW(),
-            created_at TIMESTAMP DEFAULT NOW()
-        )""",
-        "ALTER TABLE backup_jobs ADD COLUMN IF NOT EXISTS node_id INTEGER REFERENCES nodes(id) ON DELETE SET NULL",
-        "ALTER TABLE backup_jobs ADD COLUMN IF NOT EXISTS db_type VARCHAR(50) DEFAULT 'postgresql'",
-        "ALTER TABLE backup_jobs ADD COLUMN IF NOT EXISTS backup_host VARCHAR(255)",
-        "ALTER TABLE backup_jobs ADD COLUMN IF NOT EXISTS backup_method VARCHAR(50) DEFAULT 'pgdumpall'",
-        "ALTER TABLE backup_jobs ADD COLUMN IF NOT EXISTS dump_type VARCHAR(50) DEFAULT 'Schema And Data'",
-        "ALTER TABLE backup_jobs ADD COLUMN IF NOT EXISTS compression BOOLEAN DEFAULT TRUE",
-        "ALTER TABLE backup_jobs ADD COLUMN IF NOT EXISTS compression_level INTEGER DEFAULT 6",
-        "ALTER TABLE backup_jobs ADD COLUMN IF NOT EXISTS retention_days INTEGER DEFAULT 31",
-        "ALTER TABLE backup_jobs ADD COLUMN IF NOT EXISTS enable_encryption BOOLEAN DEFAULT FALSE",
-        "ALTER TABLE backup_jobs ADD COLUMN IF NOT EXISTS enable_partial BOOLEAN DEFAULT FALSE",
-        "ALTER TABLE backup_jobs ADD COLUMN IF NOT EXISTS storage_location VARCHAR(100) DEFAULT 'Store on controller'",
-        "ALTER TABLE backup_jobs ADD COLUMN IF NOT EXISTS storage_directory VARCHAR(500) DEFAULT '/var/lib/backups'",
-        "ALTER TABLE backup_jobs ADD COLUMN IF NOT EXISTS backup_subdirectory VARCHAR(255) DEFAULT 'BACKUP-%i'",
-        "ALTER TABLE backup_jobs ADD COLUMN IF NOT EXISTS cloud_credential_id INTEGER REFERENCES cloud_credentials(id) ON DELETE SET NULL",
-        "ALTER TABLE backup_jobs ADD COLUMN IF NOT EXISTS file_path VARCHAR(1000)",
-        "ALTER TABLE backup_jobs ADD COLUMN IF NOT EXISTS error_msg TEXT",
-        """CREATE TABLE IF NOT EXISTS alarm_records (
-            id SERIAL PRIMARY KEY,
-            title VARCHAR(255) NOT NULL,
-            severity VARCHAR(50) DEFAULT 'WARNING',
-            category VARCHAR(100) DEFAULT 'Cluster',
-            cluster_name VARCHAR(255),
-            hostname VARCHAR(255),
-            message TEXT,
-            is_muted BOOLEAN DEFAULT FALSE,
-            created_at TIMESTAMP DEFAULT NOW()
-        )""",
-    ]:
-        try:
-            with engine.begin() as conn:
-                conn.execute(text(stmt))
-        except Exception:
-            pass
-    # Auto-sync Neon URLs if nodes exist but have wrong/old URLs
-    try:
-        from vault import encrypt, decrypt
-        from models import SessionLocal, DatabaseNode, Project
-        db = SessionLocal()
-        try:
-            projects = db.query(Project).all()
-            for proj in projects:
-                p_name = (proj.name or '').lower()
-                if 'email' in p_name or 'e-mail' in p_name:
-                    proj.metric_table = 'emails'
-                elif 'plaka' in p_name or 'araç' in p_name:
-                    proj.metric_table = 'vehicles'
-                    
-                nodes = proj.nodes
-                if len(nodes) >= 2:
-                    primary_nodes = [n for n in nodes if n.role and n.role.lower() == 'primary']
-                    standby_nodes = [n for n in nodes if n.role and n.role.lower() == 'standby']
-                    
-                    FRANKFURT_URL = "postgresql://neondb_owner:npg_mONv8dTcRuZ2@ep-rapid-star-aszbsk55.c-4.eu-central-1.aws.neon.tech/neondb?sslmode=require&channel_binding=require"
-                    YEDEK_URL = "postgresql://neondb_owner:npg_GtTYZs3elJU0@ep-bold-leaf-zatatmr6.c-2.eu-west-2.aws.neon.tech/neondb?sslmode=require&channel_binding=require"
-                    
-                    for node in primary_nodes:
-                        current = decrypt(node.encrypted_url) if node.encrypted_url else None
-                        if current != FRANKFURT_URL:
-                            node.encrypted_url = encrypt(FRANKFURT_URL)
-                            print(f"Updated primary node {node.id} URL to Frankfurt (Neon)")
-                    
-                    for node in standby_nodes:
-                        current = decrypt(node.encrypted_url) if node.encrypted_url else None
-                        if current != YEDEK_URL:
-                            node.encrypted_url = encrypt(YEDEK_URL)
-                            print(f"Updated standby node {node.id} URL to Yedek (Neon)")
-                            
-            db.commit()
-        finally:
-            db.close()
-    except Exception as e:
-        print(f"Neon URL sync error: {e}")
+    # Immediate yield so uvicorn binds port instantly for Render port scanning
+    print("Application starting up — port binding enabled immediately.")
+    import asyncio
+    asyncio.create_task(asyncio.to_thread(run_background_db_init))
     yield
-    # Shutdown
+    print("Application shutting down.")
 
 
 app = FastAPI(title="Sunucu Yönetim ve Replikasyon", lifespan=lifespan)
+
+@app.get("/health")
+@app.get("/healthz")
+def health_check():
+    return {"status": "ok", "service": "universal-server-manager"}
 
 # Mount static files and templates with absolute paths
 _BASE_DIR = os.path.dirname(os.path.abspath(__file__))
