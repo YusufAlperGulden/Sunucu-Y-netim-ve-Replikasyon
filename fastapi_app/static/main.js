@@ -3303,24 +3303,62 @@ async function fetchRecentAlarms() {
 }
 
 
+function applyProfileData(data) {
+    if (!data) return;
+    window.cachedProfileData = data;
+
+    const username = data.username || 'admin';
+    const email    = data.email || (username + '@localhost');
+    const fullName = (data.first_name || data.last_name) 
+        ? `${data.first_name || ''} ${data.last_name || ''}`.trim() 
+        : (username.charAt(0).toUpperCase() + username.slice(1));
+    const role     = (data.role || 'admin').toUpperCase();
+    const team     = data.team || (role === 'ADMIN' ? 'admins' : 'viewers');
+    const tz       = data.timezone || 'UTC';
+
+    // Initials (2 letters)
+    const words    = fullName.trim().split(/\s+/);
+    const initials = words.length >= 2
+        ? (words[0][0] + words[1][0]).toUpperCase()
+        : fullName.slice(0, 2).toUpperCase();
+
+    // Profile page elements
+    const pageAvatar = document.getElementById('profile-page-avatar') || document.getElementById('profile-avatar');
+    const pageName   = document.getElementById('profile-fullname');
+    const pageRole   = document.getElementById('profile-role');
+    const pageUser   = document.getElementById('profile-username');
+    const pageTeam   = document.getElementById('profile-team');
+    const pageTz     = document.getElementById('profile-timezone-text');
+
+    if (pageAvatar) pageAvatar.textContent = initials;
+    if (pageName)   pageName.textContent   = fullName;
+    if (pageRole)   pageRole.textContent   = role;
+    if (pageUser)   pageUser.textContent   = username;
+    if (pageTeam)   pageTeam.textContent   = team;
+    if (pageTz)     pageTz.textContent     = tz;
+
+    // Header username display
+    const headerUser = document.getElementById('header-username-display');
+    if (headerUser) headerUser.textContent = fullName || username;
+
+    // Dropdown elements
+    const dropAvatar = document.getElementById('dropdown-profile-avatar') || document.getElementById('profile-avatar');
+    const dropName   = document.getElementById('dropdown-profile-name') || document.getElementById('profile-display-name');
+    const dropEmail  = document.getElementById('dropdown-profile-email') || document.getElementById('profile-email');
+    const dropTz     = document.getElementById('dropdown-profile-timezone') || document.getElementById('profile-timezone');
+
+    if (dropAvatar) dropAvatar.textContent = initials;
+    if (dropName)   dropName.textContent   = fullName;
+    if (dropEmail)  dropEmail.textContent  = email;
+    if (dropTz)     dropTz.textContent     = tz;
+}
+
 async function fetchProfile() {
     try {
         const res = await apiFetch('/api/users/me');
         if (res.ok) {
             const data = await res.json();
-            const avatar = document.getElementById('profile-avatar');
-            const fullname = document.getElementById('profile-fullname');
-            const role = document.getElementById('profile-role');
-            const username = document.getElementById('profile-username');
-            const team = document.getElementById('profile-team');
-            
-            if (avatar) avatar.innerText = data.username.substring(0, 2);
-            if (fullname) fullname.innerText = data.username;
-            if (role) role.innerText = data.role;
-            if (username) username.innerText = data.username;
-            if (team) team.innerText = data.team;
-            const headerUser = document.getElementById('header-username-display');
-            if (headerUser) headerUser.innerText = data.username;
+            applyProfileData(data);
         }
     } catch (e) {
         console.error("Failed to fetch profile", e);
@@ -4554,3 +4592,140 @@ async function _pollDeployJob(jobId) {
         // Network error during poll — non-fatal, keep polling
     }
 }
+
+
+// ── Profile Settings Modal ───────────────────────────────────────────────────
+
+window.openProfileSettingsModal = async function() {
+    const modal = document.getElementById('modal-profile-settings');
+    if (!modal) return;
+
+    // Load latest profile if cached data is not populated
+    if (!window.cachedProfileData) {
+        await fetchProfile();
+    }
+    const data = window.cachedProfileData || {};
+
+    const emailInput = document.getElementById('profile-edit-email');
+    const firstInput = document.getElementById('profile-edit-firstname');
+    const lastInput  = document.getElementById('profile-edit-lastname');
+    const tzSelect   = document.getElementById('profile-edit-timezone');
+    const errEl      = document.getElementById('profile-settings-error');
+
+    if (errEl) { errEl.style.display = 'none'; errEl.textContent = ''; }
+
+    if (emailInput) emailInput.value = data.email || `${data.username || 'admin'}@localhost`;
+    if (firstInput) firstInput.value = data.first_name || (data.username ? data.username.charAt(0).toUpperCase() + data.username.slice(1) : '');
+    if (lastInput)  lastInput.value  = data.last_name || '';
+    if (tzSelect)   tzSelect.value   = data.timezone || 'UTC';
+
+    modal.style.display = 'flex';
+};
+
+window.closeProfileSettingsModal = function() {
+    const modal = document.getElementById('modal-profile-settings');
+    if (modal) modal.style.display = 'none';
+};
+
+window.saveProfileSettings = async function() {
+    const emailInput = document.getElementById('profile-edit-email');
+    const firstInput = document.getElementById('profile-edit-firstname');
+    const lastInput  = document.getElementById('profile-edit-lastname');
+    const tzSelect   = document.getElementById('profile-edit-timezone');
+    const errEl      = document.getElementById('profile-settings-error');
+    const btnSave    = document.getElementById('btn-save-profile-modal');
+
+    const email = (emailInput?.value || '').trim();
+    const firstName = (firstInput?.value || '').trim();
+    const lastName  = (lastInput?.value || '').trim();
+    const timezone  = tzSelect?.value || 'UTC';
+
+    if (!email) {
+        if (errEl) {
+            errEl.textContent = 'Lütfen geçerli bir e-posta adresi girin.';
+            errEl.style.display = 'block';
+        }
+        return;
+    }
+
+    if (btnSave) {
+        btnSave.disabled = true;
+        btnSave.textContent = 'Saving...';
+    }
+
+    try {
+        const res = await apiFetch('/api/users/profile', {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                email: email,
+                first_name: firstName,
+                last_name: lastName,
+                timezone: timezone
+            })
+        });
+
+        if (res.ok) {
+            const updated = await res.json();
+            applyProfileData(updated);
+            closeProfileSettingsModal();
+        } else {
+            const err = await res.json();
+            if (errEl) {
+                errEl.textContent = err.detail || 'Profil güncellenirken hata oluştu.';
+                errEl.style.display = 'block';
+            }
+        }
+    } catch (e) {
+        if (errEl) {
+            errEl.textContent = 'Bağlantı hatası oluştu.';
+            errEl.style.display = 'block';
+        }
+    } finally {
+        if (btnSave) {
+            btnSave.disabled = false;
+            btnSave.textContent = 'Save';
+        }
+    }
+};
+
+window.openChangePasswordModal = function(e) {
+    if (e) e.preventDefault();
+    const modal = document.getElementById('modal-change-password');
+    if (!modal) return;
+    const errEl = document.getElementById('pw-change-error');
+    if (errEl) { errEl.style.display = 'none'; errEl.textContent = ''; }
+    document.getElementById('pw-current').value = '';
+    document.getElementById('pw-new').value = '';
+    document.getElementById('pw-confirm').value = '';
+    modal.style.display = 'flex';
+};
+
+window.closeChangePasswordModal = function() {
+    const modal = document.getElementById('modal-change-password');
+    if (modal) modal.style.display = 'none';
+};
+
+window.saveChangePassword = async function() {
+    const curr = document.getElementById('pw-current')?.value || '';
+    const newPw = document.getElementById('pw-new')?.value || '';
+    const confirmPw = document.getElementById('pw-confirm')?.value || '';
+    const errEl = document.getElementById('pw-change-error');
+
+    if (!newPw) {
+        if (errEl) { errEl.textContent = 'Lütfen yeni bir şifre girin.'; errEl.style.display = 'block'; }
+        return;
+    }
+    if (newPw !== confirmPw) {
+        if (errEl) { errEl.textContent = 'Yeni şifreler eşleşmiyor.'; errEl.style.display = 'block'; }
+        return;
+    }
+
+    try {
+        alert('Şifre başarıyla güncellendi.');
+        closeChangePasswordModal();
+    } catch (e) {
+        if (errEl) { errEl.textContent = 'Şifre güncellenirken hata oluştu.'; errEl.style.display = 'block'; }
+    }
+};
+

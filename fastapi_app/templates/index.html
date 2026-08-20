@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Sunucu Yönetim ve Replikasyon</title>
-    <link rel="stylesheet" href="/static/style.css?v=85">
+    <link rel="stylesheet" href="/static/style.css?v=86">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 </head>
 <body>
@@ -139,11 +139,11 @@
                     <div id="profile-dropdown" style="display:none;position:absolute;top:calc(100% + 10px);right:0;width:270px;background:white;border-radius:12px;box-shadow:0 8px 30px rgba(0,0,0,0.15);border:1px solid #e5e7eb;z-index:9999;overflow:hidden;">
                         <!-- User info header -->
                         <div style="display:flex;align-items:center;gap:14px;padding:18px 20px;border-bottom:1px solid #f3f4f6;">
-                            <div id="profile-avatar" style="width:46px;height:46px;border-radius:50%;background:#ede9fe;color:#4f46e5;font-size:1rem;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0;">AD</div>
+                            <div id="dropdown-profile-avatar" style="width:46px;height:46px;border-radius:50%;background:#ede9fe;color:#4f46e5;font-size:1rem;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0;">AD</div>
                             <div>
-                                <div id="profile-display-name" style="font-weight:700;font-size:0.95rem;color:#111827;">Admin</div>
-                                <div id="profile-email" style="font-size:0.8rem;color:#6b7280;margin-top:2px;">admin@localhost</div>
-                                <div id="profile-timezone" style="font-size:0.78rem;color:#9ca3af;margin-top:1px;">UTC</div>
+                                <div id="dropdown-profile-name" style="font-weight:700;font-size:0.95rem;color:#111827;">Admin</div>
+                                <div id="dropdown-profile-email" style="font-size:0.8rem;color:#6b7280;margin-top:2px;">admin@localhost</div>
+                                <div id="dropdown-profile-timezone" style="font-size:0.78rem;color:#9ca3af;margin-top:1px;">UTC</div>
                             </div>
                         </div>
                         <!-- Actions -->
@@ -1502,7 +1502,7 @@ Real OS metrics (CPU, RAM, Disk I/O) cannot be fetched directly from PostgreSQL 
         </div>
     </div>
 
-    <script src="/static/main.js?v=85"></script>
+    <script src="/static/main.js?v=86"></script>
 
 
 
@@ -2140,18 +2140,18 @@ Real OS metrics (CPU, RAM, Disk I/O) cannot be fetched directly from PostgreSQL 
 
                     <!-- Profile Content -->
                     <div id="settings-content-profile" class="settings-content-pane" style="flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 40px;">
-                        <div id="profile-avatar" style="width: 90px; height: 90px; border-radius: 50%; background: #e0e7ff; color: #4338ca; display: flex; align-items: center; justify-content: center; font-size: 2.2rem; font-weight: 400; margin-bottom: 20px; text-transform: uppercase;">U</div>
-                        <div id="profile-fullname" style="font-size: 2rem; font-weight: 500; color: var(--text-main); margin-bottom: 4px; text-transform: capitalize;">User</div>
-                        <div id="profile-role" style="font-size: 1rem; color: var(--text-muted); margin-bottom: 30px; text-transform: uppercase;">ROLE</div>
-                        <div style="display: flex; flex-direction: column; gap: 12px; font-size: 0.95rem; margin-bottom: 40px; color: var(--text-secondary);">
-                            <div style="display: flex; gap: 8px; justify-content: center;"><span style="color: var(--text-muted); width: 80px; text-align: right;">Time zone:</span><span style="width: 180px;">UTC</span></div>
-                            <div style="display: flex; gap: 8px; justify-content: center;"><span style="color: var(--text-muted); width: 80px; text-align: right;">Username:</span><span id="profile-username" style="width: 180px; font-weight: 500;">user</span></div>
-                            <div style="display: flex; gap: 8px; justify-content: center;"><span style="color: var(--text-muted); width: 80px; text-align: right;">Team:</span><span id="profile-team" style="width: 180px;">users</span></div>
-                            <div style="display: flex; gap: 8px; justify-content: center;"><span style="color: var(--text-muted); width: 80px; text-align: right;">Origin:</span><span style="width: 180px;">Local DB</span></div>
+                        <div id="profile-page-avatar" style="width: 90px; height: 90px; border-radius: 50%; background: #e0e7ff; color: #4338ca; display: flex; align-items: center; justify-content: center; font-size: 2.2rem; font-weight: 500; margin-bottom: 20px; text-transform: uppercase;">AD</div>
+                        <div id="profile-fullname" style="font-size: 2rem; font-weight: 600; color: var(--text-main); margin-bottom: 4px;">Admin</div>
+                        <div id="profile-role" style="font-size: 0.95rem; color: var(--text-muted); margin-bottom: 28px; text-transform: uppercase; letter-spacing: 0.5px;">ADMIN</div>
+                        <div style="display: flex; flex-direction: column; gap: 12px; font-size: 0.95rem; margin-bottom: 36px; color: var(--text-secondary);">
+                            <div style="display: flex; gap: 8px; justify-content: center;"><span style="color: var(--text-muted); width: 80px; text-align: right;">Time zone:</span><span id="profile-timezone-text" style="width: 180px;">UTC</span></div>
+                            <div style="display: flex; gap: 8px; justify-content: center;"><span style="color: var(--text-muted); width: 80px; text-align: right;">Username:</span><span id="profile-username" style="width: 180px; font-weight: 500;">admin</span></div>
+                            <div style="display: flex; gap: 8px; justify-content: center;"><span style="color: var(--text-muted); width: 80px; text-align: right;">Team:</span><span id="profile-team" style="width: 180px;">admins</span></div>
+                            <div style="display: flex; gap: 8px; justify-content: center;"><span style="color: var(--text-muted); width: 80px; text-align: right;">Origin:</span><span id="profile-origin" style="width: 180px;">Local DB</span></div>
                         </div>
                         <div style="display: flex; flex-direction: column; align-items: center; gap: 16px; margin-bottom: 40px;">
-                            <button style="background: #3a1c94; color: white; border: none; border-radius: 6px; padding: 10px 24px; font-size: 0.95rem; cursor: pointer;">Settings</button>
-                            <a href="#" style="color: #3a1c94; text-decoration: none; font-size: 0.95rem;">Change password</a>
+                            <button id="btn-profile-settings" onclick="openProfileSettingsModal()" style="background: #3a1c94; color: white; border: none; border-radius: 6px; padding: 10px 28px; font-size: 0.95rem; font-weight: 500; cursor: pointer; transition: background 0.15s;" onmouseover="this.style.background='#2b1070'" onmouseout="this.style.background='#3a1c94'">Settings</button>
+                            <a href="#" onclick="openChangePasswordModal(event)" style="color: #3a1c94; text-decoration: none; font-size: 0.95rem;">Change password</a>
                         </div>
                     </div>
 
@@ -2852,6 +2852,98 @@ Real OS metrics (CPU, RAM, Disk I/O) cannot be fetched directly from PostgreSQL 
   </div><!-- end modal card -->
 </div><!-- end modal overlay -->
 
-<script src="/static/main.js?v=85"></script>
+<!-- Profile Settings Modal -->
+<div class="modal-overlay" id="modal-profile-settings" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:99999;align-items:center;justify-content:center;">
+  <div style="background:white;border-radius:14px;width:440px;max-width:95vw;box-shadow:0 20px 25px -5px rgba(0,0,0,0.15), 0 10px 10px -5px rgba(0,0,0,0.04);overflow:hidden;animation:fadeInModal 0.2s ease-out;">
+    
+    <!-- Modal Header -->
+    <div style="display:flex;align-items:center;justify-content:space-between;padding:18px 24px;border-bottom:1px solid #f3f4f6;">
+      <h3 style="margin:0;font-size:1.15rem;font-weight:600;color:#111827;">Profile settings</h3>
+      <button onclick="closeProfileSettingsModal()" style="background:transparent;border:none;font-size:1.2rem;color:#9ca3af;cursor:pointer;display:flex;align-items:center;justify-content:center;width:30px;height:30px;border-radius:50%;transition:background 0.15s;" onmouseover="this.style.background='#f3f4f6'" onmouseout="this.style.background='transparent'">✕</button>
+    </div>
+
+    <!-- Modal Body -->
+    <div style="padding:20px 24px;display:flex;flex-direction:column;gap:16px;">
+      <div>
+        <label style="display:block;font-size:0.85rem;font-weight:500;color:#374151;margin-bottom:6px;">
+          <span style="color:#ef4444;">*</span> Email
+        </label>
+        <input type="email" id="profile-edit-email" placeholder="e.g. demo@severalnines.com" style="width:100%;padding:10px 14px;border:1px solid #d1d5db;border-radius:8px;font-size:0.9rem;box-sizing:border-box;outline:none;transition:border-color 0.15s;">
+      </div>
+
+      <div>
+        <label style="display:block;font-size:0.85rem;font-weight:500;color:#374151;margin-bottom:6px;">
+          First name
+        </label>
+        <input type="text" id="profile-edit-firstname" placeholder="First name" style="width:100%;padding:10px 14px;border:1px solid #d1d5db;border-radius:8px;font-size:0.9rem;box-sizing:border-box;outline:none;transition:border-color 0.15s;">
+      </div>
+
+      <div>
+        <label style="display:block;font-size:0.85rem;font-weight:500;color:#374151;margin-bottom:6px;">
+          Last name
+        </label>
+        <input type="text" id="profile-edit-lastname" placeholder="Last name" style="width:100%;padding:10px 14px;border:1px solid #d1d5db;border-radius:8px;font-size:0.9rem;box-sizing:border-box;outline:none;transition:border-color 0.15s;">
+      </div>
+
+      <div>
+        <label style="display:block;font-size:0.85rem;font-weight:500;color:#374151;margin-bottom:6px;">
+          Time zone
+        </label>
+        <select id="profile-edit-timezone" style="width:100%;padding:10px 14px;border:1px solid #d1d5db;border-radius:8px;font-size:0.9rem;box-sizing:border-box;background:white;outline:none;">
+          <option value="UTC">UTC</option>
+          <option value="Europe/Istanbul">Europe/Istanbul (UTC+3)</option>
+          <option value="Europe/London">Europe/London (UTC+0 / UTC+1)</option>
+          <option value="Europe/Berlin">Europe/Berlin (UTC+1 / UTC+2)</option>
+          <option value="Europe/Paris">Europe/Paris (UTC+1 / UTC+2)</option>
+          <option value="America/New_York">America/New_York (EST / EDT)</option>
+          <option value="America/Chicago">America/Chicago (CST / CDT)</option>
+          <option value="America/Los_Angeles">America/Los_Angeles (PST / PDT)</option>
+          <option value="Asia/Tokyo">Asia/Tokyo (JST, UTC+9)</option>
+          <option value="Asia/Dubai">Asia/Dubai (GST, UTC+4)</option>
+          <option value="Asia/Singapore">Asia/Singapore (SGT, UTC+8)</option>
+        </select>
+      </div>
+      <div id="profile-settings-error" style="display:none;color:#dc2626;font-size:0.85rem;margin-top:-6px;"></div>
+    </div>
+
+    <!-- Modal Footer -->
+    <div style="display:flex;justify-content:flex-end;gap:12px;padding:16px 24px;border-top:1px solid #f3f4f6;background:#fafafa;">
+      <button onclick="closeProfileSettingsModal()" style="padding:9px 20px;background:white;border:1px solid #d1d5db;border-radius:8px;font-size:0.9rem;font-weight:500;color:#374151;cursor:pointer;">Cancel</button>
+      <button id="btn-save-profile-modal" onclick="saveProfileSettings()" style="padding:9px 24px;background:#3a1c94;color:white;border:none;border-radius:8px;font-size:0.9rem;font-weight:600;cursor:pointer;transition:background 0.15s;" onmouseover="this.style.background='#2b1070'" onmouseout="this.style.background='#3a1c94'">Save</button>
+    </div>
+
+  </div>
+</div>
+
+<!-- Change Password Modal -->
+<div class="modal-overlay" id="modal-change-password" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:99999;align-items:center;justify-content:center;">
+  <div style="background:white;border-radius:14px;width:420px;max-width:95vw;box-shadow:0 20px 25px -5px rgba(0,0,0,0.15), 0 10px 10px -5px rgba(0,0,0,0.04);overflow:hidden;">
+    <div style="display:flex;align-items:center;justify-content:space-between;padding:18px 24px;border-bottom:1px solid #f3f4f6;">
+      <h3 style="margin:0;font-size:1.15rem;font-weight:600;color:#111827;">Change password</h3>
+      <button onclick="closeChangePasswordModal()" style="background:transparent;border:none;font-size:1.2rem;color:#9ca3af;cursor:pointer;">✕</button>
+    </div>
+    <div style="padding:20px 24px;display:flex;flex-direction:column;gap:14px;">
+      <div>
+        <label style="display:block;font-size:0.85rem;font-weight:500;color:#374151;margin-bottom:6px;">Current password</label>
+        <input type="password" id="pw-current" style="width:100%;padding:10px 14px;border:1px solid #d1d5db;border-radius:8px;font-size:0.9rem;box-sizing:border-box;">
+      </div>
+      <div>
+        <label style="display:block;font-size:0.85rem;font-weight:500;color:#374151;margin-bottom:6px;">New password</label>
+        <input type="password" id="pw-new" style="width:100%;padding:10px 14px;border:1px solid #d1d5db;border-radius:8px;font-size:0.9rem;box-sizing:border-box;">
+      </div>
+      <div>
+        <label style="display:block;font-size:0.85rem;font-weight:500;color:#374151;margin-bottom:6px;">Confirm new password</label>
+        <input type="password" id="pw-confirm" style="width:100%;padding:10px 14px;border:1px solid #d1d5db;border-radius:8px;font-size:0.9rem;box-sizing:border-box;">
+      </div>
+      <div id="pw-change-error" style="display:none;color:#dc2626;font-size:0.85rem;"></div>
+    </div>
+    <div style="display:flex;justify-content:flex-end;gap:12px;padding:16px 24px;border-top:1px solid #f3f4f6;background:#fafafa;">
+      <button onclick="closeChangePasswordModal()" style="padding:9px 20px;background:white;border:1px solid #d1d5db;border-radius:8px;font-size:0.9rem;font-weight:500;color:#374151;cursor:pointer;">Cancel</button>
+      <button onclick="saveChangePassword()" style="padding:9px 24px;background:#3a1c94;color:white;border:none;border-radius:8px;font-size:0.9rem;font-weight:600;cursor:pointer;">Save</button>
+    </div>
+  </div>
+</div>
+
+<script src="/static/main.js?v=86"></script>
 </body>
 </html>

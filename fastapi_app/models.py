@@ -143,6 +143,10 @@ class User(Base):
     username = Column(String(50), unique=True, index=True, nullable=False)
     password_hash = Column(String(255), nullable=False)
     role = Column(String(20), default="viewer") # "admin" or "viewer"
+    email = Column(String(255), nullable=True)
+    first_name = Column(String(100), nullable=True)
+    last_name = Column(String(100), nullable=True)
+    timezone = Column(String(50), default="UTC")
     created_at = Column(DateTime, default=datetime.datetime.utcnow)
 
 

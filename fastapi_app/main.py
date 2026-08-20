@@ -57,6 +57,10 @@ async def lifespan(app: FastAPI):
             "ALTER TABLE nodes ADD COLUMN ssh_username VARCHAR(255) DEFAULT 'root'",
             "ALTER TABLE nodes ADD COLUMN encrypted_ssh_credential VARCHAR",
             "ALTER TABLE audit_logs ADD COLUMN username VARCHAR(50) DEFAULT 'system'",
+            "ALTER TABLE users ADD COLUMN email VARCHAR(255)",
+            "ALTER TABLE users ADD COLUMN first_name VARCHAR(100)",
+            "ALTER TABLE users ADD COLUMN last_name VARCHAR(100)",
+            "ALTER TABLE users ADD COLUMN timezone VARCHAR(50) DEFAULT 'UTC'",
             # New tables — CREATE IF NOT EXISTS is safe to re-run
             """CREATE TABLE IF NOT EXISTS cloud_credentials (
                 id SERIAL PRIMARY KEY,
@@ -1013,10 +1017,60 @@ def get_current_user(credentials: HTTPBasicCredentials = Depends(security), db: 
     username = credentials.username
     user = db.query(User).filter(User.username == username).first()
     role = user.role if user else ("admin" if username == os.environ.get("ADMIN_USER") else "viewer")
+    
+    email = (user.email if user and user.email else f"{username}@localhost")
+    first_name = (user.first_name if user and user.first_name else username.capitalize())
+    last_name = (user.last_name if user and user.last_name else "")
+    timezone = (user.timezone if user and user.timezone else "UTC")
+    
     return {
         "username": username,
         "role": role,
-        "team": "admins" if role == "admin" else "viewers"
+        "team": "admins" if role == "admin" else "viewers",
+        "email": email,
+        "first_name": first_name,
+        "last_name": last_name,
+        "timezone": timezone
+    }
+
+
+class ProfileUpdateModel(BaseModel):
+    email: str
+    first_name: str = ""
+    last_name: str = ""
+    timezone: str = "UTC"
+
+
+@app.put("/api/users/profile", dependencies=[Depends(verify_credentials)])
+def update_profile(data: ProfileUpdateModel, credentials: HTTPBasicCredentials = Depends(security), db: Session = Depends(get_db)):
+    from models import User
+    import secrets
+    username = credentials.username
+    user = db.query(User).filter(User.username == username).first()
+    if not user:
+        user = User(
+            username=username,
+            password_hash=secrets.token_hex(16),
+            role="admin" if username == os.environ.get("ADMIN_USER") else "viewer"
+        )
+        db.add(user)
+    
+    user.email = data.email.strip()
+    user.first_name = data.first_name.strip()
+    user.last_name = data.last_name.strip()
+    user.timezone = data.timezone.strip() or "UTC"
+    db.commit()
+    db.refresh(user)
+
+    return {
+        "success": True,
+        "username": user.username,
+        "role": user.role,
+        "team": "admins" if user.role == "admin" else "viewers",
+        "email": user.email,
+        "first_name": user.first_name,
+        "last_name": user.last_name,
+        "timezone": user.timezone
     }
 
 
