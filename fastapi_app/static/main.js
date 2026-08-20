@@ -901,12 +901,23 @@ document.addEventListener('DOMContentLoaded', () => {
             const donutCircle = document.getElementById('cc-donut-progress');
 if (donutCircle) {
                 donutCircle.style.strokeDashoffset = offset;
-                donutCircle.style.stroke = ratio === 1 ? 'var(--success)' : (ratio > 0 ? 'var(--warning)' : 'var(--danger)');
-                
+                // Operational arc is ALWAYS green — never changes color based on ratio
+                donutCircle.style.stroke = 'var(--success)';
+
+                // Background circle = warning color (orange) when there are warnings, gray otherwise
+                const donutBg = document.getElementById('cc-donut-bg');
+                const warningCountForBg = data.length - operationalCount;
+                if (donutBg) {
+                    donutBg.style.stroke = warningCountForBg > 0 ? 'var(--warning)' : '#e5e7eb';
+                }
+
+                // Center text always green (operational count)
+                const centerText = document.getElementById('cc-donut-center-text');
+                if (centerText) centerText.style.color = 'var(--success)';
+
                 // Add hover logic
                 const donutTooltip = document.getElementById('donut-hover-tooltip');
                 const donutText = document.getElementById('donut-hover-text');
-                document.getElementById('cc-donut-center-text').style.color = donutCircle.style.stroke;
                 if (donutTooltip && donutText) {
                     donutCircle?.addEventListener('mouseenter', (e) => {
                         if(donutText) donutText.innerText = `${operationalCount} Operational`;
