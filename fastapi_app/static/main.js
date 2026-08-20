@@ -374,6 +374,59 @@ document.addEventListener('DOMContentLoaded', () => {
         fetchDashboardMetrics();
     }
 
+    window.navigateToClusterNodes = async function(clusterId, nodeName) {
+        const ntt = document.getElementById('node-hover-tooltip');
+        if (ntt) {
+            ntt.style.display = 'none';
+            ntt.style.opacity = '0';
+        }
+
+        if (!clusterId) return;
+
+        try {
+            const res = await apiFetch(`/api/projects/${clusterId}`);
+            if (!res.ok) return;
+            const proj = await res.json();
+
+            showDetailView(proj);
+
+            setTimeout(() => {
+                // 1. Activate Nodes tab in Cluster Detail
+                const nodesTab = document.querySelector('.cluster-tab[data-tab="nodes"]');
+                if (nodesTab) {
+                    nodesTab.click();
+                } else {
+                    document.querySelectorAll('.cluster-tab').forEach(t => t.classList.remove('active'));
+                    document.querySelectorAll('.tab-content').forEach(c => { c.style.display = 'none'; c.classList.remove('active'); });
+                    const tabContentNodes = document.getElementById('tab-content-nodes');
+                    if (tabContentNodes) {
+                        tabContentNodes.style.display = 'block';
+                        tabContentNodes.classList.add('active');
+                    }
+                }
+
+                // 2. Ensure Node list subtab is active
+                const nodelistSubtab = document.querySelector('.cluster-subtab[data-subtab="nodelist"]');
+                if (nodelistSubtab) {
+                    nodelistSubtab.click();
+                }
+
+                // 3. Highlight matching node in table if nodeName given
+                if (nodeName) {
+                    const rows = document.querySelectorAll('#node-list-table tbody tr');
+                    rows.forEach(r => {
+                        if (r.innerText.includes(nodeName)) {
+                            r.style.background = '#f5f3ff';
+                            setTimeout(() => { r.style.background = ''; }, 3000);
+                        }
+                    });
+                }
+            }, 80);
+        } catch(e) {
+            console.error("Failed to navigate to cluster nodes:", e);
+        }
+    };
+
     function renderNodes(nodes) {
         const tbody = document.querySelector('#node-list-table tbody');
         if (tbody) tbody.innerHTML = '';
@@ -812,7 +865,9 @@ document.addEventListener('DOMContentLoaded', () => {
                         </div>
                     </td>
                     <td style="padding: 12px 10px; color: var(--success);">On <span style="color:var(--border);">|</span> On</td>
-                    <td style="padding: 12px 10px;">${proj.nodesCount || 0}</td>
+                    <td style="padding: 12px 10px; cursor: pointer;" onclick="event.stopPropagation(); navigateToClusterNodes(${proj.id});" title="Click to view Node list">
+                        <span style="padding: 3px 10px; background: #ede9fe; color: #4338ca; border-radius: 12px; font-weight: 600; font-size: 0.82rem; transition: background 0.15s;" onmouseover="this.style.background='#ddd6fe'" onmouseout="this.style.background='#ede9fe'">${proj.nodesCount || 0}</span>
+                    </td>
                     <td style="padding: 12px 10px; color: ${statusColor};">${statusText}</td>
                     <td style="padding: 12px 10px;">
                         <div style="display: flex; justify-content: flex-end; gap: 8px;">
@@ -1060,11 +1115,12 @@ document.addEventListener('DOMContentLoaded', () => {
                     // The smaller polygon points (scaled from original)
                     const polyPoints = "22,0 42,11 42,34 22,46 3,34 3,11";
                     
-                    hexHtml += `<g class="node-hex-hover" data-idx="${idx}" style="cursor:pointer;" transform="translate(${pos.x}, ${pos.y})"
+                    hexHtml += `<g class="node-hex-hover" data-idx="${idx}" data-cluster-id="${node.clusterId}" data-node-name="${escapeHTML(node.name)}" style="cursor:pointer;" transform="translate(${pos.x}, ${pos.y})"
+                        onclick="navigateToClusterNodes(${node.clusterId}, '${escapeHTML(node.name)}')"
                         onmouseover="let p = this.querySelector('polygon'); p.setAttribute('data-orig-fill', p.getAttribute('fill')); p.setAttribute('fill', 'white'); p.setAttribute('stroke', '${node.color}');"
                         onmouseout="let p = this.querySelector('polygon'); p.setAttribute('fill', p.getAttribute('data-orig-fill')); p.setAttribute('stroke', 'var(--glass-bg)');"
                     >
-                        <polygon class="node-petek" points="${polyPoints}" fill="${node.color}" stroke="var(--glass-bg)" stroke-width="3" style="transition: all 0.2s ease;" />
+                        <polygon class="node-petek" points="${polyPoints}" fill="${node.color}" stroke="var(--glass-bg)" stroke-width="3" style="transition: all 0.2s ease; cursor: pointer;" />
                     </g>`;
                     
                     window['nodeData_' + idx] = {
@@ -1074,6 +1130,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         role: node.role ? (node.role.charAt(0).toUpperCase() + node.role.slice(1)) : 'None',
                         type: nodeType,
                         cluster: `${node.clusterName} (ID:${node.clusterId})`,
+                        clusterId: node.clusterId,
                         badge: roleBadge,
                         color: node.color
                     };
@@ -1084,12 +1141,27 @@ document.addEventListener('DOMContentLoaded', () => {
                 
                 let hoverTimeout;
                 document.querySelectorAll('.node-hex-hover').forEach(el => {
+                    el.onclick = () => {
+                        const idx = el.getAttribute('data-idx');
+                        const data = window['nodeData_' + idx];
+                        if (data && data.clusterId) {
+                            navigateToClusterNodes(data.clusterId, data.hostname);
+                        }
+                    };
                     el.onmouseenter = (e) => {
                         clearTimeout(hoverTimeout);
                         hoverTimeout = setTimeout(() => {
                             const ntt = document.getElementById('node-hover-tooltip');
                             const data = window['nodeData_' + el.getAttribute('data-idx')];
                             if (ntt && data) {
+                                window.currentTooltipClusterId = data.clusterId;
+                                window.currentTooltipNodeName = data.hostname;
+                                ntt.style.cursor = 'pointer';
+                                ntt.onclick = () => {
+                                    if (window.currentTooltipClusterId) {
+                                        navigateToClusterNodes(window.currentTooltipClusterId, window.currentTooltipNodeName);
+                                    }
+                                };
                                 const header = document.getElementById('ntt-header');
                                 const msgBox = document.getElementById('ntt-message');
                                 const stat = document.getElementById('ntt-status');
