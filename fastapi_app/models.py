@@ -219,10 +219,12 @@ class DeployJob(Base):
     project_id          = Column(Integer, ForeignKey('projects.id', ondelete='SET NULL'), nullable=True)
     db_type             = Column(String(50), nullable=False)   # 'postgresql', 'mssql'
     cluster_name        = Column(String(255), nullable=False)
-    # Status: PENDING → SSH_OK → DEPLOYING → SUCCESS | FAILED
+    # Status: PENDING → CONNECTING → SSH_OK → INSTALLING → CONFIGURING_PRIMARY
+    #         → STARTING_PRIMARY → CONFIGURING_REPLICA → VERIFYING → SUCCESS | FAILED
     status              = Column(String(50), default='PENDING', nullable=False)
     step                = Column(String(100), nullable=True)
     error_msg           = Column(String(1000), nullable=True)
+    log_output          = Column(Text, nullable=True)   # Live SSH command output for frontend polling
 
     # SSH configuration
     ssh_host            = Column(String(255), nullable=True)

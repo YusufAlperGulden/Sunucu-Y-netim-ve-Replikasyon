@@ -4305,12 +4305,19 @@ async function submitDeployWizard() {
             resultEl.style.border = '1px solid #bbf7d0';
             resultEl.style.color = '#166534';
             resultEl.innerHTML = `
-                ✓ <strong>${escapeHTML(data.cluster_name)}</strong> cluster kaydı oluşturuldu. (Job #${data.job_id})<br>
-                <span style="font-size:0.82rem;color:#4b7c5e;margin-top:6px;display:block;">
-                    ℹ️ <em>Şu an deployment kuyruğa alındı (PENDING). Gerçek sunucu kurulumu için SSH erişimine sahip bir arka plan işçisi gerekmektedir.</em>
-                </span>`;
+                <div style="font-weight:600;margin-bottom:8px;">✓ <strong>${escapeHTML(data.cluster_name)}</strong> — Deployment başlatıldı (Job #${data.job_id})</div>
+                <div id="deploy-progress-wrap" style="margin-bottom:10px;">
+                    <div id="deploy-step-label" style="font-size:0.82rem;margin-bottom:4px;color:#374151;">⏳ Başlatılıyor...</div>
+                    <div style="background:#d1fae5;border-radius:6px;height:10px;overflow:hidden;">
+                        <div id="deploy-progress-bar" style="height:10px;background:#10b981;width:0%;transition:width 0.4s ease;border-radius:6px;"></div>
+                    </div>
+                </div>
+                <details open style="margin-top:8px;">
+                    <summary style="font-size:0.78rem;cursor:pointer;color:#4b7c5e;">SSH Kurulum Logu</summary>
+                    <pre id="deploy-log-panel" style="background:#0f172a;color:#a3e635;font-size:0.72rem;padding:10px;border-radius:6px;max-height:220px;overflow-y:auto;margin-top:6px;white-space:pre-wrap;word-break:break-all;"></pre>
+                </details>`;
             btn.style.display = 'none';
-            // Refresh project list
+            startDeployPoller(data.job_id);
             setTimeout(() => { if (typeof fetchProjects === 'function') fetchProjects(); }, 800);
         } else {
             resultEl.style.background = '#fef2f2';
@@ -4458,3 +4465,78 @@ function profileLogout() {
         return result;
     };
 })();
+
+
+// ── Deploy Live Progress Poller ───────────────────────────────────────────────
+
+const DEPLOY_STATUS_STEPS = {
+    'PENDING':              { label: '⏳ Kuyrukta bekliyor...', pct: 2 },
+    'CONNECTING':           { label: '🔌 SSH bağlantısı kuruluyor...', pct: 10 },
+    'SSH_OK':               { label: '✓ SSH bağlantısı başarılı — OS tespit ediliyor...', pct: 18 },
+    'INSTALLING':           { label: '📦 PostgreSQL paketleri kuruluyor...', pct: 35 },
+    'CONFIGURING_PRIMARY':  { label: '⚙️ Primary yapılandırılıyor...', pct: 55 },
+    'STARTING_PRIMARY':     { label: '▶️ Primary servisi başlatılıyor...', pct: 68 },
+    'CONFIGURING_REPLICA':  { label: '🔄 Replica yapılandırılıyor (pg_basebackup)...', pct: 82 },
+    'VERIFYING':            { label: '🔍 Replikasyon doğrulanıyor...', pct: 93 },
+    'SUCCESS':              { label: '✅ Deployment tamamlandı!', pct: 100 },
+    'FAILED':               { label: '❌ Deployment başarısız!', pct: 100 },
+};
+
+let _deployPollTimer = null;
+
+function startDeployPoller(jobId) {
+    if (_deployPollTimer) clearInterval(_deployPollTimer);
+    _deployPollTimer = setInterval(() => _pollDeployJob(jobId), 3000);
+    // Immediate first poll
+    _pollDeployJob(jobId);
+}
+
+function stopDeployPoller() {
+    if (_deployPollTimer) { clearInterval(_deployPollTimer); _deployPollTimer = null; }
+}
+
+async function _pollDeployJob(jobId) {
+    try {
+        const res = await apiFetch('/api/deploy/' + jobId);
+        if (!res.ok) return;
+        const data = await res.json();
+
+        const status = data.status || 'PENDING';
+        const info   = DEPLOY_STATUS_STEPS[status] || { label: status, pct: 5 };
+
+        // Progress bar
+        const bar   = document.getElementById('deploy-progress-bar');
+        const label = document.getElementById('deploy-step-label');
+        if (bar)   bar.style.width = info.pct + '%';
+        if (label) label.textContent = info.label;
+
+        // Log panel
+        const logEl = document.getElementById('deploy-log-panel');
+        if (logEl && data.log_output) {
+            logEl.textContent = data.log_output;
+            logEl.scrollTop = logEl.scrollHeight;
+        }
+
+        // Terminal states
+        if (status === 'SUCCESS') {
+            stopDeployPoller();
+            if (bar)   bar.style.background = '#10b981';
+            if (label) label.style.color = '#065f46';
+            setTimeout(() => { if (typeof fetchProjects === 'function') fetchProjects(); }, 1000);
+        } else if (status === 'FAILED') {
+            stopDeployPoller();
+            if (bar)   bar.style.background = '#ef4444';
+            if (label) { label.style.color = '#991b1b'; }
+            // Show error in red
+            const resultEl = document.getElementById('deploy-result-msg');
+            if (resultEl && data.error_msg) {
+                const errDiv = document.createElement('div');
+                errDiv.style.cssText = 'background:#fef2f2;border:1px solid #fecaca;color:#991b1b;padding:8px 12px;border-radius:6px;font-size:0.82rem;margin-top:8px;';
+                errDiv.innerHTML = '<strong>Hata:</strong> ' + escapeHTML(data.error_msg);
+                resultEl.appendChild(errDiv);
+            }
+        }
+    } catch (e) {
+        // Network error during poll — non-fatal, keep polling
+    }
+}

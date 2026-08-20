@@ -7,6 +7,7 @@ from sqlalchemy.orm import Session
 from models import SessionLocal, Project, DatabaseNode
 from pydantic import BaseModel
 from ha_manager import test_connection, setup_replication, check_and_protect_wal_bloat, cleanup_node_replication, cleanup_project_replication
+from deploy_worker import run_deploy_job
 import traceback
 import asyncio
 import secrets
@@ -1931,7 +1932,7 @@ def deploy_validate_ssh(body: dict = Body(...)):
 
 
 @app.post("/api/deploy/start", dependencies=[Depends(verify_credentials)])
-def deploy_start(body: dict = Body(...), db: Session = Depends(get_db)):
+def deploy_start(background_tasks: BackgroundTasks, body: dict = Body(...), db: Session = Depends(get_db)):
     """
     Save wizard data and create the cluster record.
     Creates: Project + DatabaseNode rows + DeployJob.
@@ -2007,6 +2008,7 @@ def deploy_start(body: dict = Body(...), db: Session = Depends(get_db)):
     db.add(job)
     db.commit()
     db.refresh(job)
+    background_tasks.add_task(run_deploy_job, job.id)
     return {"success": True, "job_id": job.id, "project_id": proj.id, "cluster_name": cluster_name}
 
 
@@ -2021,6 +2023,7 @@ def deploy_get_job(job_id: int, db: Session = Depends(get_db)):
         "id": job.id, "project_id": job.project_id,
         "db_type": job.db_type, "cluster_name": job.cluster_name,
         "status": job.status, "step": job.step, "error_msg": job.error_msg,
+        "log_output": job.log_output or "",
         "created_at": str(job.created_at), "updated_at": str(job.updated_at),
     }
 
