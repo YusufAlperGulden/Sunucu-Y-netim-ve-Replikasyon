@@ -118,13 +118,43 @@ class OperationalReport(Base):
 class BackupJob(Base):
     __tablename__ = 'backup_jobs'
     id = Column(Integer, primary_key=True, index=True)
-    project_id = Column(Integer, ForeignKey('projects.id', ondelete='CASCADE'), nullable=False)
-    cluster_name = Column(String(255))
-    backup_type = Column(String(50)) # FULL, INCR, DIFF
-    status = Column(String(50), default="IN_PROGRESS") # COMPLETED, FAILED, IN_PROGRESS
+    project_id = Column(Integer, ForeignKey('projects.id', ondelete='CASCADE'), nullable=True)
+    node_id = Column(Integer, ForeignKey('nodes.id', ondelete='SET NULL'), nullable=True)
+    cluster_name = Column(String(255), nullable=True)
+    db_type = Column(String(50), default='postgresql') # 'postgresql', 'mssql'
+    backup_host = Column(String(255), nullable=True)
+    backup_method = Column(String(50), default='pgdumpall') # pgdumpall, pg_basebackup, Full, Differential, Transaction Log
+    dump_type = Column(String(50), default='Schema And Data') # Schema And Data, Schema Only, Data Only
+    backup_type = Column(String(50), default='FULL') # FULL, INCR, DIFF
+    compression = Column(Boolean, default=True)
+    compression_level = Column(Integer, default=6)
+    retention_days = Column(Integer, default=31)
+    enable_encryption = Column(Boolean, default=False)
+    enable_partial = Column(Boolean, default=False)
+    storage_location = Column(String(100), default='Store on controller') # Store on controller, Cloud storage
+    storage_directory = Column(String(500), default='/var/lib/backups')
+    backup_subdirectory = Column(String(255), default='BACKUP-%i')
+    cloud_credential_id = Column(Integer, ForeignKey('cloud_credentials.id', ondelete='SET NULL'), nullable=True)
+    file_path = Column(String(1000), nullable=True)
+    error_msg = Column(Text, nullable=True)
+    status = Column(String(50), default="IN_PROGRESS") # COMPLETED, FAILED, IN_PROGRESS, PENDING
     size_mb = Column(Float, default=0.0)
     created_at = Column(DateTime, default=datetime.datetime.utcnow)
     completed_at = Column(DateTime, nullable=True)
+
+
+class AlarmRecord(Base):
+    """System and cluster alerts / alarms (unmuted / muted)."""
+    __tablename__ = 'alarm_records'
+    id = Column(Integer, primary_key=True, index=True)
+    title = Column(String(255), nullable=False)
+    severity = Column(String(50), default='WARNING') # CRITICAL, WARNING, INFO
+    category = Column(String(100), default='Cluster') # Cluster, Node, Replication, Backup
+    cluster_name = Column(String(255), nullable=True)
+    hostname = Column(String(255), nullable=True)
+    message = Column(Text, nullable=True)
+    is_muted = Column(Boolean, default=False)
+    created_at = Column(DateTime, default=datetime.datetime.utcnow)
     
 class BackupSchedule(Base):
     __tablename__ = 'backup_schedules'

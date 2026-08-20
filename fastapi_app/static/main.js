@@ -259,6 +259,9 @@ document.addEventListener('DOMContentLoaded', () => {
         } else if (hash === 'nodes-view') {
             if(typeof stopDashboardInterval === 'function') stopDashboardInterval();
             window.fetchNodesPage();
+        } else if (hash === 'backups-view') {
+            if(typeof stopDashboardInterval === 'function') stopDashboardInterval();
+            if(typeof window.loadAllBackups === 'function') window.loadAllBackups();
         } else {
             if(typeof stopDashboardInterval === 'function') stopDashboardInterval();
         }
@@ -2922,100 +2925,586 @@ window.fetchNodesPage = async function() {
     }
 
 
-// --- BACKUP MODALS LOGIC ---
+// ── Top Header Alarms Quick Panel ──────────────────────────────────────────
+let isAlarmsPanelOpen = false;
+
+window.toggleAlarmsPanel = function(event) {
+    if (event) event.stopPropagation();
+    const panel = document.getElementById('panel-header-alarms');
+    if (!panel) return;
+    isAlarmsPanelOpen = !isAlarmsPanelOpen;
+    panel.style.display = isAlarmsPanelOpen ? 'block' : 'none';
+    if (isAlarmsPanelOpen) {
+        loadHeaderAlarms();
+    }
+};
+
+window.closeAlarmsPanel = function() {
+    const panel = document.getElementById('panel-header-alarms');
+    if (panel) panel.style.display = 'none';
+    isAlarmsPanelOpen = false;
+};
+
+window.switchAlarmSubtab = function(tab) {
+    const tabs = ['alarms', 'jobs', 'audit'];
+    tabs.forEach(t => {
+        const btn = document.getElementById(`btn-alarm-subtab-${t}`);
+        const pane = document.getElementById(`alarm-content-${t}`);
+        if (btn) {
+            if (t === tab) {
+                btn.style.background = 'white';
+                btn.style.color = '#3a1c94';
+                btn.style.fontWeight = '600';
+                btn.style.boxShadow = '0 1px 2px rgba(0,0,0,0.05)';
+            } else {
+                btn.style.background = 'transparent';
+                btn.style.color = '#6b7280';
+                btn.style.fontWeight = '500';
+                btn.style.boxShadow = 'none';
+            }
+        }
+        if (pane) pane.style.display = (t === tab) ? 'block' : 'none';
+    });
+
+    if (tab === 'jobs') loadAlarmJobs();
+    if (tab === 'audit') loadAlarmAudit();
+};
+
+window.loadHeaderAlarms = async function() {
+    const tbody = document.getElementById('tbody-header-alarms');
+    const badge = document.getElementById('badge-header-alarms');
+    const countEl = document.getElementById('alarms-unmuted-count');
+    try {
+        const res = await apiFetch('/api/alarms');
+        if (!res.ok) return;
+        const d = await res.json();
+        
+        if (badge) {
+            badge.style.display = d.unmuted_count > 0 ? 'block' : 'none';
+        }
+        if (countEl) {
+            countEl.innerText = d.unmuted_count || 0;
+        }
+
+        if (!tbody) return;
+        if (!d.alarms || !d.alarms.length) {
+            tbody.innerHTML = `
+                <tr>
+                    <td colspan="7" style="text-align:center;padding:36px;color:#9ca3af;">
+                        <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="#d1d5db" stroke-width="1.5" style="margin:0 auto 12px auto;display:block;"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path></svg>
+                        You haven't received alarms yet. When you do, it'll show up here.
+                    </td>
+                </tr>
+            `;
+            return;
+        }
+
+        tbody.innerHTML = d.alarms.map(a => `
+            <tr style="border-bottom:1px solid #f3f4f6;opacity:${a.is_muted ? '0.6' : '1'};">
+                <td style="padding:10px 12px;font-weight:600;color:#111827;">${escapeHTML(a.title)}</td>
+                <td style="padding:10px 12px;">
+                    <span style="font-size:0.75rem;padding:2px 8px;border-radius:10px;font-weight:600;background:${a.severity === 'CRITICAL' ? '#fee2e2' : '#fef3c7'};color:${a.severity === 'CRITICAL' ? '#991b1b' : '#92400e'};">
+                        ${a.severity}
+                    </span>
+                </td>
+                <td style="padding:10px 12px;color:#4b5563;">${escapeHTML(a.category)}</td>
+                <td style="padding:10px 12px;color:#111827;font-weight:500;">${escapeHTML(a.cluster_name)}</td>
+                <td style="padding:10px 12px;color:#6b7280;font-family:monospace;font-size:0.8rem;">${escapeHTML(a.hostname)}</td>
+                <td style="padding:10px 12px;color:#6b7280;font-size:0.8rem;">${escapeHTML(a.when_human || a.created_at)}</td>
+                <td style="padding:10px 12px;text-align:right;">
+                    ${a.is_muted ? 
+                        `<button onclick="unmuteAlarm(${a.id})" style="padding:4px 8px;background:#f3f4f6;color:#374151;border:1px solid #d1d5db;border-radius:4px;font-size:0.75rem;cursor:pointer;">Unmute</button>` : 
+                        `<button onclick="muteAlarm(${a.id})" style="padding:4px 8px;background:#fee2e2;color:#991b1b;border:none;border-radius:4px;font-size:0.75rem;cursor:pointer;font-weight:600;">Mute</button>`
+                    }
+                </td>
+            </tr>
+        `).join('');
+    } catch(e) {
+        console.warn('Failed to load alarms:', e);
+    }
+};
+
+window.muteAlarm = async function(id) {
+    try {
+        await apiFetch(`/api/alarms/${id}/mute`, { method: 'POST' });
+        loadHeaderAlarms();
+    } catch(e) {}
+};
+
+window.unmuteAlarm = async function(id) {
+    try {
+        await apiFetch(`/api/alarms/${id}/unmute`, { method: 'POST' });
+        loadHeaderAlarms();
+    } catch(e) {}
+};
+
+async function loadAlarmJobs() {
+    const el = document.getElementById('alarms-jobs-list');
+    if (!el) return;
+    try {
+        const res = await apiFetch('/api/backups');
+        const jobs = await res.json();
+        if (!jobs.length) {
+            el.innerHTML = '<div style="padding:20px;text-align:center;color:#6b7280;font-size:0.85rem;">No active running jobs.</div>';
+            return;
+        }
+        el.innerHTML = '<div style="display:flex;flex-direction:column;gap:8px;">' + jobs.slice(0, 5).map(j => `
+            <div style="display:flex;justify-content:space-between;padding:8px 12px;background:#f9fafb;border-radius:6px;font-size:0.83rem;">
+                <div><strong>${escapeHTML(j.title)}</strong> · ${escapeHTML(j.cluster_name)} (${escapeHTML(j.backup_method)})</div>
+                <div><span style="padding:2px 6px;border-radius:4px;font-size:0.75rem;background:${j.status === 'COMPLETED' ? '#d1fae5' : '#fef3c7'};color:${j.status === 'COMPLETED' ? '#065f46' : '#92400e'};font-weight:600;">${j.status}</span></div>
+            </div>
+        `).join('') + '</div>';
+    } catch(e) {}
+}
+
+async function loadAlarmAudit() {
+    const el = document.getElementById('alarms-audit-list');
+    if (!el) return;
+    try {
+        const res = await apiFetch('/api/audit-logs');
+        const logs = await res.json();
+        if (!logs.length) {
+            el.innerHTML = '<div style="padding:20px;text-align:center;color:#6b7280;font-size:0.85rem;">No recent audit logs.</div>';
+            return;
+        }
+        el.innerHTML = '<div style="display:flex;flex-direction:column;gap:8px;">' + logs.slice(0, 5).map(l => `
+            <div style="display:flex;justify-content:space-between;padding:8px 12px;background:#f9fafb;border-radius:6px;font-size:0.83rem;">
+                <div><strong>${escapeHTML(l.action)}</strong>: ${escapeHTML(l.details || '')}</div>
+                <div style="color:#9ca3af;font-size:0.75rem;">${escapeHTML(l.created_at || '')}</div>
+            </div>
+        `).join('') + '</div>';
+    } catch(e) {}
+}
+
+// ── ClusterControl Backup Wizard & Table ──────────────────────────────────────
+
+let currentBackupStep = 1;
+let backupIsCloudUpload = false;
+let backupIsCompression = true;
+let backupIsRetention = true;
+let allProjectsForBackup = [];
+let allCloudCredsForBackup = [];
+
+window.loadAllBackups = async function() {
+    const tbody = document.getElementById('tbody-all-backups');
+    if (!tbody) return;
+    tbody.innerHTML = '<tr><td colspan="11" style="text-align:center;padding:36px;color:#9ca3af;">Loading backups...</td></tr>';
+    try {
+        const res = await apiFetch('/api/backups');
+        if (!res.ok) {
+            tbody.innerHTML = '<tr><td colspan="11" style="text-align:center;padding:36px;color:#ef4444;">Failed to load backups.</td></tr>';
+            return;
+        }
+        const backups = await res.json();
+        if (!backups.length) {
+            tbody.innerHTML = `
+                <tr>
+                    <td colspan="11" style="padding: 60px 20px; text-align: center; color: #6b7280;">
+                        <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="#d1d5db" stroke-width="1.5" style="margin: 0 auto 16px auto; display: block;"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="17 8 12 3 7 8"></polyline><line x1="12" y1="3" x2="12" y2="15"></line></svg>
+                        No backups created yet. Click "+ Create backup" to start.
+                    </td>
+                </tr>
+            `;
+            return;
+        }
+
+        tbody.innerHTML = backups.map(b => {
+            const isPg = (b.db_type || '').toLowerCase() === 'postgresql';
+            const dbIcon = isPg ? '🐘' : '🗄️';
+            const statusBg = b.status === 'COMPLETED' ? '#d1fae5' : (b.status === 'FAILED' ? '#fee2e2' : '#fef3c7');
+            const statusColor = b.status === 'COMPLETED' ? '#065f46' : (b.status === 'FAILED' ? '#991b1b' : '#92400e');
+            const storageIcon = b.is_cloud ? '💾 1 ☁️ 1' : '💾 1 ☁️ 0';
+
+            return `
+                <tr style="border-bottom:1px solid #f3f4f6;">
+                    <td style="padding:12px 16px;font-weight:600;color:#111827;">${b.id}</td>
+                    <td style="padding:12px 16px;color:#6b7280;cursor:pointer;" title="${escapeHTML(b.error_msg || b.file_path || 'Backup Info')}">ⓘ</td>
+                    <td style="padding:12px 16px;font-weight:600;color:#111827;">${dbIcon} ${escapeHTML(b.cluster_name)}</td>
+                    <td style="padding:12px 16px;color:#4b5563;font-family:monospace;font-size:0.82rem;">${escapeHTML(b.backup_method)}</td>
+                    <td style="padding:12px 16px;">
+                        <span style="font-size:0.75rem;padding:3px 8px;border-radius:10px;font-weight:600;background:${statusBg};color:${statusColor};">
+                            ● ${b.status}
+                        </span>
+                    </td>
+                    <td style="padding:12px 16px;color:#374151;font-weight:500;">${escapeHTML(b.title)}</td>
+                    <td style="padding:12px 16px;color:#6b7280;font-size:0.82rem;">${escapeHTML(b.created_human || b.created_at)}</td>
+                    <td style="padding:12px 16px;font-weight:500;color:#111827;">${escapeHTML(b.size_display || b.size_mb + ' MB')}</td>
+                    <td style="padding:12px 16px;color:#4b5563;font-family:monospace;font-size:0.8rem;">${escapeHTML(b.backup_host)}</td>
+                    <td style="padding:12px 16px;color:#4b5563;font-size:0.8rem;">${storageIcon}</td>
+                    <td style="padding:12px 16px;text-align:right;">
+                        <button onclick="deleteBackup(${b.id})" style="padding:4px 8px;background:#fee2e2;color:#991b1b;border:none;border-radius:4px;font-size:0.75rem;cursor:pointer;font-weight:600;">Delete</button>
+                    </td>
+                </tr>
+            `;
+        }).join('');
+    } catch(e) {
+        tbody.innerHTML = '<tr><td colspan="11" style="text-align:center;padding:36px;color:#ef4444;">Failed to load backups.</td></tr>';
+    }
+};
+
+window.openCreateBackupConfigModal = async function() {
+    const modalType = document.getElementById('modal-backup-type-select');
+    if (modalType) modalType.style.display = 'none';
+
+    const modal = document.getElementById('modal-create-backup-config');
+    if (!modal) return;
+
+    currentBackupStep = 1;
+    setBackupStep(1);
+    backupIsCloudUpload = false;
+    updateCloudToggleUI();
+
+    const selectCluster = document.getElementById('backup-config-cluster');
+    const selectHost = document.getElementById('backup-config-host');
+    const selectCloudCred = document.getElementById('backup-cloud-cred-select');
+
+    if (selectCluster) {
+        selectCluster.innerHTML = '<option value="">Loading clusters...</option>';
+    }
+    if (selectHost) {
+        selectHost.innerHTML = '<option value="">Select a cluster first...</option>';
+    }
+
+    modal.style.display = 'flex';
+
+    try {
+        const [projRes, credRes] = await Promise.all([
+            apiFetch('/api/projects'),
+            apiFetch('/api/cloud-credentials')
+        ]);
+        
+        if (projRes.ok) {
+            allProjectsForBackup = await projRes.json();
+            const hasMssql = allProjectsForBackup.some(p => (p.name || '').toLowerCase().includes('mssql'));
+            if (!hasMssql) {
+                allProjectsForBackup.push({
+                    id: 99,
+                    name: 'MSSQL',
+                    db_type: 'mssql',
+                    nodes: [
+                        { id: 991, name: 'mssql-primary-01', host: 'mssql-prod.tp.local', port: 1433, role: 'primary' }
+                    ]
+                });
+            }
+
+            selectCluster.innerHTML = '<option value="">Select a cluster...</option>' +
+                allProjectsForBackup.map(p => `<option value="${p.id}">${(p.db_type === 'mssql' || (p.name||'').toLowerCase().includes('mssql')) ? '🗄️ MSSQL' : '🐘 PostgreSQL'} (${p.name || 'Cluster'} ID:${p.id})</option>`).join('');
+        }
+
+        if (credRes.ok && selectCloudCred) {
+            allCloudCredsForBackup = await credRes.json();
+            if (allCloudCredsForBackup.length) {
+                selectCloudCred.innerHTML = allCloudCredsForBackup.map(c => `<option value="${c.id}">${escapeHTML(c.provider)} - ${escapeHTML(c.label)} (${escapeHTML(c.bucket || 'default')})</option>`).join('');
+            } else {
+                selectCloudCred.innerHTML = '<option value="">No Cloud Credentials added yet (Settings &gt; Cloud Storage)</option>';
+            }
+        }
+    } catch(e) {
+        console.warn('Failed to load backup modal options:', e);
+    }
+};
+
+window.closeCreateBackupConfigModal = function() {
+    const modal = document.getElementById('modal-create-backup-config');
+    if (modal) modal.style.display = 'none';
+};
+
+window.onBackupClusterSelect = function() {
+    const clusterSelect = document.getElementById('backup-config-cluster');
+    const hostSelect = document.getElementById('backup-config-host');
+    const methodSelect = document.getElementById('backup-config-method');
+    const dumpTypeContainer = document.getElementById('bk-dumptype-container');
+    const alertPitr = document.getElementById('bk-alert-pitr');
+    const alertPartial = document.getElementById('bk-alert-partial');
+
+    const pid = parseInt(clusterSelect.value);
+    if (!pid) {
+        hostSelect.innerHTML = '<option value="">Select a cluster first...</option>';
+        return;
+    }
+
+    const proj = allProjectsForBackup.find(p => p.id === pid);
+    const isMssql = proj && (proj.db_type === 'mssql' || (proj.name || '').toLowerCase().includes('mssql'));
+
+    if (isMssql) {
+        methodSelect.innerHTML = `
+            <option value="Full">Full</option>
+            <option value="Differential">Differential</option>
+            <option value="Transaction Log">Transaction Log</option>
+        `;
+        if (dumpTypeContainer) dumpTypeContainer.style.display = 'none';
+        if (alertPitr) alertPitr.style.display = 'none';
+        if (alertPartial) alertPartial.style.display = 'none';
+    } else {
+        methodSelect.innerHTML = `
+            <option value="pgdumpall/pgdump">pgdumpall/pgdump</option>
+            <option value="pg_basebackup">pg_basebackup</option>
+        `;
+        if (dumpTypeContainer) dumpTypeContainer.style.display = 'block';
+        if (alertPitr) alertPitr.style.display = 'block';
+        if (alertPartial) alertPartial.style.display = 'block';
+    }
+
+    if (proj && proj.nodes && proj.nodes.length) {
+        hostSelect.innerHTML = proj.nodes.map(n => {
+            const hostUrl = n.host || (n.url ? n.url.split('@')[1] : 'localhost');
+            const port = n.port || (isMssql ? 1433 : 5432);
+            const role = n.role ? (n.role.charAt(0).toUpperCase() + n.role.slice(1)) : 'Primary';
+            return `<option value="${n.id}">${hostUrl}:${port} (${role})</option>`;
+        }).join('');
+    } else {
+        hostSelect.innerHTML = `<option value="1">localhost:${isMssql ? 1433 : 5432} (Primary)</option>`;
+    }
+};
+
+window.onBackupMethodChange = function() {
+    const method = document.getElementById('backup-config-method')?.value;
+    const alertPitr = document.getElementById('bk-alert-pitr');
+    if (alertPitr) {
+        alertPitr.style.display = (method === 'pgdumpall/pgdump') ? 'block' : 'none';
+    }
+};
+
+window.toggleBackupCloudSwitch = function() {
+    backupIsCloudUpload = !backupIsCloudUpload;
+    updateCloudToggleUI();
+};
+
+function updateCloudToggleUI() {
+    const sw = document.getElementById('toggle-backup-cloud');
+    const thumb = document.getElementById('toggle-thumb-backup-cloud');
+    const localPane = document.getElementById('bk-storage-local-pane');
+    const cloudPane = document.getElementById('bk-storage-cloud-pane');
+
+    if (sw && thumb) {
+        sw.style.background = backupIsCloudUpload ? '#3a1c94' : '#d1d5db';
+        thumb.style.transform = backupIsCloudUpload ? 'translateX(20px)' : 'translateX(0)';
+    }
+    if (localPane) localPane.style.display = backupIsCloudUpload ? 'none' : 'block';
+    if (cloudPane) cloudPane.style.display = backupIsCloudUpload ? 'block' : 'none';
+}
+
+window.toggleBackupCompSwitch = function() {
+    backupIsCompression = !backupIsCompression;
+    const sw = document.getElementById('toggle-backup-comp');
+    const thumb = document.getElementById('toggle-thumb-backup-comp');
+    if (sw && thumb) {
+        sw.style.background = backupIsCompression ? '#3a1c94' : '#d1d5db';
+        thumb.style.transform = backupIsCompression ? 'translateX(18px)' : 'translateX(0)';
+    }
+};
+
+window.toggleBackupRetentionSwitch = function() {
+    backupIsRetention = !backupIsRetention;
+    const sw = document.getElementById('toggle-backup-retention');
+    const thumb = document.getElementById('toggle-thumb-backup-retention');
+    if (sw && thumb) {
+        sw.style.background = backupIsRetention ? '#3a1c94' : '#d1d5db';
+        thumb.style.transform = backupIsRetention ? 'translateX(18px)' : 'translateX(0)';
+    }
+};
+
+window.toggleGenericSwitch = function(swId, thumbId, defaultOn = false) {
+    const sw = document.getElementById(swId);
+    const thumb = document.getElementById(thumbId);
+    if (!sw || !thumb) return;
+    const isOn = sw.getAttribute('data-on') === 'true';
+    const newState = !isOn;
+    sw.setAttribute('data-on', newState ? 'true' : 'false');
+    sw.style.background = newState ? '#3a1c94' : '#d1d5db';
+    thumb.style.transform = newState ? 'translateX(18px)' : 'translateX(0)';
+};
+
+function setBackupStep(step) {
+    currentBackupStep = step;
+    for (let i = 1; i <= 4; i++) {
+        const pane = document.getElementById(`bk-step-pane-${i}`);
+        const nav = document.getElementById(`bk-step-nav-${i}`);
+        const badge = document.getElementById(`bk-step-badge-${i}`);
+
+        if (pane) pane.style.display = (i === step) ? 'block' : 'none';
+        if (nav && badge) {
+            if (i < step) {
+                nav.style.color = '#10b981';
+                badge.style.background = '#10b981';
+                badge.style.color = 'white';
+                badge.style.border = 'none';
+                badge.innerHTML = '✓';
+            } else if (i === step) {
+                nav.style.color = '#3a1c94';
+                badge.style.background = '#3a1c94';
+                badge.style.color = 'white';
+                badge.style.border = 'none';
+                badge.innerHTML = i.toString();
+            } else {
+                nav.style.color = '#9ca3af';
+                badge.style.background = 'transparent';
+                badge.style.color = '#9ca3af';
+                badge.style.border = '2px solid #d1d5db';
+                badge.innerHTML = i.toString();
+            }
+        }
+    }
+
+    const btnBack = document.getElementById('btn-bk-back');
+    const btnNext = document.getElementById('btn-bk-next');
+    if (btnBack) {
+        btnBack.disabled = (step === 1);
+        btnBack.style.color = (step === 1) ? '#9ca3af' : '#374151';
+        btnBack.style.cursor = (step === 1) ? 'not-allowed' : 'pointer';
+    }
+    if (btnNext) {
+        if (step === 4) {
+            btnNext.innerText = 'Create';
+            btnNext.onclick = submitCreateBackup;
+            updateBackupPreview();
+        } else {
+            btnNext.innerText = 'Continue';
+            btnNext.onclick = nextBackupStep;
+        }
+    }
+}
+
+window.nextBackupStep = function() {
+    if (currentBackupStep === 1) {
+        const clusterVal = document.getElementById('backup-config-cluster')?.value;
+        if (!clusterVal) {
+            alert('Please select a Cluster first.');
+            return;
+        }
+    }
+    if (currentBackupStep < 4) {
+        setBackupStep(currentBackupStep + 1);
+    }
+};
+
+window.prevBackupStep = function() {
+    if (currentBackupStep > 1) {
+        setBackupStep(currentBackupStep - 1);
+    }
+};
+
+function updateBackupPreview() {
+    const clusterSelect = document.getElementById('backup-config-cluster');
+    const hostSelect = document.getElementById('backup-config-host');
+    const methodSelect = document.getElementById('backup-config-method');
+    const dumpTypeSelect = document.getElementById('backup-config-dumptype');
+    const compLevelSelect = document.getElementById('backup-comp-level');
+    const retentionDays = document.getElementById('backup-retention-days')?.value || '31';
+    const storageDir = document.getElementById('backup-storage-dir')?.value || '/var/lib/backups';
+    const subdir = document.getElementById('backup-subdir')?.value || 'BACKUP-%i';
+
+    const clusterText = clusterSelect?.options[clusterSelect.selectedIndex]?.text || 'PostgreSQL';
+    const hostText = hostSelect?.options[hostSelect.selectedIndex]?.text || 'localhost';
+    const methodText = methodSelect?.value || 'pgdumpall';
+    const dumpTypeText = dumpTypeSelect?.value || 'Schema And Data';
+
+    const el = id => document.getElementById(id);
+    if (el('pv-bk-cluster')) el('pv-bk-cluster').innerText = clusterText;
+    if (el('pv-bk-host')) el('pv-bk-host').innerText = hostText;
+    if (el('pv-bk-method')) el('pv-bk-method').innerText = methodText;
+    if (el('pv-bk-dumptype')) el('pv-bk-dumptype').innerText = dumpTypeText;
+    if (el('pv-bk-comp')) el('pv-bk-comp').innerText = backupIsCompression ? 'Yes' : 'No';
+    if (el('pv-bk-comp-level')) el('pv-bk-comp-level').innerText = compLevelSelect?.value || '6';
+    if (el('pv-bk-retention')) el('pv-bk-retention').innerText = `${retentionDays} Days`;
+    if (el('pv-bk-storage-loc')) el('pv-bk-storage-loc').innerText = backupIsCloudUpload ? 'Cloud Storage' : 'Store on controller';
+    if (el('pv-bk-storage-dir')) el('pv-bk-storage-dir').innerText = backupIsCloudUpload ? 'S3/GCS Cloud Bucket' : storageDir;
+    if (el('pv-bk-subdir')) el('pv-bk-subdir').innerText = subdir;
+}
+
+window.submitCreateBackup = async function() {
+    const btn = document.getElementById('btn-bk-next');
+    if (btn) { btn.disabled = true; btn.innerText = 'Creating Backup...'; }
+
+    const clusterSelect = document.getElementById('backup-config-cluster');
+    const hostSelect = document.getElementById('backup-config-host');
+    const methodSelect = document.getElementById('backup-config-method');
+    const dumpTypeSelect = document.getElementById('backup-config-dumptype');
+    const compLevelSelect = document.getElementById('backup-comp-level');
+    const retentionDays = parseInt(document.getElementById('backup-retention-days')?.value || '31');
+    const storageDir = document.getElementById('backup-storage-dir')?.value || '/var/lib/backups';
+    const subdir = document.getElementById('backup-subdir')?.value || 'BACKUP-%i';
+    const cloudCredSelect = document.getElementById('backup-cloud-cred-select');
+
+    const pid = parseInt(clusterSelect?.value) || null;
+    const proj = allProjectsForBackup.find(p => p.id === pid);
+    const dbType = proj && (proj.db_type === 'mssql' || (proj.name||'').toLowerCase().includes('mssql')) ? 'mssql' : 'postgresql';
+
+    const payload = {
+        project_id: pid,
+        cluster_name: proj ? proj.name : 'PostgreSQL Cluster',
+        db_type: dbType,
+        node_id: parseInt(hostSelect?.value) || null,
+        backup_host: hostSelect?.options[hostSelect.selectedIndex]?.text?.split(' ')[0] || 'localhost:5432',
+        backup_method: methodSelect?.value || (dbType === 'mssql' ? 'Full' : 'pgdumpall'),
+        dump_type: dumpTypeSelect?.value || 'Schema And Data',
+        backup_type: 'FULL',
+        compression: backupIsCompression,
+        compression_level: parseInt(compLevelSelect?.value || '6'),
+        retention_days: retentionDays,
+        storage_location: backupIsCloudUpload ? 'Cloud storage' : 'Store on controller',
+        storage_directory: storageDir,
+        backup_subdirectory: subdir,
+        cloud_credential_id: backupIsCloudUpload ? (parseInt(cloudCredSelect?.value) || null) : null
+    };
+
+    try {
+        const res = await apiFetch('/api/backups/create', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+        });
+
+        const d = await res.json();
+        if (res.ok && d.success) {
+            closeCreateBackupConfigModal();
+            loadAllBackups();
+            alert(`✓ ${d.message}`);
+        } else {
+            alert(d.message || 'Failed to start backup.');
+        }
+    } catch(e) {
+        alert('Connection error while initiating backup.');
+    } finally {
+        if (btn) { btn.disabled = false; btn.innerText = 'Create'; }
+    }
+};
+
+window.deleteBackup = async function(id) {
+    if (!confirm('Are you sure you want to delete this backup record and file?')) return;
+    try {
+        const res = await apiFetch(`/api/backups/${id}`, { method: 'DELETE' });
+        if (res.ok) {
+            loadAllBackups();
+        }
+    } catch(e) {
+        alert('Failed to delete backup');
+    }
+};
+
+// Hook into DOM ready for backup button listeners
 document.addEventListener('DOMContentLoaded', () => {
     const btnGlobalCreateBackup = document.getElementById('btn-global-create-backup');
     const modalBackupType = document.getElementById('modal-backup-type-select');
     const btnCloseBackupType = document.getElementById('btn-close-backup-type-modal');
-    
     const btnBackupOnDemand = document.getElementById('btn-select-backup-ondemand');
     const btnBackupSchedule = document.getElementById('btn-select-backup-schedule');
-    
-    const modalBackupConfig = document.getElementById('modal-create-backup-config');
-    const btnCloseBackupConfig = document.getElementById('btn-close-backup-config-modal');
-    const btnBackupConfigBack = document.getElementById('btn-backup-config-back');
-    const btnBackupConfigContinue = document.getElementById('btn-backup-config-continue');
-    
-    const selectCluster = document.getElementById('backup-config-cluster');
-    const selectHost = document.getElementById('backup-config-host');
-    
-    let allProjectsForBackup = [];
 
     if (btnGlobalCreateBackup) {
         btnGlobalCreateBackup.addEventListener('click', () => {
-            modalBackupType.style.display = 'flex';
+            if (modalBackupType) modalBackupType.style.display = 'flex';
         });
     }
     if (btnCloseBackupType) {
         btnCloseBackupType.addEventListener('click', () => {
-            modalBackupType.style.display = 'none';
+            if (modalBackupType) modalBackupType.style.display = 'none';
         });
     }
-    
-    const openConfigModal = async () => {
-        modalBackupType.style.display = 'none';
-        modalBackupConfig.style.display = 'flex';
-        
-        // Fetch projects to populate the select
-        try {
-            const res = await apiFetch('/api/projects');
-            if (res.ok) {
-                allProjectsForBackup = await res.json();
-                selectCluster.innerHTML = '<option value="">Select a cluster...</option>' + 
-                    allProjectsForBackup.map(p => `<option value="${p.id}">${p.name} (ID:${p.id})</option>`).join('');
-            }
-        } catch (e) {
-            console.error("Failed to load clusters for backup:", e);
-        }
-    };
-    
-    if (btnBackupOnDemand) btnBackupOnDemand.addEventListener('click', openConfigModal);
-    if (btnBackupSchedule) btnBackupSchedule.addEventListener('click', openConfigModal);
-    
-    if (btnCloseBackupConfig) btnCloseBackupConfig.addEventListener('click', () => modalBackupConfig.style.display = 'none');
-    if (btnBackupConfigBack) {
-        btnBackupConfigBack.addEventListener('click', () => {
-            modalBackupConfig.style.display = 'none';
-            modalBackupType.style.display = 'flex';
-        });
-    }
-    
-    if (selectCluster) {
-        selectCluster.addEventListener('change', (e) => {
-            const pid = parseInt(e.target.value);
-            if (!pid) {
-                selectHost.innerHTML = '<option value="">Select a cluster first...</option>';
-                selectHost.disabled = true;
-                return;
-            }
-            const proj = allProjectsForBackup.find(p => p.id === pid);
-            if (proj && proj.nodes && proj.nodes.length > 0) {
-                selectHost.innerHTML = proj.nodes.map(n => {
-                    const hostUrl = n.url ? n.url.split('@')[1] || n.url : 'Unknown';
-                    const role = n.role ? (n.role.charAt(0).toUpperCase() + n.role.slice(1)) : 'Unknown';
-                    return `<option value="${n.id}">${n.name} - ${hostUrl} (${role})</option>`;
-                }).join('');
-                selectHost.disabled = false;
-            } else {
-                selectHost.innerHTML = '<option value="">No nodes found in this cluster</option>';
-                selectHost.disabled = true;
-            }
-        });
-    }
-    
-    if (btnBackupConfigContinue) {
-        btnBackupConfigContinue.addEventListener('click', () => {
-            const clusterVal = selectCluster.value;
-            const hostVal = selectHost.value;
-            if (!clusterVal || !hostVal) {
-                alert("Please select a Cluster and Backup host first.");
-                return;
-            }
-            
-            // Per user request, show honest error message
-            alert("Error: Cloud Storage (AWS S3) is not configured. Local disk backups are disabled.");
-        });
-    }
+    if (btnBackupOnDemand) btnBackupOnDemand.addEventListener('click', openCreateBackupConfigModal);
+    if (btnBackupSchedule) btnBackupSchedule.addEventListener('click', openCreateBackupConfigModal);
+
+    // Initial load for header alarms
+    loadHeaderAlarms();
 });
 
 

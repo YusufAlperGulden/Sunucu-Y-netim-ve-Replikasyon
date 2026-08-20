@@ -6,8 +6,10 @@ from fastapi.security import HTTPBasic, HTTPBasicCredentials
 from sqlalchemy.orm import Session
 from models import SessionLocal, Project, DatabaseNode
 from pydantic import BaseModel
+from typing import Optional, List, Dict, Any
 from ha_manager import test_connection, setup_replication, check_and_protect_wal_bloat, cleanup_node_replication, cleanup_project_replication
 from deploy_worker import run_deploy_job
+from backup_worker import run_backup_job
 import traceback
 import asyncio
 import secrets
@@ -164,6 +166,33 @@ async def lifespan(app: FastAPI):
             pods_count INTEGER DEFAULT 0,
             operator_installed VARCHAR(100) DEFAULT 'CloudNativePG',
             last_synced_at TIMESTAMP DEFAULT NOW(),
+            created_at TIMESTAMP DEFAULT NOW()
+        )""",
+        "ALTER TABLE backup_jobs ADD COLUMN IF NOT EXISTS node_id INTEGER REFERENCES nodes(id) ON DELETE SET NULL",
+        "ALTER TABLE backup_jobs ADD COLUMN IF NOT EXISTS db_type VARCHAR(50) DEFAULT 'postgresql'",
+        "ALTER TABLE backup_jobs ADD COLUMN IF NOT EXISTS backup_host VARCHAR(255)",
+        "ALTER TABLE backup_jobs ADD COLUMN IF NOT EXISTS backup_method VARCHAR(50) DEFAULT 'pgdumpall'",
+        "ALTER TABLE backup_jobs ADD COLUMN IF NOT EXISTS dump_type VARCHAR(50) DEFAULT 'Schema And Data'",
+        "ALTER TABLE backup_jobs ADD COLUMN IF NOT EXISTS compression BOOLEAN DEFAULT TRUE",
+        "ALTER TABLE backup_jobs ADD COLUMN IF NOT EXISTS compression_level INTEGER DEFAULT 6",
+        "ALTER TABLE backup_jobs ADD COLUMN IF NOT EXISTS retention_days INTEGER DEFAULT 31",
+        "ALTER TABLE backup_jobs ADD COLUMN IF NOT EXISTS enable_encryption BOOLEAN DEFAULT FALSE",
+        "ALTER TABLE backup_jobs ADD COLUMN IF NOT EXISTS enable_partial BOOLEAN DEFAULT FALSE",
+        "ALTER TABLE backup_jobs ADD COLUMN IF NOT EXISTS storage_location VARCHAR(100) DEFAULT 'Store on controller'",
+        "ALTER TABLE backup_jobs ADD COLUMN IF NOT EXISTS storage_directory VARCHAR(500) DEFAULT '/var/lib/backups'",
+        "ALTER TABLE backup_jobs ADD COLUMN IF NOT EXISTS backup_subdirectory VARCHAR(255) DEFAULT 'BACKUP-%i'",
+        "ALTER TABLE backup_jobs ADD COLUMN IF NOT EXISTS cloud_credential_id INTEGER REFERENCES cloud_credentials(id) ON DELETE SET NULL",
+        "ALTER TABLE backup_jobs ADD COLUMN IF NOT EXISTS file_path VARCHAR(1000)",
+        "ALTER TABLE backup_jobs ADD COLUMN IF NOT EXISTS error_msg TEXT",
+        """CREATE TABLE IF NOT EXISTS alarm_records (
+            id SERIAL PRIMARY KEY,
+            title VARCHAR(255) NOT NULL,
+            severity VARCHAR(50) DEFAULT 'WARNING',
+            category VARCHAR(100) DEFAULT 'Cluster',
+            cluster_name VARCHAR(255),
+            hostname VARCHAR(255),
+            message TEXT,
+            is_muted BOOLEAN DEFAULT FALSE,
             created_at TIMESTAMP DEFAULT NOW()
         )""",
     ]:
@@ -947,35 +976,93 @@ from pydantic import BaseModel
 from typing import Optional
 from datetime import datetime
 
-class BackupCreate(BaseModel):
-    project_id: int
-    backup_type: str
+class BackupWizardCreate(BaseModel):
+    project_id: Optional[int] = None
+    cluster_name: Optional[str] = None
+    db_type: str = "postgresql" # "postgresql", "mssql"
+    node_id: Optional[int] = None
+    backup_host: Optional[str] = None
+    backup_method: str = "pgdumpall" # pgdumpall, pg_basebackup, Full, Differential, Transaction Log
+    dump_type: str = "Schema And Data" # Schema And Data, Schema Only, Data Only
+    backup_type: str = "FULL"
+    compression: bool = True
+    compression_level: int = 6
+    retention_days: int = 31
+    enable_encryption: bool = False
+    enable_partial: bool = False
+    storage_location: str = "Store on controller" # Store on controller, Cloud storage
+    storage_directory: str = "/var/lib/backups"
+    backup_subdirectory: str = "BACKUP-%i"
+    cloud_credential_id: Optional[int] = None
 
+@app.post("/api/backups/create", dependencies=[Depends(verify_credentials)])
 @app.post("/api/backups", dependencies=[Depends(verify_credentials)])
-def create_backup(payload: BackupCreate, db: Session = Depends(get_db)):
-    from models import BackupJob
-    proj = db.query(Project).filter(Project.id == payload.project_id).first()
-    if not proj:
-        return JSONResponse(status_code=404, content={"message": "Project not found"})
-        
+def create_backup(payload: BackupWizardCreate, background_tasks: BackgroundTasks, db: Session = Depends(get_db)):
+    from models import BackupJob, Project, DatabaseNode, AuditLog
+
+    # Resolve project if project_id or cluster_name provided
+    proj = None
+    if payload.project_id:
+        proj = db.query(Project).filter(Project.id == payload.project_id).first()
+    elif payload.cluster_name:
+        proj = db.query(Project).filter(Project.name.ilike(f"%{payload.cluster_name}%")).first()
+
+    cluster_title = payload.cluster_name or (proj.name if proj else f"{payload.db_type.upper()} Cluster")
+
+    # If node_id not specified, pick primary node of the cluster
+    target_node_id = payload.node_id
+    host_str = payload.backup_host
+    if not target_node_id and proj and proj.nodes:
+        pri = next((n for n in proj.nodes if n.role and n.role.lower() == 'primary'), proj.nodes[0])
+        target_node_id = pri.id
+        if not host_str:
+            host_str = f"{pri.host}:{pri.port or (1433 if payload.db_type == 'mssql' else 5432)}"
+
+    if not host_str:
+        host_str = "localhost:5432" if payload.db_type == 'postgresql' else "localhost:1433"
+
     job = BackupJob(
-        project_id=proj.id,
-        cluster_name=proj.name,
-        backup_type=payload.backup_type,
-        status="IN_PROGRESS"
+        project_id=proj.id if proj else None,
+        node_id=target_node_id,
+        cluster_name=cluster_title,
+        db_type=payload.db_type,
+        backup_host=host_str,
+        backup_method=payload.backup_method,
+        dump_type=payload.dump_type,
+        backup_type=payload.backup_type or "FULL",
+        compression=payload.compression,
+        compression_level=payload.compression_level,
+        retention_days=payload.retention_days,
+        enable_encryption=payload.enable_encryption,
+        enable_partial=payload.enable_partial,
+        storage_location=payload.storage_location,
+        storage_directory=payload.storage_directory,
+        backup_subdirectory=payload.backup_subdirectory,
+        cloud_credential_id=payload.cloud_credential_id,
+        status="PENDING"
     )
     db.add(job)
     db.commit()
     db.refresh(job)
-    
-    # In a real scenario, we'd fire an async background task here.
-    # For now, we simulate completion after a short delay via worker.
-    from models import AuditLog
-    audit = AuditLog(project_id=proj.id, action="Backup Initiated", details=f"Type: {payload.backup_type}")
+
+    # Launch real background backup runner
+    background_tasks.add_task(run_backup_job, job.id)
+
+    audit = AuditLog(
+        project_id=proj.id if proj else None,
+        action="BACKUP_INITIATED",
+        user="admin",
+        details=f"Backup #{job.id} ({job.backup_method}) started for {cluster_title} on host {host_str}."
+    )
     db.add(audit)
     db.commit()
-    
-    return {"success": True, "job_id": job.id, "message": "Backup started successfully"}
+
+    return {
+        "success": True,
+        "job_id": job.id,
+        "cluster_name": cluster_title,
+        "message": f"✓ Backup job #{job.id} initiated successfully."
+    }
 
 @app.get("/api/backups", dependencies=[Depends(verify_credentials)])
 def get_backups(db: Session = Depends(get_db)):
@@ -983,17 +1070,103 @@ def get_backups(db: Session = Depends(get_db)):
     jobs = db.query(BackupJob).order_by(BackupJob.id.desc()).all()
     results = []
     for j in jobs:
+        is_cloud = bool(j.cloud_credential_id or (j.storage_location and 'cloud' in j.storage_location.lower()))
         results.append({
             "id": j.id,
             "project_id": j.project_id,
-            "cluster_name": j.cluster_name,
-            "backup_type": j.backup_type,
+            "cluster_name": j.cluster_name or "PostgreSQL",
+            "db_type": j.db_type or "postgresql",
+            "backup_host": j.backup_host or "localhost:5432",
+            "backup_method": j.backup_method or "pgdumpall",
+            "dump_type": j.dump_type or "Schema And Data",
+            "backup_type": j.backup_type or "FULL",
+            "title": f"BACKUP-{j.id}",
             "status": j.status,
-            "size_mb": j.size_mb,
+            "size_mb": j.size_mb or 0.0,
+            "size_display": f"{j.size_mb} MB" if j.size_mb and j.size_mb >= 1.0 else (f"{int((j.size_mb or 0)*1024)} KB" if j.size_mb else "0 KB"),
+            "storage_location": j.storage_location or "Store on controller",
+            "is_cloud": is_cloud,
+            "file_path": j.file_path or "",
+            "error_msg": j.error_msg or "",
             "created_at": j.created_at.strftime("%Y-%m-%d %H:%M:%S") if j.created_at else "",
+            "created_human": j.created_at.strftime("%b %d, %H:%M") if j.created_at else "Just now",
             "completed_at": j.completed_at.strftime("%Y-%m-%d %H:%M:%S") if j.completed_at else ""
         })
     return results
+
+# ── Alarms & Activity Quick Panel Endpoints ─────────────────────────────────
+
+@app.get("/api/alarms", dependencies=[Depends(verify_credentials)])
+def get_alarms(db: Session = Depends(get_db)):
+    from models import AlarmRecord, DatabaseNode
+    # Auto-generate dynamic alarms from offline database nodes
+    try:
+        nodes = db.query(DatabaseNode).all()
+        for n in nodes:
+            if n.status and n.status.upper() in ('DOWN', 'FAILED', 'ERROR'):
+                existing = db.query(AlarmRecord).filter(
+                    AlarmRecord.hostname.like(f"%{n.host}%"),
+                    AlarmRecord.title.like('%Unreachable%')
+                ).first()
+                if not existing:
+                    db.add(AlarmRecord(
+                        title=f"Node Unreachable: {n.name or n.host}",
+                        severity="CRITICAL",
+                        category="Node",
+                        cluster_name=n.project.name if n.project else "PostgreSQL",
+                        hostname=f"{n.host}:{n.port or 5432}",
+                        message=f"Node {n.name or n.host} is currently down or unreachable."
+                    ))
+        db.commit()
+    except Exception:
+        pass
+
+    all_alarms = db.query(AlarmRecord).order_by(AlarmRecord.id.desc()).all()
+    unmuted = [a for a in all_alarms if not a.is_muted]
+
+    return {
+        "total_count": len(all_alarms),
+        "unmuted_count": len(unmuted),
+        "alarms": [{
+            "id": a.id,
+            "title": a.title,
+            "severity": a.severity,
+            "category": a.category,
+            "cluster_name": a.cluster_name or "PostgreSQL",
+            "hostname": a.hostname or "localhost",
+            "message": a.message or "",
+            "is_muted": a.is_muted,
+            "created_at": a.created_at.strftime("%Y-%m-%d %H:%M:%S") if a.created_at else "",
+            "when_human": a.created_at.strftime("%b %d, %H:%M") if a.created_at else "Just now"
+        } for a in all_alarms]
+    }
+
+@app.post("/api/alarms/{alarm_id}/mute", dependencies=[Depends(verify_credentials)])
+def mute_alarm(alarm_id: int, db: Session = Depends(get_db)):
+    from models import AlarmRecord
+    a = db.query(AlarmRecord).filter(AlarmRecord.id == alarm_id).first()
+    if not a:
+        raise HTTPException(status_code=404, detail="Alarm not found")
+    a.is_muted = True
+    db.commit()
+    return {"success": True, "message": "Alarm muted"}
+
+@app.post("/api/alarms/{alarm_id}/unmute", dependencies=[Depends(verify_credentials)])
+def unmute_alarm(alarm_id: int, db: Session = Depends(get_db)):
+    from models import AlarmRecord
+    a = db.query(AlarmRecord).filter(AlarmRecord.id == alarm_id).first()
+    if not a:
+        raise HTTPException(status_code=404, detail="Alarm not found")
+    a.is_muted = False
+    db.commit()
+    return {"success": True, "message": "Alarm unmuted"}
+
+@app.post("/api/alarms/clear-all", dependencies=[Depends(verify_credentials)])
+def clear_all_alarms(db: Session = Depends(get_db)):
+    from models import AlarmRecord
+    db.query(AlarmRecord).delete()
+    db.commit()
+    return {"success": True, "message": "All alarms cleared"}
 
 class ScheduleCreate(BaseModel):
     project_id: int
