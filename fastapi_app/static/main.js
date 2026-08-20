@@ -136,7 +136,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     const statusFilter = document.getElementById('cc-status-filter');
     if (statusFilter) {
-        statusFilter.addEventListener('change', (e) => {
+        statusFilter?.addEventListener('change', (e) => {
             const filterValue = e.target.value;
             const rows = document.querySelectorAll('#cc-projects-tbody tr');
             rows.forEach(row => {
@@ -155,7 +155,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // --- MODAL EVENT LISTENERS ---
     if (btnAddProj) {
-        btnAddProj.addEventListener('click', () => {
+        btnAddProj?.addEventListener('click', () => {
             modalAddProj.style.display = 'flex';
         });
     }
@@ -168,13 +168,13 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     if (btnOpenNodeModal) {
-        btnOpenNodeModal.addEventListener('click', () => {
+        btnOpenNodeModal?.addEventListener('click', () => {
             modalAddNode.style.display = 'flex';
         });
     }
 
     if (btnCloseProjModal) {
-        btnCloseProjModal.addEventListener('click', () => {
+        btnCloseProjModal?.addEventListener('click', () => {
             modalAddProj.style.display = 'none';
         });
     }
@@ -479,10 +479,10 @@ document.addEventListener('DOMContentLoaded', () => {
     // Global tooltip hover events
     const clusterTooltip = document.getElementById('cluster-hover-tooltip');
     if (clusterTooltip) {
-        clusterTooltip.addEventListener('mouseenter', () => {
+        clusterTooltip?.addEventListener('mouseenter', () => {
             clearTimeout(clusterHoverTimeout);
         });
-        clusterTooltip.addEventListener('mouseleave', () => {
+        clusterTooltip?.addEventListener('mouseleave', () => {
             clusterHoverTimeout = setTimeout(() => {
                 clusterTooltip.style.opacity = '0';
                 clusterTooltip.style.transform = 'translateY(10px)';
@@ -908,15 +908,15 @@ if (donutCircle) {
                 const donutText = document.getElementById('donut-hover-text');
                 document.getElementById('cc-donut-center-text').style.color = donutCircle.style.stroke;
                 if (donutTooltip && donutText) {
-                    donutCircle.addEventListener('mouseenter', (e) => {
+                    donutCircle?.addEventListener('mouseenter', (e) => {
                         if(donutText) donutText.innerText = `${operationalCount} Operational`;
                         donutTooltip.style.display = 'block';
                     });
-                    donutCircle.addEventListener('mousemove', (e) => {
+                    donutCircle?.addEventListener('mousemove', (e) => {
                         donutTooltip.style.left = (e.clientX + 10) + 'px';
                         donutTooltip.style.top = (e.clientY + 10) + 'px';
                     });
-                    donutCircle.addEventListener('mouseleave', () => {
+                    donutCircle?.addEventListener('mouseleave', () => {
                         donutTooltip.style.display = 'none';
                     });
                 }
@@ -1102,15 +1102,15 @@ if (donutCircle) {
                        const donutTooltip = document.getElementById('donut-hover-tooltip');
                        const donutText = document.getElementById('donut-hover-text');
                        if (donutTooltip && donutText) {
-                           dnSlice.addEventListener('mouseenter', (e) => {
+                           dnSlice?.addEventListener('mouseenter', (e) => {
                                if(donutText) donutText.innerText = `${allNodes.length - shutDownCount} Operational`;
                                donutTooltip.style.display = 'block';
                            });
-                           dnSlice.addEventListener('mousemove', (e) => {
+                           dnSlice?.addEventListener('mousemove', (e) => {
                                donutTooltip.style.left = (e.clientX + 10) + 'px';
                                donutTooltip.style.top = (e.clientY + 10) + 'px';
                            });
-                           dnSlice.addEventListener('mouseleave', () => {
+                           dnSlice?.addEventListener('mouseleave', () => {
                                donutTooltip.style.display = 'none';
                            });
                        }
@@ -1499,7 +1499,7 @@ window.exportAuditLogsCsv = function() {
     const btnCloseSyncModal = document.getElementById('btn-close-sync-modal');
     
     if (btnSyncRepDashboard && modalSyncStatus) {
-        btnSyncRepDashboard.addEventListener('click', () => {
+        btnSyncRepDashboard?.addEventListener('click', () => {
             modalSyncStatus.style.display = 'flex';
             const dataFlow = document.getElementById('sync-data-flow');
             if(dataFlow) {
@@ -1509,7 +1509,7 @@ window.exportAuditLogsCsv = function() {
     }
 
     if (btnCloseSyncModal && modalSyncStatus) {
-        btnCloseSyncModal.addEventListener('click', () => {
+        btnCloseSyncModal?.addEventListener('click', () => {
             modalSyncStatus.style.display = 'none';
         });
     }
@@ -1526,7 +1526,7 @@ window.exportAuditLogsCsv = function() {
 
     let modalMetricsInterval = null;
 
-    btnCloseEditNodeModal.addEventListener('click', () => {
+    btnCloseEditNodeModal?.addEventListener('click', () => {
         modalEditNode.style.display = 'none';
         editNodeUrlInput.value = '';
         editNodeUrlInput.type = 'password';
@@ -1536,7 +1536,7 @@ window.exportAuditLogsCsv = function() {
     const eyeOpenSvg = '<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>';
     const eyeClosedSvg = '<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle><line x1="1" y1="1" x2="23" y2="23"></line></svg>';
 
-    toggleEditUrlBtn.addEventListener('click', () => {
+    toggleEditUrlBtn?.addEventListener('click', () => {
         if(editNodeUrlInput.type === 'password') {
             editNodeUrlInput.type = 'text';
             toggleEditUrlBtn.innerHTML = eyeOpenSvg;
@@ -1546,7 +1546,7 @@ window.exportAuditLogsCsv = function() {
         }
     });
 
-    copyEditUrlBtn.addEventListener('click', () => {
+    copyEditUrlBtn?.addEventListener('click', () => {
         if(editNodeUrlInput.value) {
             navigator.clipboard.writeText(editNodeUrlInput.value);
             const originalIcon = copyEditUrlBtn.innerHTML;
@@ -1626,7 +1626,7 @@ window.exportAuditLogsCsv = function() {
         }
     }
 
-    formEditNode.addEventListener('submit', async (e) => {
+    formEditNode?.addEventListener('submit', async (e) => {
         e.preventDefault();
         const nodeId = document.getElementById('edit-node-id').value;
         const newUrl = editNodeUrlInput.value;
@@ -1823,7 +1823,7 @@ window.exportAuditLogsCsv = function() {
 
     const btnCleanupSlots = document.getElementById('btn-cleanup-slots');
     if (btnCleanupSlots) {
-        btnCleanupSlots.addEventListener('click', async () => {
+        btnCleanupSlots?.addEventListener('click', async () => {
             if (!currentProjectId) return;
             if (!confirm('Primary sunucudaki eski/kayıt dışı replikasyon slotları (orphan slots) temizlenecek. Onaylıyor musunuz?')) return;
             
@@ -1850,7 +1850,7 @@ window.exportAuditLogsCsv = function() {
 
     // Button: Edit Project (Detail View)
     if (btnEditProjectDetail) {
-        btnEditProjectDetail.addEventListener('click', async () => {
+        btnEditProjectDetail?.addEventListener('click', async () => {
             if (!currentProjectId) return;
             // Get current project details directly from backend to ensure data is fresh
             try {
@@ -1871,7 +1871,7 @@ window.exportAuditLogsCsv = function() {
     // Button: Refresh Logs
     const btnRefreshLogs = document.getElementById('btn-refresh-logs');
     if(btnRefreshLogs) {
-        btnRefreshLogs.addEventListener('click', window.fetchAuditLogs);
+        btnRefreshLogs?.addEventListener('click', window.fetchAuditLogs);
     }
 
     // Button: Save Settings
@@ -1913,7 +1913,7 @@ window.exportAuditLogsCsv = function() {
     });
 
     if (settingsProjectSelect) {
-        settingsProjectSelect.addEventListener('change', async (e) => {
+        settingsProjectSelect?.addEventListener('change', async (e) => {
             const pid = e.target.value;
             if (!pid) {
                 projectSettingsContainer.style.display = 'none';
@@ -1935,7 +1935,7 @@ window.exportAuditLogsCsv = function() {
     }
 
     if(btnSaveSettings) {
-        btnSaveSettings.addEventListener('click', async () => {
+        btnSaveSettings?.addEventListener('click', async () => {
             const pid = settingsProjectSelect ? settingsProjectSelect.value : null;
             if (!pid) {
                 alert("Lütfen önce bir proje seçin.");
