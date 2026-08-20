@@ -2068,28 +2068,36 @@ window.exportAuditLogsCsv = function() {
     });
 });
 
-document.getElementById('toggle-url-btn').addEventListener('click', function() { const input = document.getElementById('node-url'); const icon = this.querySelector('svg'); if (input.type === 'password') { input.type = 'text'; icon.innerHTML = '<path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle>'; } else { input.type = 'password'; icon.innerHTML = '<path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle><line x1="1" y1="1" x2="23" y2="23"></line>'; } });
-
-document.getElementById('copy-url-btn').addEventListener('click', function() { const input = document.getElementById('node-url'); navigator.clipboard.writeText(input.value).then(() => { const originalHTML = this.innerHTML; this.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#00ff00" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>'; setTimeout(() => { this.innerHTML = originalHTML; }, 2000); }); });
-
-
-
-
-
-
-// Sidebar Toggle Logic
-document.getElementById('btn-toggle-sidebar').addEventListener('click', () => {
-    const sidebar = document.querySelector('.sidebar');
-    sidebar.classList.toggle('collapsed');
-    const icon = document.getElementById('icon-sidebar-arrow');
-    if (sidebar.classList.contains('collapsed')) {
-        icon.innerHTML = '<polyline points="9 18 15 12 9 6"></polyline>';
+document.getElementById('toggle-url-btn')?.addEventListener('click', function() {
+    const input = document.getElementById('node-url');
+    if (!input) return;
+    const icon = this.querySelector('svg');
+    if (input.type === 'password') {
+        input.type = 'text';
+        if (icon) icon.innerHTML = '<path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle>';
     } else {
-        icon.innerHTML = '<polyline points="15 18 9 12 15 6"></polyline>';
+        input.type = 'password';
+        if (icon) icon.innerHTML = '<path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle><line x1="1" y1="1" x2="23" y2="23"></line>';
     }
 });
 
+document.getElementById('copy-url-btn')?.addEventListener('click', function() {
+    const input = document.getElementById('node-url');
+    if (!input) return;
+    navigator.clipboard.writeText(input.value).then(() => {
+        const originalHTML = this.innerHTML;
+        this.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#00ff00" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>';
+        setTimeout(() => { this.innerHTML = originalHTML; }, 2000);
+    });
+});
 
+// Sidebar Toggle Logic
+document.getElementById('btn-toggle-sidebar')?.addEventListener('click', () => {
+    const sidebar = document.querySelector('.sidebar');
+    if (!sidebar) return;
+    sidebar.classList.toggle('collapsed');
+    const icon = document.getElementById('icon-sidebar-arrow');
+    if (sidebar.classList.contains('collapsed')) {
 
 
 

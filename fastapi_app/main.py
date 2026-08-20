@@ -39,11 +39,16 @@ async def lifespan(app: FastAPI):
     # Startup
     print("Application startup complete.")
     from sqlalchemy import text
-    from models import engine
+    from models import engine, Base
     import os as _os
     # Ensure reports directory exists
     _reports_dir = _os.path.join(_os.path.dirname(_os.path.abspath(__file__)), "reports")
     _os.makedirs(_reports_dir, exist_ok=True)
+
+    # Create ALL ORM-mapped tables if they don't exist yet
+    # (safe to call repeatedly — uses CREATE TABLE IF NOT EXISTS internally)
+    Base.metadata.create_all(bind=engine)
+
     with engine.begin() as conn:
         for stmt in [
             "ALTER TABLE nodes ADD COLUMN ssh_host VARCHAR(255)",
