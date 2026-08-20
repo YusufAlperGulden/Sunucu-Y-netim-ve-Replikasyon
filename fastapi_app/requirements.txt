@@ -11,3 +11,6 @@ paramiko
 passlib[bcrypt]
 ldap3
 boto3
+kubernetes
+pyyaml
+requests

@@ -255,3 +255,34 @@ class DeployJob(Base):
                                   onupdate=datetime.datetime.utcnow)
 
     project = relationship('Project')
+
+
+class OpsController(Base):
+    """Tracks registered external ClusterControl controllers in Ops-Center mode."""
+    __tablename__ = 'ops_controllers'
+    id                   = Column(Integer, primary_key=True, index=True)
+    name                 = Column(String(100), nullable=False)
+    url                  = Column(String(255), nullable=False)
+    encrypted_api_token  = Column(String(500), nullable=True)
+    status               = Column(String(50), default='ONLINE')  # ONLINE, OFFLINE, SYNCING
+    is_primary           = Column(Boolean, default=False)
+    version              = Column(String(50), default='2.5.0')
+    cluster_count        = Column(Integer, default=0)
+    created_at           = Column(DateTime, default=datetime.datetime.utcnow)
+    updated_at           = Column(DateTime, default=datetime.datetime.utcnow, onupdate=datetime.datetime.utcnow)
+
+
+class KubeCluster(Base):
+    """Tracks registered Kubernetes clusters for K8s operator database management."""
+    __tablename__ = 'kube_clusters'
+    id                   = Column(Integer, primary_key=True, index=True)
+    name                 = Column(String(100), nullable=False)
+    encrypted_kubeconfig = Column(Text, nullable=False)
+    api_server_url       = Column(String(255), nullable=True)
+    status               = Column(String(50), default='CONNECTED')  # CONNECTED, ERROR, UNREACHABLE
+    namespace            = Column(String(100), default='default')
+    nodes_count          = Column(Integer, default=1)
+    pods_count           = Column(Integer, default=0)
+    operator_installed   = Column(String(100), default='CloudNativePG')
+    last_synced_at       = Column(DateTime, default=datetime.datetime.utcnow)
+    created_at           = Column(DateTime, default=datetime.datetime.utcnow)

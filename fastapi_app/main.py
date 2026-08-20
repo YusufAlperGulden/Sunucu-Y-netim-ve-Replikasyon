@@ -141,6 +141,31 @@ async def lifespan(app: FastAPI):
             extra_json VARCHAR(1000),
             updated_at TIMESTAMP DEFAULT NOW()
         )""",
+        """CREATE TABLE IF NOT EXISTS ops_controllers (
+            id SERIAL PRIMARY KEY,
+            name VARCHAR(100) NOT NULL,
+            url VARCHAR(255) NOT NULL,
+            encrypted_api_token VARCHAR(500),
+            status VARCHAR(50) DEFAULT 'ONLINE',
+            is_primary BOOLEAN DEFAULT FALSE,
+            version VARCHAR(50) DEFAULT '2.5.0',
+            cluster_count INTEGER DEFAULT 0,
+            created_at TIMESTAMP DEFAULT NOW(),
+            updated_at TIMESTAMP DEFAULT NOW()
+        )""",
+        """CREATE TABLE IF NOT EXISTS kube_clusters (
+            id SERIAL PRIMARY KEY,
+            name VARCHAR(100) NOT NULL,
+            encrypted_kubeconfig TEXT NOT NULL,
+            api_server_url VARCHAR(255),
+            status VARCHAR(50) DEFAULT 'CONNECTED',
+            namespace VARCHAR(100) DEFAULT 'default',
+            nodes_count INTEGER DEFAULT 1,
+            pods_count INTEGER DEFAULT 0,
+            operator_installed VARCHAR(100) DEFAULT 'CloudNativePG',
+            last_synced_at TIMESTAMP DEFAULT NOW(),
+            created_at TIMESTAMP DEFAULT NOW()
+        )""",
     ]:
         try:
             with engine.begin() as conn:
@@ -192,9 +217,13 @@ async def lifespan(app: FastAPI):
 
 app = FastAPI(title="Sunucu Yönetim ve Replikasyon", lifespan=lifespan)
 
-# Mount static files and templates
-app.mount("/static", StaticFiles(directory="static"), name="static")
-templates = Jinja2Templates(directory="templates")
+# Mount static files and templates with absolute paths
+_BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+_STATIC_DIR = os.path.join(_BASE_DIR, "static")
+_TEMPLATES_DIR = os.path.join(_BASE_DIR, "templates")
+
+app.mount("/static", StaticFiles(directory=_STATIC_DIR), name="static")
+templates = Jinja2Templates(directory=_TEMPLATES_DIR)
 
 # Dependency
 def get_db():
@@ -1149,6 +1178,289 @@ def change_password(data: ChangePasswordModel, credentials: HTTPBasicCredentials
     db.refresh(user)
 
     return {"success": True, "message": "Password changed successfully"}
+
+
+# ----------------------------------------------------
+# ADDONS & INTEGRATIONS (Ops-Center & Kubernetes)
+# ----------------------------------------------------
+
+class EnableOpsCenterModel(BaseModel):
+    root_username: str
+    email: str = ""
+    root_password: str
+    confirm_root_password: str
+
+
+class EnableK8sModel(BaseModel):
+    enabled: bool = True
+
+
+class ControllerCreateModel(BaseModel):
+    name: str
+    url: str
+    api_token: str = ""
+
+
+class KubeClusterCreateModel(BaseModel):
+    name: str
+    kubeconfig_yaml: str
+    namespace: str = "default"
+
+
+@app.get("/api/addons", dependencies=[Depends(verify_credentials)])
+def get_addons(db: Session = Depends(get_db)):
+    from models import AddonSetting, OpsController, KubeCluster
+    import json
+    
+    ops_setting = db.query(AddonSetting).filter(AddonSetting.addon_key == "ops_center").first()
+    k8s_setting = db.query(AddonSetting).filter(AddonSetting.addon_key == "kubernetes").first()
+    
+    ops_data = {}
+    if ops_setting and ops_setting.extra_json:
+        try:
+            ops_data = json.loads(ops_setting.extra_json)
+        except Exception:
+            pass
+
+    ops_controllers_count = db.query(OpsController).count()
+    k8s_clusters_count = db.query(KubeCluster).count()
+
+    return {
+        "ops_center": {
+            "enabled": bool(ops_setting.enabled) if ops_setting else False,
+            "root_username": ops_data.get("root_username", "root"),
+            "email": ops_data.get("email", ""),
+            "controllers_count": ops_controllers_count,
+            "mode": "multi-controller" if (ops_setting and ops_setting.enabled) else "single-controller"
+        },
+        "kubernetes": {
+            "enabled": bool(k8s_setting.enabled) if k8s_setting else False,
+            "clusters_count": k8s_clusters_count
+        }
+    }
+
+
+@app.post("/api/addons/ops-center/enable", dependencies=[Depends(verify_credentials)])
+def enable_ops_center(data: EnableOpsCenterModel, db: Session = Depends(get_db)):
+    from models import AddonSetting, OpsController, Project
+    import json
+    
+    if not data.root_username.strip():
+        return JSONResponse(status_code=400, content={"message": "Root username is required"})
+    if not data.root_password:
+        return JSONResponse(status_code=400, content={"message": "Root password is required"})
+    if data.root_password != data.confirm_root_password:
+        return JSONResponse(status_code=400, content={"message": "Root passwords do not match"})
+
+    setting = db.query(AddonSetting).filter(AddonSetting.addon_key == "ops_center").first()
+    if not setting:
+        setting = AddonSetting(addon_key="ops_center")
+        db.add(setting)
+
+    setting.enabled = True
+    setting.extra_json = json.dumps({
+        "root_username": data.root_username.strip(),
+        "email": data.email.strip(),
+        "root_password_hash": hash_password(data.root_password)
+    })
+    
+    # Ensure a local controller entry exists
+    primary_ctrl = db.query(OpsController).filter(OpsController.is_primary == True).first()
+    if not primary_ctrl:
+        local_ctrl = OpsController(
+            name="Primary Controller (Local)",
+            url="http://127.0.0.1:8000",
+            status="ONLINE",
+            is_primary=True,
+            version="2.5.0",
+            cluster_count=db.query(Project).count()
+        )
+        db.add(local_ctrl)
+
+    db.commit()
+    return {"success": True, "message": "Ops-Center enabled successfully"}
+
+
+@app.post("/api/addons/ops-center/disable", dependencies=[Depends(verify_credentials)])
+def disable_ops_center(db: Session = Depends(get_db)):
+    from models import AddonSetting
+    setting = db.query(AddonSetting).filter(AddonSetting.addon_key == "ops_center").first()
+    if setting:
+        setting.enabled = False
+        db.commit()
+    return {"success": True, "message": "Ops-Center disabled (Switched to Single-Controller mode)"}
+
+
+@app.post("/api/addons/kubernetes/enable", dependencies=[Depends(verify_credentials)])
+def enable_kubernetes(db: Session = Depends(get_db)):
+    from models import AddonSetting
+    setting = db.query(AddonSetting).filter(AddonSetting.addon_key == "kubernetes").first()
+    if not setting:
+        setting = AddonSetting(addon_key="kubernetes")
+        db.add(setting)
+    setting.enabled = True
+    db.commit()
+    return {"success": True, "message": "Kubernetes integration enabled"}
+
+
+@app.post("/api/addons/kubernetes/disable", dependencies=[Depends(verify_credentials)])
+def disable_kubernetes(db: Session = Depends(get_db)):
+    from models import AddonSetting
+    setting = db.query(AddonSetting).filter(AddonSetting.addon_key == "kubernetes").first()
+    if setting:
+        setting.enabled = False
+        db.commit()
+    return {"success": True, "message": "Kubernetes integration disabled"}
+
+
+# --- Ops-Center Controller Endpoints ---
+
+@app.get("/api/ops-center/controllers", dependencies=[Depends(verify_credentials)])
+def get_ops_controllers(db: Session = Depends(get_db)):
+    from ops_center_worker import sync_all_controllers
+    return sync_all_controllers(db)
+
+
+@app.post("/api/ops-center/controllers", dependencies=[Depends(verify_credentials)])
+def add_ops_controller(data: ControllerCreateModel, db: Session = Depends(get_db)):
+    from models import OpsController
+    from vault import encrypt
+    from ops_center_worker import ping_controller
+    
+    if not data.name.strip() or not data.url.strip():
+        return JSONResponse(status_code=400, content={"message": "Name and URL are required"})
+
+    ping_res = ping_controller(data.url, data.api_token)
+    ctrl = OpsController(
+        name=data.name.strip(),
+        url=data.url.strip(),
+        encrypted_api_token=encrypt(data.api_token) if data.api_token else None,
+        status="ONLINE" if ping_res.get("online") else "OFFLINE",
+        is_primary=False,
+        version="2.5.0",
+        cluster_count=0
+    )
+    db.add(ctrl)
+    db.commit()
+    db.refresh(ctrl)
+    return {"success": True, "id": ctrl.id, "name": ctrl.name, "status": ctrl.status, "ping": ping_res}
+
+
+@app.delete("/api/ops-center/controllers/{ctrl_id}", dependencies=[Depends(verify_credentials)])
+def delete_ops_controller(ctrl_id: int, db: Session = Depends(get_db)):
+    from models import OpsController
+    ctrl = db.query(OpsController).filter(OpsController.id == ctrl_id).first()
+    if not ctrl:
+        return JSONResponse(status_code=404, content={"message": "Controller not found"})
+    if ctrl.is_primary:
+        return JSONResponse(status_code=400, content={"message": "Cannot delete the primary local controller"})
+    db.delete(ctrl)
+    db.commit()
+    return {"success": True}
+
+
+# --- Kubernetes Clusters Endpoints ---
+
+@app.get("/api/k8s/clusters", dependencies=[Depends(verify_credentials)])
+def get_k8s_clusters(db: Session = Depends(get_db)):
+    from models import KubeCluster
+    clusters = db.query(KubeCluster).order_by(KubeCluster.id.asc()).all()
+    return [{
+        "id": c.id,
+        "name": c.name,
+        "api_server_url": c.api_server_url or "-",
+        "status": c.status,
+        "namespace": c.namespace,
+        "nodes_count": c.nodes_count,
+        "pods_count": c.pods_count,
+        "operator_installed": c.operator_installed,
+        "created_at": c.created_at.strftime("%Y-%m-%d %H:%M:%S") if c.created_at else ""
+    } for c in clusters]
+
+
+@app.post("/api/k8s/clusters", dependencies=[Depends(verify_credentials)])
+def add_k8s_cluster(data: KubeClusterCreateModel, db: Session = Depends(get_db)):
+    from models import KubeCluster
+    from vault import encrypt
+    from k8s_worker import validate_k8s_connection
+    
+    if not data.name.strip():
+        return JSONResponse(status_code=400, content={"message": "Cluster name is required"})
+    if not data.kubeconfig_yaml.strip():
+        return JSONResponse(status_code=400, content={"message": "Kubeconfig YAML content is required"})
+
+    val_res = validate_k8s_connection(data.kubeconfig_yaml)
+    if not val_res.get("success"):
+        return JSONResponse(status_code=400, content={"message": val_res.get("error", "Kubeconfig validation failed")})
+
+    cluster = KubeCluster(
+        name=data.name.strip(),
+        encrypted_kubeconfig=encrypt(data.kubeconfig_yaml),
+        api_server_url=val_res.get("api_server", ""),
+        status="CONNECTED",
+        namespace=data.namespace.strip() or "default",
+        nodes_count=val_res.get("nodes_count", 1),
+        operator_installed=val_res.get("operator", "CloudNativePG")
+    )
+    db.add(cluster)
+    db.commit()
+    db.refresh(cluster)
+    return {"success": True, "id": cluster.id, "name": cluster.name, "message": val_res.get("message")}
+
+
+@app.get("/api/k8s/clusters/{cluster_id}/pods", dependencies=[Depends(verify_credentials)])
+def get_k8s_cluster_pods(cluster_id: int, db: Session = Depends(get_db)):
+    from models import KubeCluster
+    from vault import decrypt
+    from k8s_worker import list_k8s_pods
+    
+    cluster = db.query(KubeCluster).filter(KubeCluster.id == cluster_id).first()
+    if not cluster:
+        return JSONResponse(status_code=404, content={"message": "Kubernetes cluster not found"})
+
+    kubeconfig = decrypt(cluster.encrypted_kubeconfig)
+    pods = list_k8s_pods(kubeconfig, cluster.namespace)
+    return {"cluster_id": cluster.id, "namespace": cluster.namespace, "pods": pods}
+
+
+class K8sDeployDbModel(BaseModel):
+    db_name: str
+    replicas: int = 2
+    db_pass: str = "postgres123"
+
+
+@app.post("/api/k8s/clusters/{cluster_id}/deploy-db", dependencies=[Depends(verify_credentials)])
+def deploy_k8s_database(cluster_id: int, data: K8sDeployDbModel, db: Session = Depends(get_db)):
+    from models import KubeCluster
+    from vault import decrypt
+    from k8s_worker import deploy_k8s_postgres
+    
+    cluster = db.query(KubeCluster).filter(KubeCluster.id == cluster_id).first()
+    if not cluster:
+        return JSONResponse(status_code=404, content={"message": "Kubernetes cluster not found"})
+
+    kubeconfig = decrypt(cluster.encrypted_kubeconfig)
+    res = deploy_k8s_postgres(
+        kubeconfig_str=kubeconfig,
+        namespace=cluster.namespace,
+        cluster_name=data.db_name.strip().lower().replace(" ", "-"),
+        replicas=data.replicas,
+        db_pass=data.db_pass
+    )
+    if not res.get("success"):
+        return JSONResponse(status_code=400, content={"message": res.get("error", "Deployment failed")})
+    return res
+
+
+@app.delete("/api/k8s/clusters/{cluster_id}", dependencies=[Depends(verify_credentials)])
+def delete_k8s_cluster(cluster_id: int, db: Session = Depends(get_db)):
+    from models import KubeCluster
+    cluster = db.query(KubeCluster).filter(KubeCluster.id == cluster_id).first()
+    if not cluster:
+        return JSONResponse(status_code=404, content={"message": "Cluster not found"})
+    db.delete(cluster)
+    db.commit()
+    return {"success": True}
 
 
 @app.get("/api/debug/metrics/{project_id}", dependencies=[Depends(verify_credentials)])

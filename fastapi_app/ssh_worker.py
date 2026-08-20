@@ -1,4 +1,7 @@
-import paramiko
+try:
+    import paramiko
+except ImportError:
+    paramiko = None
 import io
 
 class SSHManager:
@@ -7,8 +10,11 @@ class SSHManager:
         self.port = port
         self.username = username
         self.credential_string = credential_string
-        self.client = paramiko.SSHClient()
-        self.client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+        if paramiko is not None:
+            self.client = paramiko.SSHClient()
+            self.client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+        else:
+            self.client = None
 
     def connect(self):
         # Determine if credential is a PEM key

@@ -3871,36 +3871,462 @@ window.loadLicense = async function() {
     } catch(e) { console.warn('License load error:', e); }
 };
 
-// ── Addons ─────────────────────────────────────────────────────────────────
+// ── Addons (ClusterControl Ops-Center & Kubernetes) ───────────────────────────
+
+let currentOpsCenterStep = 1;
+
 window.loadAddons = async function() {
     try {
         const res = await apiFetch('/api/addons');
         if (!res.ok) return;
         const d = await res.json();
-        const setToggle = (key, data) => {
-            const chk = document.getElementById(`addon-toggle-${key}`);
-            const urlEl = document.getElementById(`addon-url-${key}`);
-            if (chk) chk.checked = data.enabled;
-            if (urlEl) urlEl.value = data.api_url || '';
-        };
-        if (d.kubernetes) setToggle('kubernetes', d.kubernetes);
-        if (d.ops_center) setToggle('ops_center', d.ops_center);
-    } catch(e) { console.warn('Addons load error:', e); }
+        
+        // Ops-Center UI state
+        const opsEnabled = d.ops_center?.enabled;
+        const opsToggle = document.getElementById('toggle-addon-ops-center');
+        const opsThumb = document.getElementById('toggle-thumb-ops-center');
+        const opsStatus = document.getElementById('ops-center-status-text');
+        const opsPanel = document.getElementById('ops-center-panel');
+        
+        if (opsToggle && opsThumb) {
+            opsToggle.style.background = opsEnabled ? '#3a1c94' : '#d1d5db';
+            opsThumb.style.transform = opsEnabled ? 'translateX(20px)' : 'translateX(0)';
+        }
+        if (opsStatus) {
+            opsStatus.innerText = opsEnabled ? `Multi-controller mode · ${d.ops_center?.controllers_count || 1} controller(s)` : 'Single-controller mode · local';
+        }
+        if (opsPanel) {
+            opsPanel.style.display = opsEnabled ? 'block' : 'none';
+        }
+        if (opsEnabled) {
+            loadOpsControllers();
+        }
+
+        // Kubernetes UI state
+        const k8sEnabled = d.kubernetes?.enabled;
+        const k8sToggle = document.getElementById('toggle-addon-k8s');
+        const k8sThumb = document.getElementById('toggle-thumb-k8s');
+        const k8sStatus = document.getElementById('k8s-status-text');
+        const k8sPanel = document.getElementById('k8s-panel');
+
+        if (k8sToggle && k8sThumb) {
+            k8sToggle.style.background = k8sEnabled ? '#3a1c94' : '#d1d5db';
+            k8sThumb.style.transform = k8sEnabled ? 'translateX(20px)' : 'translateX(0)';
+        }
+        if (k8sStatus) {
+            k8sStatus.innerText = k8sEnabled ? `Enabled · ${d.kubernetes?.clusters_count || 0} cluster(s)` : 'Not enabled';
+        }
+        if (k8sPanel) {
+            k8sPanel.style.display = k8sEnabled ? 'block' : 'none';
+        }
+        if (k8sEnabled) {
+            loadKubeClusters();
+        }
+    } catch(e) {
+        console.warn('Addons load error:', e);
+    }
 };
-window.saveAddon = async function(key) {
-    const chk = document.getElementById(`addon-toggle-${key}`);
-    const urlEl = document.getElementById(`addon-url-${key}`);
-    const enabled = chk ? chk.checked : false;
-    const api_url = urlEl ? urlEl.value : '';
-    const res = await apiFetch(`/api/addons/${key}`, { method: 'PUT', headers: {'Content-Type':'application/json'}, body: JSON.stringify({ enabled, api_url }) });
-    const data = await res.json();
-    alert(data.success ? 'Addon settings saved.' : (data.message || 'Failed'));
+
+window.toggleOpsCenterAddon = async function() {
+    const res = await apiFetch('/api/addons');
+    const d = await res.json();
+    if (d.ops_center?.enabled) {
+        if (confirm('Are you sure you want to disable Ops-Center? The console will switch back to Single-Controller mode.')) {
+            const disRes = await apiFetch('/api/addons/ops-center/disable', { method: 'POST' });
+            if (disRes.ok) {
+                loadAddons();
+            }
+        }
+    } else {
+        openEnableOpsCenterModal();
+    }
 };
-window.testAddon = async function(key) {
-    const res = await apiFetch(`/api/addons/${key}/test`, { method: 'POST' });
-    const data = await res.json();
-    alert(data.message);
+
+window.openEnableOpsCenterModal = function() {
+    currentOpsCenterStep = 1;
+    setOpsCenterStep(1);
+    const modal = document.getElementById('modal-enable-ops-center');
+    if (modal) modal.style.display = 'flex';
 };
+
+window.closeEnableOpsCenterModal = function() {
+    const modal = document.getElementById('modal-enable-ops-center');
+    if (modal) modal.style.display = 'none';
+};
+
+function setOpsCenterStep(step) {
+    currentOpsCenterStep = step;
+    const p1 = document.getElementById('ops-step-pane-1');
+    const p2 = document.getElementById('ops-step-pane-2');
+    const b1 = document.getElementById('ops-step-badge-1');
+    const b2 = document.getElementById('ops-step-badge-2');
+    const n1 = document.getElementById('ops-step-nav-1');
+    const n2 = document.getElementById('ops-step-nav-2');
+    const btnBack = document.getElementById('btn-ops-back');
+    const btnNext = document.getElementById('btn-ops-next');
+
+    if (step === 1) {
+        if (p1) p1.style.display = 'block';
+        if (p2) p2.style.display = 'none';
+        if (n1) n1.style.color = '#3a1c94';
+        if (n2) n2.style.color = '#9ca3af';
+        if (b1) { b1.style.background = '#3a1c94'; b1.style.color = 'white'; b1.style.border = 'none'; b1.innerHTML = '1'; }
+        if (b2) { b2.style.background = 'transparent'; b2.style.color = '#9ca3af'; b2.style.border = '2px solid #d1d5db'; b2.innerHTML = '2'; }
+        if (btnBack) { btnBack.disabled = true; btnBack.style.color = '#9ca3af'; btnBack.style.cursor = 'not-allowed'; }
+        if (btnNext) { btnNext.innerText = 'Continue'; btnNext.onclick = nextOpsCenterStep; }
+    } else {
+        if (p1) p1.style.display = 'none';
+        if (p2) p2.style.display = 'block';
+        if (n1) n1.style.color = '#10b981';
+        if (n2) n2.style.color = '#3a1c94';
+        if (b1) { b1.style.background = '#10b981'; b1.style.color = 'white'; b1.style.border = 'none'; b1.innerHTML = '✓'; }
+        if (b2) { b2.style.background = '#3a1c94'; b2.style.color = 'white'; b2.style.border = 'none'; b2.innerHTML = '2'; }
+        if (btnBack) { btnBack.disabled = false; btnBack.style.color = '#374151'; btnBack.style.cursor = 'pointer'; }
+        if (btnNext) { btnNext.innerText = 'Finish'; btnNext.onclick = submitEnableOpsCenter; }
+    }
+}
+
+window.nextOpsCenterStep = function() {
+    setOpsCenterStep(2);
+};
+
+window.prevOpsCenterStep = function() {
+    setOpsCenterStep(1);
+};
+
+window.submitEnableOpsCenter = async function() {
+    const user = document.getElementById('ops-root-user')?.value.trim() || '';
+    const email = document.getElementById('ops-root-email')?.value.trim() || '';
+    const pass = document.getElementById('ops-root-pass')?.value || '';
+    const confirmPass = document.getElementById('ops-root-confirm')?.value || '';
+    const errEl = document.getElementById('ops-root-error');
+
+    if (errEl) errEl.style.display = 'none';
+
+    if (!user) {
+        if (errEl) { errEl.innerText = 'Please enter root username'; errEl.style.display = 'block'; }
+        return;
+    }
+    if (!pass) {
+        if (errEl) { errEl.innerText = 'Please enter root user password'; errEl.style.display = 'block'; }
+        return;
+    }
+    if (pass !== confirmPass) {
+        if (errEl) { errEl.innerText = 'Root passwords do not match'; errEl.style.display = 'block'; }
+        return;
+    }
+
+    try {
+        const res = await apiFetch('/api/addons/ops-center/enable', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                root_username: user,
+                email: email,
+                root_password: pass,
+                confirm_root_password: confirmPass
+            })
+        });
+        const resData = await res.json();
+        if (res.ok && resData.success) {
+            closeEnableOpsCenterModal();
+            loadAddons();
+            alert('✓ Ops-Center successfully enabled in Multi-Controller mode.');
+        } else {
+            if (errEl) { errEl.innerText = resData.message || 'Failed to enable Ops-Center'; errEl.style.display = 'block'; }
+        }
+    } catch(e) {
+        if (errEl) { errEl.innerText = 'Connection error'; errEl.style.display = 'block'; }
+    }
+};
+
+window.toggleK8sAddon = async function() {
+    const res = await apiFetch('/api/addons');
+    const d = await res.json();
+    if (d.kubernetes?.enabled) {
+        if (confirm('Are you sure you want to disable Kubernetes feature?')) {
+            const disRes = await apiFetch('/api/addons/kubernetes/disable', { method: 'POST' });
+            if (disRes.ok) {
+                loadAddons();
+            }
+        }
+    } else {
+        openEnableK8sModal();
+    }
+};
+
+window.openEnableK8sModal = function() {
+    const modal = document.getElementById('modal-enable-k8s');
+    if (modal) modal.style.display = 'flex';
+};
+
+window.closeEnableK8sModal = function() {
+    const modal = document.getElementById('modal-enable-k8s');
+    if (modal) modal.style.display = 'none';
+};
+
+window.submitEnableK8s = async function() {
+    const btn = document.getElementById('btn-submit-enable-k8s');
+    if (btn) { btn.disabled = true; btn.innerText = 'Enabling...'; }
+    try {
+        const res = await apiFetch('/api/addons/kubernetes/enable', { method: 'POST' });
+        if (res.ok) {
+            closeEnableK8sModal();
+            loadAddons();
+            alert('✓ Kubernetes feature enabled.');
+        }
+    } catch(e) {
+        alert('Failed to enable Kubernetes.');
+    } finally {
+        if (btn) { btn.disabled = false; btn.innerText = 'Enable'; }
+    }
+};
+
+// ── Controllers Table (Ops-Center) ──
+window.loadOpsControllers = async function() {
+    const tbody = document.getElementById('tbody-ops-controllers');
+    if (!tbody) return;
+    tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;padding:16px;color:#9ca3af;">Loading controllers...</td></tr>';
+    try {
+        const res = await apiFetch('/api/ops-center/controllers');
+        const list = await res.json();
+        if (!list || !list.length) {
+            tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;padding:16px;color:#9ca3af;">No controllers registered.</td></tr>';
+            return;
+        }
+        tbody.innerHTML = list.map(c => `
+            <tr style="border-bottom:1px solid #f3f4f6;">
+                <td style="padding:10px 14px;font-weight:600;color:#111827;">${escapeHTML(c.name)} ${c.is_primary ? '<span style="font-size:0.7rem;background:#e0e7ff;color:#3a1c94;padding:2px 6px;border-radius:4px;margin-left:4px;">Primary</span>' : ''}</td>
+                <td style="padding:10px 14px;color:#4b5563;font-family:monospace;font-size:0.8rem;">${escapeHTML(c.url)}</td>
+                <td style="padding:10px 14px;">
+                    <span style="font-size:0.75rem;padding:3px 8px;border-radius:10px;font-weight:600;background:${c.status === 'ONLINE' ? '#d1fae5' : '#fee2e2'};color:${c.status === 'ONLINE' ? '#065f46' : '#991b1b'};">
+                        ● ${c.status} (${c.latency_ms}ms)
+                    </span>
+                </td>
+                <td style="padding:10px 14px;color:#6b7280;">${escapeHTML(c.version || '2.5.0')}</td>
+                <td style="padding:10px 14px;color:#111827;font-weight:500;">${c.cluster_count}</td>
+                <td style="padding:10px 14px;text-align:right;">
+                    ${!c.is_primary ? `<button onclick="deleteOpsController(${c.id})" style="padding:4px 8px;background:#fee2e2;color:#991b1b;border:none;border-radius:4px;font-size:0.75rem;cursor:pointer;font-weight:600;">Remove</button>` : '<span style="color:#9ca3af;font-size:0.75rem;">Default</span>'}
+                </td>
+            </tr>
+        `).join('');
+    } catch(e) {
+        tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;padding:16px;color:#ef4444;">Failed to load controllers</td></tr>';
+    }
+};
+
+window.openAddControllerModal = function() {
+    const modal = document.getElementById('modal-add-ops-controller');
+    if (modal) {
+        document.getElementById('ctrl-name').value = '';
+        document.getElementById('ctrl-url').value = '';
+        document.getElementById('ctrl-token').value = '';
+        const err = document.getElementById('ctrl-add-err');
+        if (err) err.style.display = 'none';
+        modal.style.display = 'flex';
+    }
+};
+
+window.closeAddControllerModal = function() {
+    const modal = document.getElementById('modal-add-ops-controller');
+    if (modal) modal.style.display = 'none';
+};
+
+window.submitAddController = async function() {
+    const name = document.getElementById('ctrl-name')?.value.trim();
+    const url = document.getElementById('ctrl-url')?.value.trim();
+    const token = document.getElementById('ctrl-token')?.value.trim();
+    const err = document.getElementById('ctrl-add-err');
+    const btn = document.getElementById('btn-submit-add-ctrl');
+
+    if (err) err.style.display = 'none';
+
+    if (!name || !url) {
+        if (err) { err.innerText = 'Controller Name and URL are required'; err.style.display = 'block'; }
+        return;
+    }
+
+    if (btn) { btn.disabled = true; btn.innerText = 'Testing & Connecting...'; }
+
+    try {
+        const res = await apiFetch('/api/ops-center/controllers', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ name, url, api_token: token })
+        });
+        const d = await res.json();
+        if (res.ok && d.success) {
+            closeAddControllerModal();
+            loadOpsControllers();
+            alert(`✓ Controller '${name}' registered successfully (${d.status}).`);
+        } else {
+            if (err) { err.innerText = d.message || 'Failed to connect to controller'; err.style.display = 'block'; }
+        }
+    } catch(e) {
+        if (err) { err.innerText = 'Connection error'; err.style.display = 'block'; }
+    } finally {
+        if (btn) { btn.disabled = false; btn.innerText = 'Register Controller'; }
+    }
+};
+
+window.deleteOpsController = async function(id) {
+    if (!confirm('Are you sure you want to remove this controller?')) return;
+    try {
+        const res = await apiFetch(`/api/ops-center/controllers/${id}`, { method: 'DELETE' });
+        if (res.ok) {
+            loadOpsControllers();
+        }
+    } catch(e) {
+        alert('Failed to remove controller');
+    }
+};
+
+// ── Kubernetes Clusters Table ──
+window.loadKubeClusters = async function() {
+    const tbody = document.getElementById('tbody-k8s-clusters');
+    if (!tbody) return;
+    tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;padding:16px;color:#9ca3af;">Loading K8s clusters...</td></tr>';
+    try {
+        const res = await apiFetch('/api/k8s/clusters');
+        const list = await res.json();
+        if (!list || !list.length) {
+            tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;padding:16px;color:#9ca3af;">No Kubernetes clusters registered yet. Click "+ Add K8s Cluster" to connect your Kubeconfig.</td></tr>';
+            return;
+        }
+        tbody.innerHTML = list.map(c => `
+            <tr style="border-bottom:1px solid #f3f4f6;">
+                <td style="padding:10px 14px;font-weight:600;color:#111827;">${escapeHTML(c.name)}</td>
+                <td style="padding:10px 14px;color:#4b5563;font-family:monospace;font-size:0.78rem;">${escapeHTML(c.api_server_url)}</td>
+                <td style="padding:10px 14px;color:#4b5563;">${escapeHTML(c.namespace)}</td>
+                <td style="padding:10px 14px;color:#111827;font-weight:500;">${c.nodes_count}</td>
+                <td style="padding:10px 14px;"><span style="font-size:0.75rem;background:#ede9fe;color:#5b21b6;padding:2px 6px;border-radius:4px;font-weight:600;">${escapeHTML(c.operator_installed || 'CloudNativePG')}</span></td>
+                <td style="padding:10px 14px;">
+                    <span style="font-size:0.75rem;padding:3px 8px;border-radius:10px;font-weight:600;background:#d1fae5;color:#065f46;">
+                        ● ${c.status}
+                    </span>
+                </td>
+                <td style="padding:10px 14px;text-align:right;">
+                    <button onclick="viewK8sPods(${c.id}, '${escapeHTML(c.name)}')" style="padding:4px 8px;background:#e0e7ff;color:#3a1c94;border:none;border-radius:4px;font-size:0.75rem;cursor:pointer;font-weight:600;margin-right:6px;">Pods</button>
+                    <button onclick="deleteKubeCluster(${c.id})" style="padding:4px 8px;background:#fee2e2;color:#991b1b;border:none;border-radius:4px;font-size:0.75rem;cursor:pointer;font-weight:600;">Remove</button>
+                </td>
+            </tr>
+        `).join('');
+    } catch(e) {
+        tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;padding:16px;color:#ef4444;">Failed to load Kubernetes clusters</td></tr>';
+    }
+};
+
+window.openAddKubeClusterModal = function() {
+    const modal = document.getElementById('modal-add-k8s-cluster');
+    if (modal) {
+        document.getElementById('k8s-cluster-name').value = '';
+        document.getElementById('k8s-namespace').value = 'default';
+        document.getElementById('k8s-kubeconfig-yaml').value = '';
+        const err = document.getElementById('k8s-add-err');
+        if (err) err.style.display = 'none';
+        modal.style.display = 'flex';
+    }
+};
+
+window.closeAddKubeClusterModal = function() {
+    const modal = document.getElementById('modal-add-k8s-cluster');
+    if (modal) modal.style.display = 'none';
+};
+
+window.submitAddKubeCluster = async function() {
+    const name = document.getElementById('k8s-cluster-name')?.value.trim();
+    const namespace = document.getElementById('k8s-namespace')?.value.trim() || 'default';
+    const kubeconfig = document.getElementById('k8s-kubeconfig-yaml')?.value.trim();
+    const err = document.getElementById('k8s-add-err');
+    const btn = document.getElementById('btn-submit-add-k8s');
+
+    if (err) err.style.display = 'none';
+
+    if (!name) {
+        if (err) { err.innerText = 'Cluster Name is required'; err.style.display = 'block'; }
+        return;
+    }
+    if (!kubeconfig) {
+        if (err) { err.innerText = 'Kubeconfig YAML content is required'; err.style.display = 'block'; }
+        return;
+    }
+
+    if (btn) { btn.disabled = true; btn.innerText = 'Validating API Server...'; }
+
+    try {
+        const res = await apiFetch('/api/k8s/clusters', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ name, namespace, kubeconfig_yaml: kubeconfig })
+        });
+        const d = await res.json();
+        if (res.ok && d.success) {
+            closeAddKubeClusterModal();
+            loadKubeClusters();
+            alert(`✓ Kubernetes Cluster '${name}' successfully connected.`);
+        } else {
+            if (err) { err.innerText = d.message || 'Failed to connect to Kubernetes API'; err.style.display = 'block'; }
+        }
+    } catch(e) {
+        if (err) { err.innerText = 'Connection error during Kubernetes validation'; err.style.display = 'block'; }
+    } finally {
+        if (btn) { btn.disabled = false; btn.innerText = 'Test & Connect Cluster'; }
+    }
+};
+
+window.deleteKubeCluster = async function(id) {
+    if (!confirm('Are you sure you want to remove this Kubernetes cluster?')) return;
+    try {
+        const res = await apiFetch(`/api/k8s/clusters/${id}`, { method: 'DELETE' });
+        if (res.ok) {
+            loadKubeClusters();
+        }
+    } catch(e) {
+        alert('Failed to remove cluster');
+    }
+};
+
+window.viewK8sPods = async function(clusterId, clusterName) {
+    const modal = document.getElementById('modal-k8s-pods');
+    const title = document.getElementById('modal-k8s-pods-title');
+    const tbody = document.getElementById('tbody-k8s-pods');
+    if (!modal || !tbody) return;
+
+    if (title) title.innerText = `Live Pods: ${clusterName}`;
+    tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;padding:20px;color:#9ca3af;">Querying Kubernetes API for live pods...</td></tr>';
+    modal.style.display = 'flex';
+
+    try {
+        const res = await apiFetch(`/api/k8s/clusters/${clusterId}/pods`);
+        const d = await res.json();
+        if (!d.pods || !d.pods.length) {
+            tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;padding:20px;color:#9ca3af;">No pods found in namespace.</td></tr>';
+            return;
+        }
+        tbody.innerHTML = d.pods.map(p => `
+            <tr style="border-bottom:1px solid #f3f4f6;">
+                <td style="padding:8px 10px;font-family:monospace;font-size:0.8rem;font-weight:600;color:#111827;">${escapeHTML(p.name)}</td>
+                <td style="padding:8px 10px;">
+                    <span style="font-size:0.75rem;padding:2px 6px;border-radius:8px;font-weight:600;background:${p.status === 'Running' ? '#d1fae5' : '#fef3c7'};color:${p.status === 'Running' ? '#065f46' : '#92400e'};">
+                        ${p.status}
+                    </span>
+                </td>
+                <td style="padding:8px 10px;color:${p.ready ? '#10b981' : '#ef4444'};font-weight:600;">${p.ready ? 'Yes' : 'No'}</td>
+                <td style="padding:8px 10px;color:#6b7280;">${p.restarts}</td>
+                <td style="padding:8px 10px;font-size:0.78rem;color:#4b5563;">${p.ip} (${p.node})</td>
+                <td style="padding:8px 10px;font-size:0.78rem;color:#6b7280;">${p.age}</td>
+            </tr>
+        `).join('');
+    } catch(e) {
+        tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;padding:20px;color:#ef4444;">Failed to retrieve pods from Kubernetes API</td></tr>';
+    }
+};
+
+window.closeK8sPodsModal = function() {
+    const modal = document.getElementById('modal-k8s-pods');
+    if (modal) modal.style.display = 'none';
+};
+
 
 // ── LDAP (User Management tab) ─────────────────────────────────────────────
 window.loadLdapConfigs = async function() {

@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Sunucu Yönetim ve Replikasyon</title>
-    <link rel="stylesheet" href="/static/style.css?v=88">
+    <link rel="stylesheet" href="/static/style.css?v=89">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 </head>
 <body>
@@ -1502,7 +1502,7 @@ Real OS metrics (CPU, RAM, Disk I/O) cannot be fetched directly from PostgreSQL 
         </div>
     </div>
 
-    <script src="/static/main.js?v=88"></script>
+    <script src="/static/main.js?v=89"></script>
 
 
 
@@ -2337,56 +2337,118 @@ Real OS metrics (CPU, RAM, Disk I/O) cannot be fetched directly from PostgreSQL 
 
                     <!-- Addons Content -->
                     <div id="settings-content-addons" class="settings-content-pane" style="display: none; padding: 24px;">
-                        <div style="display: flex; gap: 24px;">
+                        <div style="display: flex; gap: 24px; margin-bottom: 28px;">
                             <!-- Ops-Center -->
-                            <div style="flex: 1; border: 1px solid #e5e7eb; border-radius: 8px; padding: 20px; background: white;">
-                                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
-                                    <div style="display: flex; align-items: center; gap: 8px; font-weight: 600; font-size: 1.1rem; color: #111827;">
-                                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>
-                                        Ops-Center
+                            <div style="flex: 1; border: 1px solid #e5e7eb; border-radius: 12px; padding: 22px; background: white; box-shadow: 0 1px 3px rgba(0,0,0,0.05); display: flex; flex-direction: column; justify-content: space-between;">
+                                <div>
+                                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+                                        <div style="display: flex; align-items: center; gap: 10px; font-weight: 600; font-size: 1.15rem; color: #111827;">
+                                            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#3a1c94" stroke-width="2"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>
+                                            Ops-Center
+                                        </div>
+                                        <div id="toggle-addon-ops-center" onclick="toggleOpsCenterAddon()" style="width: 44px; height: 24px; background: #d1d5db; border-radius: 12px; position: relative; cursor: pointer; transition: background 0.2s;">
+                                            <div id="toggle-thumb-ops-center" style="width: 20px; height: 20px; background: white; border-radius: 50%; position: absolute; top: 2px; left: 2px; transition: transform 0.2s; box-shadow: 0 1px 2px rgba(0,0,0,0.2);"></div>
+                                        </div>
                                     </div>
-                                    <div style="width: 40px; height: 20px; background: #d1d5db; border-radius: 10px; position: relative;">
-                                        <div style="width: 16px; height: 16px; background: white; border-radius: 50%; position: absolute; top: 2px; left: 2px;"></div>
-                                    </div>
+                                    <p style="font-size: 0.85rem; color: #6b7280; line-height: 1.5; margin-bottom: 18px;">Manage several ClusterControl controllers from one console. Ops-Center gives you a single pane of glass to monitor and operate every controller, cluster and node.</p>
+                                    <div style="font-size: 0.75rem; font-weight: 700; color: #9ca3af; margin-bottom: 10px; letter-spacing: 0.5px;">WHEN TO ENABLE IT</div>
+                                    <ul style="font-size: 0.85rem; color: #4b5563; padding-left: 20px; margin-bottom: 22px; line-height: 1.5;">
+                                        <li style="margin-bottom: 6px;">You run more than one ClusterControl controller — for example separate prod, staging or per-region installations — and want to manage them from one place.</li>
+                                        <li style="margin-bottom: 6px;">Your fleet grows beyond ~1000 nodes and you need to scale out horizontally across several CMON controllers.</li>
+                                        <li>You want centralized monitoring with the ability to switch between controllers for targeted operations.</li>
+                                    </ul>
                                 </div>
-                                <p style="font-size: 0.85rem; color: #6b7280; line-height: 1.5; margin-bottom: 20px;">Manage several ClusterControl controllers from one console. Ops-Center gives you a single pane of glass to monitor and operate every controller, cluster and node.</p>
-                                <div style="font-size: 0.75rem; font-weight: 600; color: #9ca3af; margin-bottom: 12px; letter-spacing: 0.5px;">WHEN TO ENABLE IT</div>
-                                <ul style="font-size: 0.85rem; color: #4b5563; padding-left: 20px; margin-bottom: 24px; line-height: 1.5;">
-                                    <li style="margin-bottom: 8px;">You run more than one ClusterControl controller — for example separate prod, staging or per-region installations — and want to manage them from one place.</li>
-                                    <li style="margin-bottom: 8px;">Your fleet grows beyond ~1000 nodes and you need to scale out horizontally across several CMON controllers.</li>
-                                    <li>You want centralized monitoring with the ability to switch between controllers for targeted operations.</li>
-                                </ul>
-                                <div style="display: flex; justify-content: space-between; align-items: center; font-size: 0.85rem;">
-                                    <span style="color: #6b7280;">Single-controller mode - local</span>
-                                    <a href="#" style="color: #3a1c94; text-decoration: none; font-weight: 500;">Learn more</a>
+                                <div style="display: flex; justify-content: space-between; align-items: center; font-size: 0.85rem; padding-top: 14px; border-top: 1px solid #f3f4f6;">
+                                    <span id="ops-center-status-text" style="color: #6b7280; font-weight: 500;">Single-controller mode · local</span>
+                                    <a href="https://docs.severalnines.com/clustercontrol/latest/user-guide/integration/clustercontrol-ops-c/" target="_blank" style="color: #3a1c94; text-decoration: none; font-weight: 600;">Learn more</a>
                                 </div>
                             </div>
                             
                             <!-- Kubernetes -->
-                            <div style="flex: 1; border: 1px solid #e5e7eb; border-radius: 8px; padding: 20px; background: white;">
-                                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
-                                    <div style="display: flex; align-items: center; gap: 8px; font-weight: 600; font-size: 1.1rem; color: #111827;">
-                                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2L2 7l10 5 10-5-10-5z"></path><path d="M2 17l10 5 10-5"></path><path d="M2 12l10 5 10-5"></path></svg>
-                                        Kubernetes
+                            <div style="flex: 1; border: 1px solid #e5e7eb; border-radius: 12px; padding: 22px; background: white; box-shadow: 0 1px 3px rgba(0,0,0,0.05); display: flex; flex-direction: column; justify-content: space-between;">
+                                <div>
+                                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+                                        <div style="display: flex; align-items: center; gap: 10px; font-weight: 600; font-size: 1.15rem; color: #111827;">
+                                            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#3a1c94" stroke-width="2"><path d="M12 2L2 7l10 5 10-5-10-5z"></path><path d="M2 17l10 5 10-5"></path><path d="M2 12l10 5 10-5"></path></svg>
+                                            Kubernetes
+                                        </div>
+                                        <div id="toggle-addon-k8s" onclick="toggleK8sAddon()" style="width: 44px; height: 24px; background: #d1d5db; border-radius: 12px; position: relative; cursor: pointer; transition: background 0.2s;">
+                                            <div id="toggle-thumb-k8s" style="width: 20px; height: 20px; background: white; border-radius: 50%; position: absolute; top: 2px; left: 2px; transition: transform 0.2s; box-shadow: 0 1px 2px rgba(0,0,0,0.2);"></div>
+                                        </div>
                                     </div>
-                                    <div style="width: 40px; height: 20px; background: #d1d5db; border-radius: 10px; position: relative;">
-                                        <div style="width: 16px; height: 16px; background: white; border-radius: 50%; position: absolute; top: 2px; left: 2px;"></div>
-                                    </div>
+                                    <p style="font-size: 0.85rem; color: #6b7280; line-height: 1.5; margin-bottom: 18px;">Deploy and manage Kubernetes-based database clusters using database operators, alongside your traditional clusters.</p>
+                                    <div style="font-size: 0.75rem; font-weight: 700; color: #9ca3af; margin-bottom: 10px; letter-spacing: 0.5px;">WHEN TO ENABLE IT</div>
+                                    <ul style="font-size: 0.85rem; color: #4b5563; padding-left: 20px; margin-bottom: 22px; line-height: 1.5;">
+                                        <li style="margin-bottom: 6px;">Your infrastructure runs on Kubernetes and you want to operate databases as native cluster resources.</li>
+                                        <li style="margin-bottom: 6px;">You want database operators to automate deployment, scaling and recovery on K8s.</li>
+                                        <li>You need to manage Kubernetes-based database clusters from the same console as the rest of your fleet.</li>
+                                    </ul>
                                 </div>
-                                <p style="font-size: 0.85rem; color: #6b7280; line-height: 1.5; margin-bottom: 20px;">Deploy and manage Kubernetes-based database clusters using database operators, alongside your traditional clusters.</p>
-                                <div style="font-size: 0.75rem; font-weight: 600; color: #9ca3af; margin-bottom: 12px; letter-spacing: 0.5px;">WHEN TO ENABLE IT</div>
-                                <ul style="font-size: 0.85rem; color: #4b5563; padding-left: 20px; margin-bottom: 24px; line-height: 1.5;">
-                                    <li style="margin-bottom: 8px;">Your infrastructure runs on Kubernetes and you want to operate databases as native cluster resources.</li>
-                                    <li style="margin-bottom: 8px;">You want database operators to automate deployment, scaling and recovery on K8s.</li>
-                                    <li>You need to manage Kubernetes-based database clusters from the same console as the rest of your fleet.</li>
-                                </ul>
-                                <div style="display: flex; justify-content: space-between; align-items: center; font-size: 0.85rem;">
-                                    <span style="color: #6b7280;">Not enabled</span>
-                                    <a href="#" style="color: #3a1c94; text-decoration: none; font-weight: 500;">Learn more</a>
+                                <div style="display: flex; justify-content: space-between; align-items: center; font-size: 0.85rem; padding-top: 14px; border-top: 1px solid #f3f4f6;">
+                                    <span id="k8s-status-text" style="color: #6b7280; font-weight: 500;">Not enabled</span>
+                                    <a href="https://docs.severalnines.com/clustercontrol/latest/user-guide/integration/kubernetes/" target="_blank" style="color: #3a1c94; text-decoration: none; font-weight: 600;">Learn more</a>
                                 </div>
                             </div>
                         </div>
+
+                        <!-- Ops-Center Controllers Table (Visible when Ops-Center is enabled) -->
+                        <div id="ops-center-panel" style="display: none; border: 1px solid #e5e7eb; border-radius: 12px; background: white; padding: 20px; margin-bottom: 24px;">
+                            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
+                                <div>
+                                    <h4 style="margin: 0; font-size: 1.05rem; font-weight: 600; color: #111827;">Managed Controllers (CMON Instances)</h4>
+                                    <p style="margin: 4px 0 0 0; font-size: 0.8rem; color: #6b7280;">Centralized control of multiple ClusterControl instances across your datacenters.</p>
+                                </div>
+                                <button onclick="openAddControllerModal()" style="padding: 8px 16px; background: #3a1c94; color: white; border: none; border-radius: 6px; font-size: 0.85rem; font-weight: 600; cursor: pointer;">+ Add Controller</button>
+                            </div>
+                            <div style="overflow-x: auto;">
+                                <table style="width: 100%; border-collapse: collapse; font-size: 0.85rem;">
+                                    <thead>
+                                        <tr style="border-bottom: 2px solid #f3f4f6; color: #6b7280; text-align: left;">
+                                            <th style="padding: 10px 14px;">Name</th>
+                                            <th style="padding: 10px 14px;">Controller URL</th>
+                                            <th style="padding: 10px 14px;">Status</th>
+                                            <th style="padding: 10px 14px;">Version</th>
+                                            <th style="padding: 10px 14px;">Clusters</th>
+                                            <th style="padding: 10px 14px; text-align: right;">Action</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="tbody-ops-controllers">
+                                        <!-- Populated via main.js -->
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+
+                        <!-- Kubernetes Clusters Table (Visible when Kubernetes is enabled) -->
+                        <div id="k8s-panel" style="display: none; border: 1px solid #e5e7eb; border-radius: 12px; background: white; padding: 20px;">
+                            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
+                                <div>
+                                    <h4 style="margin: 0; font-size: 1.05rem; font-weight: 600; color: #111827;">Registered Kubernetes Clusters</h4>
+                                    <p style="margin: 4px 0 0 0; font-size: 0.8rem; color: #6b7280;">Manage database operators and cloud-native databases on your K8s clusters.</p>
+                                </div>
+                                <button onclick="openAddKubeClusterModal()" style="padding: 8px 16px; background: #3a1c94; color: white; border: none; border-radius: 6px; font-size: 0.85rem; font-weight: 600; cursor: pointer;">+ Add K8s Cluster</button>
+                            </div>
+                            <div style="overflow-x: auto;">
+                                <table style="width: 100%; border-collapse: collapse; font-size: 0.85rem;">
+                                    <thead>
+                                        <tr style="border-bottom: 2px solid #f3f4f6; color: #6b7280; text-align: left;">
+                                            <th style="padding: 10px 14px;">Cluster Name</th>
+                                            <th style="padding: 10px 14px;">API Server</th>
+                                            <th style="padding: 10px 14px;">Namespace</th>
+                                            <th style="padding: 10px 14px;">Nodes</th>
+                                            <th style="padding: 10px 14px;">Operator</th>
+                                            <th style="padding: 10px 14px;">Status</th>
+                                            <th style="padding: 10px 14px; text-align: right;">Action</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="tbody-k8s-clusters">
+                                        <!-- Populated via main.js -->
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
                     </div>
+
 
                     <!-- Diagnostics Content (Isolated Dedicated Tab matching ClusterControl Layout) -->
                     <div id="settings-content-diagnostics" class="settings-content-pane" style="display: none; padding: 60px 40px; justify-content: center; align-items: center; gap: 48px; max-width: 1000px; margin: 0 auto; width: 100%;">
@@ -2975,6 +3037,203 @@ Real OS metrics (CPU, RAM, Disk I/O) cannot be fetched directly from PostgreSQL 
   </div>
 </div>
 
-<script src="/static/main.js?v=88"></script>
+<!-- Enable Kubernetes Modal (ClusterControl style) -->
+<div class="modal-overlay" id="modal-enable-k8s" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:99999;align-items:center;justify-content:center;">
+  <div style="background:white;border-radius:14px;width:440px;max-width:95vw;box-shadow:0 20px 25px -5px rgba(0,0,0,0.15);overflow:hidden;animation:fadeInModal 0.2s ease-out;">
+    <div style="display:flex;align-items:center;justify-content:space-between;padding:18px 24px;border-bottom:1px solid #f3f4f6;">
+      <h3 style="margin:0;font-size:1.15rem;font-weight:600;color:#111827;">Enable kubernetes</h3>
+      <button onclick="closeEnableK8sModal()" style="background:transparent;border:none;font-size:1.2rem;color:#9ca3af;cursor:pointer;">✕</button>
+    </div>
+    <div style="padding:22px 24px;">
+      <p style="margin:0 0 16px 0;font-size:0.92rem;color:#374151;line-height:1.5;">Are you sure you want to enable kubernetes feature?<br>Page will reload after the operation is complete.</p>
+      <p style="margin:0;font-size:0.9rem;color:#4b5563;line-height:1.5;">Enabling Kubernetes will allow you to manage Kubernetes clusters from the system.</p>
+    </div>
+    <div style="display:flex;justify-content:flex-end;gap:12px;padding:16px 24px;border-top:1px solid #f3f4f6;background:#fafafa;">
+      <button onclick="closeEnableK8sModal()" style="padding:9px 20px;background:white;border:1px solid #d1d5db;border-radius:8px;font-size:0.9rem;font-weight:500;color:#374151;cursor:pointer;">Cancel</button>
+      <button id="btn-submit-enable-k8s" onclick="submitEnableK8s()" style="padding:9px 24px;background:#3a1c94;color:white;border:none;border-radius:8px;font-size:0.9rem;font-weight:600;cursor:pointer;">Enable</button>
+    </div>
+  </div>
+</div>
+
+<!-- Enable Ops-Center Wizard Modal (ClusterControl 2-step style) -->
+<div class="modal-overlay" id="modal-enable-ops-center" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:99999;align-items:center;justify-content:center;">
+  <div style="background:white;border-radius:14px;width:760px;max-width:95vw;box-shadow:0 20px 25px -5px rgba(0,0,0,0.15);overflow:hidden;animation:fadeInModal 0.2s ease-out;">
+    <!-- Modal Header -->
+    <div style="display:flex;align-items:center;justify-content:space-between;padding:18px 24px;border-bottom:1px solid #f3f4f6;">
+      <h3 style="margin:0;font-size:1.15rem;font-weight:600;color:#111827;">Enable Ops-Center</h3>
+      <button onclick="closeEnableOpsCenterModal()" style="background:transparent;border:none;font-size:1.2rem;color:#9ca3af;cursor:pointer;">✕</button>
+    </div>
+    
+    <div style="display:flex;min-height:360px;">
+      <!-- Wizard Left Steps Navigation -->
+      <div style="width:200px;border-right:1px solid #f3f4f6;padding:24px 18px;background:#fafafa;display:flex;flex-direction:column;gap:20px;">
+        <div id="ops-step-nav-1" style="display:flex;align-items:center;gap:12px;color:#3a1c94;font-weight:600;font-size:0.9rem;">
+          <div id="ops-step-badge-1" style="width:28px;height:28px;border-radius:50%;background:#3a1c94;color:white;display:flex;align-items:center;justify-content:center;font-size:0.85rem;font-weight:700;">1</div>
+          <span>About</span>
+        </div>
+        <div id="ops-step-nav-2" style="display:flex;align-items:center;gap:12px;color:#9ca3af;font-weight:500;font-size:0.9rem;">
+          <div id="ops-step-badge-2" style="width:28px;height:28px;border-radius:50%;border:2px solid #d1d5db;color:#9ca3af;display:flex;align-items:center;justify-content:center;font-size:0.85rem;font-weight:700;">2</div>
+          <span>Set root user</span>
+        </div>
+      </div>
+
+      <!-- Wizard Right Content Pane -->
+      <div style="flex:1;padding:24px 28px;display:flex;flex-direction:column;justify-content:space-between;">
+        
+        <!-- Step 1: About Pane -->
+        <div id="ops-step-pane-1">
+          <p style="font-size:0.88rem;color:#374151;line-height:1.5;margin-bottom:16px;">
+            Ops-Center enables centralized management of several ClusterControl installations from a single user interface. It supports environments with over 1000 nodes by horizontal scaling through the addition of multiple CMON controllers.
+          </p>
+          <div style="background:#f9fafb;border:1px solid #e5e7eb;border-radius:8px;padding:16px;margin-bottom:16px;display:flex;align-items:center;justify-content:center;gap:16px;">
+            <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="#3a1c94" stroke-width="1.5"><rect x="2" y="2" width="20" height="8" rx="2"></rect><rect x="2" y="14" width="20" height="8" rx="2"></rect><line x1="6" y1="6" x2="6.01" y2="6"></line><line x1="6" y1="18" x2="6.01" y2="18"></line></svg>
+            <div style="font-size:0.82rem;color:#4b5563;line-height:1.4;">
+              <b>Multi-Controller Proxy:</b> Connect staging, production, and disaster recovery controller nodes into one single pane of glass.
+            </div>
+          </div>
+          <p style="font-size:0.85rem;color:#4b5563;line-height:1.5;margin-bottom:14px;">
+            From a unified dashboard, you can monitor, manage, and gain insights into all controllers, clusters, and nodes, with the ability to switch between active controllers for targeted operations.
+          </p>
+          <a href="https://docs.severalnines.com/clustercontrol/latest/user-guide/integration/clustercontrol-ops-c/" target="_blank" style="color:#3a1c94;font-size:0.85rem;font-weight:600;text-decoration:none;">Learn more about how Ops-Center works</a>
+        </div>
+
+        <!-- Step 2: Set Root User Pane -->
+        <div id="ops-step-pane-2" style="display:none;">
+          <p style="font-size:0.88rem;color:#374151;line-height:1.5;margin-bottom:18px;">
+            Set the Ops-C root user and password. You will need to provide the root user credentials exclusively when managing CMON Controllers.
+          </p>
+          
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:14px;">
+            <div>
+              <label style="display:block;font-size:0.82rem;font-weight:500;color:#374151;margin-bottom:5px;"><span style="color:#ef4444;">*</span> Root username</label>
+              <input type="text" id="ops-root-user" placeholder="Enter username" style="width:100%;padding:9px 12px;border:1px solid #d1d5db;border-radius:6px;font-size:0.88rem;box-sizing:border-box;">
+            </div>
+            <div>
+              <label style="display:block;font-size:0.82rem;font-weight:500;color:#374151;margin-bottom:5px;">Email</label>
+              <input type="email" id="ops-root-email" placeholder="Enter an email address" style="width:100%;padding:9px 12px;border:1px solid #d1d5db;border-radius:6px;font-size:0.88rem;box-sizing:border-box;">
+            </div>
+          </div>
+
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:10px;">
+            <div>
+              <label style="display:block;font-size:0.82rem;font-weight:500;color:#374151;margin-bottom:5px;"><span style="color:#ef4444;">*</span> Root user password</label>
+              <div style="position:relative;">
+                <input type="password" id="ops-root-pass" placeholder="Enter a new root user password" style="width:100%;padding:9px 36px 9px 12px;border:1px solid #d1d5db;border-radius:6px;font-size:0.88rem;box-sizing:border-box;">
+                <button type="button" onclick="togglePasswordVisibility('ops-root-pass', this)" style="position:absolute;right:8px;top:50%;transform:translateY(-50%);background:none;border:none;color:#9ca3af;cursor:pointer;padding:2px;"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg></button>
+              </div>
+            </div>
+            <div>
+              <label style="display:block;font-size:0.82rem;font-weight:500;color:#374151;margin-bottom:5px;"><span style="color:#ef4444;">*</span> Confirm root user password</label>
+              <div style="position:relative;">
+                <input type="password" id="ops-root-confirm" placeholder="Reenter the root user password" style="width:100%;padding:9px 36px 9px 12px;border:1px solid #d1d5db;border-radius:6px;font-size:0.88rem;box-sizing:border-box;">
+                <button type="button" onclick="togglePasswordVisibility('ops-root-confirm', this)" style="position:absolute;right:8px;top:50%;transform:translateY(-50%);background:none;border:none;color:#9ca3af;cursor:pointer;padding:2px;"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg></button>
+              </div>
+            </div>
+          </div>
+          <div id="ops-root-error" style="display:none;color:#ef4444;font-size:0.82rem;margin-top:6px;"></div>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- Wizard Footer Buttons -->
+    <div style="display:flex;justify-content:flex-end;gap:12px;padding:16px 24px;border-top:1px solid #f3f4f6;background:#fafafa;">
+      <button id="btn-ops-back" onclick="prevOpsCenterStep()" style="padding:9px 20px;background:white;border:1px solid #d1d5db;border-radius:8px;font-size:0.9rem;font-weight:500;color:#9ca3af;cursor:not-allowed;" disabled>Back</button>
+      <button id="btn-ops-next" onclick="nextOpsCenterStep()" style="padding:9px 24px;background:#3a1c94;color:white;border:none;border-radius:8px;font-size:0.9rem;font-weight:600;cursor:pointer;">Continue</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal: Add Remote Controller (Ops-Center) -->
+<div class="modal-overlay" id="modal-add-ops-controller" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:99999;align-items:center;justify-content:center;">
+  <div style="background:white;border-radius:14px;width:480px;max-width:95vw;box-shadow:0 20px 25px -5px rgba(0,0,0,0.15);overflow:hidden;animation:fadeInModal 0.2s ease-out;">
+    <div style="display:flex;align-items:center;justify-content:space-between;padding:18px 24px;border-bottom:1px solid #f3f4f6;">
+      <h3 style="margin:0;font-size:1.15rem;font-weight:600;color:#111827;">Register CMON Controller</h3>
+      <button onclick="closeAddControllerModal()" style="background:transparent;border:none;font-size:1.2rem;color:#9ca3af;cursor:pointer;">✕</button>
+    </div>
+    <div style="padding:20px 24px;display:flex;flex-direction:column;gap:14px;">
+      <div>
+        <label style="display:block;font-size:0.85rem;font-weight:500;color:#374151;margin-bottom:6px;">Controller Name</label>
+        <input type="text" id="ctrl-name" placeholder="e.g. Frankfurt-Prod-Controller" style="width:100%;padding:9px 12px;border:1px solid #d1d5db;border-radius:6px;font-size:0.88rem;box-sizing:border-box;">
+      </div>
+      <div>
+        <label style="display:block;font-size:0.85rem;font-weight:500;color:#374151;margin-bottom:6px;">Controller URL</label>
+        <input type="text" id="ctrl-url" placeholder="https://cmon-frankfurt.example.com:9501" style="width:100%;padding:9px 12px;border:1px solid #d1d5db;border-radius:6px;font-size:0.88rem;box-sizing:border-box;">
+      </div>
+      <div>
+        <label style="display:block;font-size:0.85rem;font-weight:500;color:#374151;margin-bottom:6px;">API Key / RPC Token (Optional)</label>
+        <input type="password" id="ctrl-token" placeholder="Optional token for secured controller" style="width:100%;padding:9px 12px;border:1px solid #d1d5db;border-radius:6px;font-size:0.88rem;box-sizing:border-box;">
+      </div>
+      <div id="ctrl-add-err" style="display:none;color:#ef4444;font-size:0.85rem;"></div>
+    </div>
+    <div style="display:flex;justify-content:flex-end;gap:12px;padding:16px 24px;border-top:1px solid #f3f4f6;background:#fafafa;">
+      <button onclick="closeAddControllerModal()" style="padding:9px 20px;background:white;border:1px solid #d1d5db;border-radius:8px;font-size:0.9rem;font-weight:500;color:#374151;cursor:pointer;">Cancel</button>
+      <button id="btn-submit-add-ctrl" onclick="submitAddController()" style="padding:9px 24px;background:#3a1c94;color:white;border:none;border-radius:8px;font-size:0.9rem;font-weight:600;cursor:pointer;">Register Controller</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal: Add Kubernetes Cluster -->
+<div class="modal-overlay" id="modal-add-k8s-cluster" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:99999;align-items:center;justify-content:center;">
+  <div style="background:white;border-radius:14px;width:560px;max-width:95vw;box-shadow:0 20px 25px -5px rgba(0,0,0,0.15);overflow:hidden;animation:fadeInModal 0.2s ease-out;">
+    <div style="display:flex;align-items:center;justify-content:space-between;padding:18px 24px;border-bottom:1px solid #f3f4f6;">
+      <h3 style="margin:0;font-size:1.15rem;font-weight:600;color:#111827;">Register Kubernetes Cluster</h3>
+      <button onclick="closeAddKubeClusterModal()" style="background:transparent;border:none;font-size:1.2rem;color:#9ca3af;cursor:pointer;">✕</button>
+    </div>
+    <div style="padding:20px 24px;display:flex;flex-direction:column;gap:14px;">
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+        <div>
+          <label style="display:block;font-size:0.85rem;font-weight:500;color:#374151;margin-bottom:6px;">Cluster Name</label>
+          <input type="text" id="k8s-cluster-name" placeholder="e.g. prod-gke-cluster" style="width:100%;padding:9px 12px;border:1px solid #d1d5db;border-radius:6px;font-size:0.88rem;box-sizing:border-box;">
+        </div>
+        <div>
+          <label style="display:block;font-size:0.85rem;font-weight:500;color:#374151;margin-bottom:6px;">Default Namespace</label>
+          <input type="text" id="k8s-namespace" value="default" placeholder="default" style="width:100%;padding:9px 12px;border:1px solid #d1d5db;border-radius:6px;font-size:0.88rem;box-sizing:border-box;">
+        </div>
+      </div>
+      <div>
+        <label style="display:block;font-size:0.85rem;font-weight:500;color:#374151;margin-bottom:6px;">Kubeconfig YAML</label>
+        <textarea id="k8s-kubeconfig-yaml" rows="7" placeholder="Paste full kubeconfig YAML or upload file..." style="width:100%;padding:10px 12px;border:1px solid #d1d5db;border-radius:6px;font-family:monospace;font-size:0.8rem;box-sizing:border-box;resize:vertical;"></textarea>
+      </div>
+      <div id="k8s-add-err" style="display:none;color:#ef4444;font-size:0.85rem;"></div>
+    </div>
+    <div style="display:flex;justify-content:flex-end;gap:12px;padding:16px 24px;border-top:1px solid #f3f4f6;background:#fafafa;">
+      <button onclick="closeAddKubeClusterModal()" style="padding:9px 20px;background:white;border:1px solid #d1d5db;border-radius:8px;font-size:0.9rem;font-weight:500;color:#374151;cursor:pointer;">Cancel</button>
+      <button id="btn-submit-add-k8s" onclick="submitAddKubeCluster()" style="padding:9px 24px;background:#3a1c94;color:white;border:none;border-radius:8px;font-size:0.9rem;font-weight:600;cursor:pointer;">Test & Connect Cluster</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal: View K8s Pods -->
+<div class="modal-overlay" id="modal-k8s-pods" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:99999;align-items:center;justify-content:center;">
+  <div style="background:white;border-radius:14px;width:720px;max-width:95vw;box-shadow:0 20px 25px -5px rgba(0,0,0,0.15);overflow:hidden;animation:fadeInModal 0.2s ease-out;">
+    <div style="display:flex;align-items:center;justify-content:space-between;padding:18px 24px;border-bottom:1px solid #f3f4f6;">
+      <h3 id="modal-k8s-pods-title" style="margin:0;font-size:1.15rem;font-weight:600;color:#111827;">Live Kubernetes Pods</h3>
+      <button onclick="closeK8sPodsModal()" style="background:transparent;border:none;font-size:1.2rem;color:#9ca3af;cursor:pointer;">✕</button>
+    </div>
+    <div style="padding:20px 24px;max-height:60vh;overflow-y:auto;">
+      <table style="width:100%;border-collapse:collapse;font-size:0.85rem;">
+        <thead>
+          <tr style="border-bottom:2px solid #f3f4f6;color:#6b7280;text-align:left;">
+            <th style="padding:8px 10px;">Pod Name</th>
+            <th style="padding:8px 10px;">Status</th>
+            <th style="padding:8px 10px;">Ready</th>
+            <th style="padding:8px 10px;">Restarts</th>
+            <th style="padding:8px 10px;">IP / Node</th>
+            <th style="padding:8px 10px;">Age</th>
+          </tr>
+        </thead>
+        <tbody id="tbody-k8s-pods">
+          <!-- Populated dynamically -->
+        </tbody>
+      </table>
+    </div>
+    <div style="display:flex;justify-content:flex-end;padding:14px 24px;border-top:1px solid #f3f4f6;background:#fafafa;">
+      <button onclick="closeK8sPodsModal()" style="padding:8px 20px;background:white;border:1px solid #d1d5db;border-radius:8px;font-size:0.88rem;color:#374151;cursor:pointer;">Close</button>
+    </div>
+  </div>
+</div>
+
+<script src="/static/main.js?v=89"></script>
 </body>
 </html>
