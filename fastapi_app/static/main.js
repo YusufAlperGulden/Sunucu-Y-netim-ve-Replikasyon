@@ -186,6 +186,20 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     // --- VIEW MANAGEMENT ---
+    // Ensure all view sections live inside main-content so the router can show them correctly.
+    // Sections injected outside the <main> tag would otherwise render below the layout (invisible).
+    (function relocateOrphanedViews() {
+        const mainContent = document.querySelector('main.main-content');
+        if (!mainContent) return;
+        const orphanIds = ['users-view','backups-view','changelog-view','activity-view','reports-view','settings-view'];
+        orphanIds.forEach(id => {
+            const el = document.getElementById(id);
+            if (el && !mainContent.contains(el)) {
+                mainContent.appendChild(el);
+            }
+        });
+    })();
+
     const sidebarLinks = document.querySelectorAll('.sidebar-nav > a, .sidebar-nav > div > a, a[data-view="changelog-view"]');
     const viewSections = document.querySelectorAll('.view-section');
     
