@@ -4689,15 +4689,40 @@ window.saveProfileSettings = async function() {
     }
 };
 
+window.togglePasswordVisibility = function(inputId, btnEl) {
+    const input = document.getElementById(inputId);
+    if (!input) return;
+    const isPass = input.type === 'password';
+    input.type = isPass ? 'text' : 'password';
+    if (btnEl) {
+        btnEl.style.color = isPass ? '#3a1c94' : '#9ca3af';
+    }
+};
+
 window.openChangePasswordModal = function(e) {
     if (e) e.preventDefault();
     const modal = document.getElementById('modal-change-password');
     if (!modal) return;
-    const errEl = document.getElementById('pw-change-error');
-    if (errEl) { errEl.style.display = 'none'; errEl.textContent = ''; }
-    document.getElementById('pw-current').value = '';
-    document.getElementById('pw-new').value = '';
-    document.getElementById('pw-confirm').value = '';
+    
+    // Reset inputs
+    ['pw-current', 'pw-new', 'pw-confirm'].forEach(id => {
+        const el = document.getElementById(id);
+        if (el) {
+            el.value = '';
+            el.type = 'password';
+            el.style.borderColor = '#d1d5db';
+        }
+    });
+
+    // Reset errors
+    ['pw-current-err', 'pw-new-err', 'pw-confirm-err', 'pw-general-err'].forEach(id => {
+        const el = document.getElementById(id);
+        if (el) {
+            el.style.display = 'none';
+            el.textContent = '';
+        }
+    });
+
     modal.style.display = 'flex';
 };
 
@@ -4707,25 +4732,116 @@ window.closeChangePasswordModal = function() {
 };
 
 window.saveChangePassword = async function() {
-    const curr = document.getElementById('pw-current')?.value || '';
-    const newPw = document.getElementById('pw-new')?.value || '';
-    const confirmPw = document.getElementById('pw-confirm')?.value || '';
-    const errEl = document.getElementById('pw-change-error');
+    const currInput = document.getElementById('pw-current');
+    const newInput  = document.getElementById('pw-new');
+    const confInput = document.getElementById('pw-confirm');
+    
+    const currErr = document.getElementById('pw-current-err');
+    const newErr  = document.getElementById('pw-new-err');
+    const confErr = document.getElementById('pw-confirm-err');
+    const genErr  = document.getElementById('pw-general-err');
+    const btnSubmit = document.getElementById('btn-submit-change-pw');
 
-    if (!newPw) {
-        if (errEl) { errEl.textContent = 'Lütfen yeni bir şifre girin.'; errEl.style.display = 'block'; }
-        return;
+    // Reset error states
+    [currErr, newErr, confErr, genErr].forEach(el => { if (el) { el.style.display = 'none'; el.textContent = ''; } });
+    [currInput, newInput, confInput].forEach(el => { if (el) el.style.borderColor = '#d1d5db'; });
+
+    const currVal = (currInput?.value || '').trim();
+    const newVal  = (newInput?.value || '').trim();
+    const confVal = (confInput?.value || '').trim();
+
+    let hasError = false;
+
+    if (!currVal) {
+        if (currErr) { currErr.textContent = 'Please enter current password'; currErr.style.display = 'block'; }
+        if (currInput) currInput.style.borderColor = '#ef4444';
+        hasError = true;
     }
-    if (newPw !== confirmPw) {
-        if (errEl) { errEl.textContent = 'Yeni şifreler eşleşmiyor.'; errEl.style.display = 'block'; }
-        return;
+
+    if (!newVal) {
+        if (newErr) { newErr.textContent = 'Please enter new password'; newErr.style.display = 'block'; }
+        if (newInput) newInput.style.borderColor = '#ef4444';
+        hasError = true;
+    } else if (currVal && newVal === currVal) {
+        if (newErr) { newErr.textContent = 'Current and new password should not be the same!'; newErr.style.display = 'block'; }
+        if (newInput) newInput.style.borderColor = '#ef4444';
+        hasError = true;
+    } else if (newVal.length < 4) {
+        if (newErr) { newErr.textContent = 'Password must be at least 4 characters'; newErr.style.display = 'block'; }
+        if (newInput) newInput.style.borderColor = '#ef4444';
+        hasError = true;
+    }
+
+    if (!confVal) {
+        if (confErr) { confErr.textContent = 'Please repeat new password'; confErr.style.display = 'block'; }
+        if (confInput) confInput.style.borderColor = '#ef4444';
+        hasError = true;
+    } else if (newVal && confVal !== newVal) {
+        if (confErr) { confErr.textContent = 'Passwords do not match!'; confErr.style.display = 'block'; }
+        if (confInput) confInput.style.borderColor = '#ef4444';
+        hasError = true;
+    }
+
+    if (hasError) return;
+
+    if (btnSubmit) {
+        btnSubmit.disabled = true;
+        btnSubmit.textContent = 'Changing...';
     }
 
     try {
-        alert('Şifre başarıyla güncellendi.');
-        closeChangePasswordModal();
+        const res = await apiFetch('/api/users/change-password', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                current_password: currVal,
+                new_password: newVal,
+                repeat_password: confVal
+            })
+        });
+
+        const resData = await res.json();
+
+        if (res.ok && resData.success) {
+            // Update stored auth token seamlessly so user stays authenticated
+            const username = window.cachedProfileData?.username || 'admin';
+            if (typeof globalAuthToken !== 'undefined') {
+                globalAuthToken = btoa(username + ':' + newVal);
+                localStorage.setItem('auth_token', globalAuthToken);
+            }
+            closeChangePasswordModal();
+            alert('✓ Şifreniz başarıyla değiştirildi.');
+        } else {
+            const field = resData.field;
+            const msg = resData.message || 'Şifre değiştirilemedi.';
+            if (field === 'current' && currErr) {
+                currErr.textContent = msg;
+                currErr.style.display = 'block';
+                if (currInput) currInput.style.borderColor = '#ef4444';
+            } else if (field === 'new' && newErr) {
+                newErr.textContent = msg;
+                newErr.style.display = 'block';
+                if (newInput) newInput.style.borderColor = '#ef4444';
+            } else if (field === 'repeat' && confErr) {
+                confErr.textContent = msg;
+                confErr.style.display = 'block';
+                if (confInput) confInput.style.borderColor = '#ef4444';
+            } else if (genErr) {
+                genErr.textContent = msg;
+                genErr.style.display = 'block';
+            }
+        }
     } catch (e) {
-        if (errEl) { errEl.textContent = 'Şifre güncellenirken hata oluştu.'; errEl.style.display = 'block'; }
+        if (genErr) {
+            genErr.textContent = 'Bağlantı hatası oluştu.';
+            genErr.style.display = 'block';
+        }
+    } finally {
+        if (btnSubmit) {
+            btnSubmit.disabled = false;
+            btnSubmit.textContent = 'Change';
+        }
     }
 };
+
 

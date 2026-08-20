@@ -17,6 +17,7 @@ security = HTTPBasic(auto_error=False)
 
 import os
 import secrets
+import hashlib
 
 ADMIN_USER = os.environ.get("ADMIN_USER")
 ADMIN_PASS = os.environ.get("ADMIN_PASS")
@@ -25,15 +26,45 @@ if not ADMIN_USER or not ADMIN_PASS:
     raise RuntimeError("CRITICAL: ADMIN_USER or ADMIN_PASS environment variables are missing.")
 
 
+def hash_password(password: str) -> str:
+    """Hash password using SHA-256 with a salt."""
+    salt = "crm_sec_salt_2026_"
+    return hashlib.sha256((salt + password).encode("utf-8")).hexdigest()
+
+
+def verify_password(plain_password: str, stored_hash: str) -> bool:
+    """Verify password against database hash or plain match."""
+    if not stored_hash:
+        return False
+    if plain_password == stored_hash:
+        return True
+    return hash_password(plain_password) == stored_hash
+
+
 def verify_credentials(credentials: HTTPBasicCredentials = Depends(security)):
     if not credentials:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Not authenticated", headers={"WWW-Authenticate": "Bearer"})
     
-    correct_username = secrets.compare_digest(credentials.username, ADMIN_USER)
-    correct_password = secrets.compare_digest(credentials.password, ADMIN_PASS)
-    if not (correct_username and correct_password):
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Incorrect credentials", headers={"WWW-Authenticate": "Bearer"})
-    return credentials
+    # 1. Check database first
+    from models import SessionLocal, User
+    db = SessionLocal()
+    try:
+        user = db.query(User).filter(User.username == credentials.username).first()
+        if user and user.password_hash:
+            if verify_password(credentials.password, user.password_hash):
+                return credentials
+    except Exception:
+        pass
+    finally:
+        db.close()
+
+    # 2. Fallback to environment variables
+    correct_username = secrets.compare_digest(credentials.username, ADMIN_USER) if ADMIN_USER else False
+    correct_password = secrets.compare_digest(credentials.password, ADMIN_PASS) if ADMIN_PASS else False
+    if correct_username and correct_password:
+        return credentials
+
+    raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Incorrect credentials", headers={"WWW-Authenticate": "Bearer"})
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -993,7 +1024,7 @@ def create_user(payload: UserCreate, db: Session = Depends(get_db)):
     existing = db.query(User).filter(User.username == payload.username).first()
     if existing:
         return JSONResponse(status_code=400, content={"message": "Username already exists"})
-    new_user = User(username=payload.username, password_hash=get_password_hash(payload.password), role=payload.role)
+    new_user = User(username=payload.username, password_hash=hash_password(payload.password), role=payload.role)
     db.add(new_user)
     db.commit()
     return {"success": True}
@@ -1050,7 +1081,7 @@ def update_profile(data: ProfileUpdateModel, credentials: HTTPBasicCredentials =
     if not user:
         user = User(
             username=username,
-            password_hash=secrets.token_hex(16),
+            password_hash=hash_password(ADMIN_PASS) if username == ADMIN_USER else secrets.token_hex(16),
             role="admin" if username == os.environ.get("ADMIN_USER") else "viewer"
         )
         db.add(user)
@@ -1072,6 +1103,51 @@ def update_profile(data: ProfileUpdateModel, credentials: HTTPBasicCredentials =
         "last_name": user.last_name,
         "timezone": user.timezone
     }
+
+
+class ChangePasswordModel(BaseModel):
+    current_password: str
+    new_password: str
+    repeat_password: str
+
+
+@app.post("/api/users/change-password", dependencies=[Depends(verify_credentials)])
+def change_password(data: ChangePasswordModel, credentials: HTTPBasicCredentials = Depends(security), db: Session = Depends(get_db)):
+    from models import User
+    username = credentials.username
+    user = db.query(User).filter(User.username == username).first()
+
+    # 1. Verify current password
+    current_valid = False
+    if user and user.password_hash:
+        current_valid = verify_password(data.current_password, user.password_hash)
+    if not current_valid and username == ADMIN_USER and data.current_password == ADMIN_PASS:
+        current_valid = True
+
+    if not current_valid:
+        return JSONResponse(status_code=400, content={"message": "Please enter correct current password", "field": "current"})
+
+    if data.current_password == data.new_password:
+        return JSONResponse(status_code=400, content={"message": "Current and new password should not be the same!", "field": "new"})
+
+    if data.new_password != data.repeat_password:
+        return JSONResponse(status_code=400, content={"message": "Passwords do not match!", "field": "repeat"})
+
+    if len(data.new_password.strip()) < 4:
+        return JSONResponse(status_code=400, content={"message": "Password must be at least 4 characters", "field": "new"})
+
+    if not user:
+        user = User(
+            username=username,
+            role="admin" if username == ADMIN_USER else "viewer"
+        )
+        db.add(user)
+
+    user.password_hash = hash_password(data.new_password)
+    db.commit()
+    db.refresh(user)
+
+    return {"success": True, "message": "Password changed successfully"}
 
 
 @app.get("/api/debug/metrics/{project_id}", dependencies=[Depends(verify_credentials)])
