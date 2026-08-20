@@ -3941,7 +3941,7 @@ const DEPLOY_STEPS = [
     'Önizleme',
 ];
 
-const PG_VERSIONS   = ['17', '16', '15', '14'];
+const PG_VERSIONS   = ['18', '17', '16', '15', '14'];
 const MSSQL_VERSIONS = ['2022', '2019'];
 
 function openDeployWizard() {
