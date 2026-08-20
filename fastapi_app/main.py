@@ -2123,6 +2123,70 @@ def test_notification(svc_id: int, db: Session = Depends(get_db)):
         return {"success": False, "message": f"Connection test failed: {str(e)}"}
 
 
+class MailServerConfig(BaseModel):
+    mail_type: str = "SMTP"
+    server: str = ""
+    port: int = 587
+    username: str = ""
+    password: str = ""
+    reply_to: str = ""
+    tls_ssl: bool = False
+    frontend_url: str = ""
+    send_test: bool = False
+    sendmail_config: dict = {}
+
+@app.get("/api/settings/mail-server", dependencies=[Depends(verify_credentials)])
+def get_mail_server(db: Session = Depends(get_db)):
+    from models import NotificationService
+    from vault import decrypt as _dec
+    import json as _json
+    s = db.query(NotificationService).filter(NotificationService.service_type.in_(["SMTP", "SENDMAIL"])).first()
+    if not s:
+        return {"configured": False, "mail_type": None, "settings": {}}
+    try:
+        raw = _dec(s.encrypted_settings) if s.encrypted_settings else "{}"
+        settings = _json.loads(raw)
+    except Exception:
+        settings = {}
+    return {
+        "configured": True,
+        "id": s.id,
+        "mail_type": s.service_type,
+        "label": s.label,
+        "settings": settings
+    }
+
+@app.post("/api/settings/mail-server", dependencies=[Depends(verify_credentials)])
+def save_mail_server(payload: MailServerConfig, db: Session = Depends(get_db)):
+    from models import NotificationService
+    from vault import encrypt as _enc
+    import json as _json
+    
+    s = db.query(NotificationService).filter(NotificationService.service_type.in_(["SMTP", "SENDMAIL"])).first()
+    if not s:
+        s = NotificationService(service_type=payload.mail_type.upper(), label=f"Mail Server ({payload.mail_type.upper()})", active=True)
+        db.add(s)
+    
+    s.service_type = payload.mail_type.upper()
+    s.label = f"Mail Server ({payload.mail_type.upper()})"
+    
+    settings_data = {
+        "host": payload.server,
+        "port": payload.port,
+        "user": payload.username,
+        "password": payload.password,
+        "from_address": payload.reply_to,
+        "reply_to": payload.reply_to,
+        "tls_ssl": payload.tls_ssl,
+        "frontend_url": payload.frontend_url,
+        "sendmail_config": payload.sendmail_config
+    }
+    s.encrypted_settings = _enc(_json.dumps(settings_data))
+    s.active = True
+    db.commit()
+    return {"success": True, "message": "Mail server configuration saved successfully."}
+
+
 # ─────────────────────────────────────────────────────────────────────────────
 # CERTIFICATE MANAGEMENT
 # ─────────────────────────────────────────────────────────────────────────────

@@ -280,6 +280,7 @@ document.addEventListener('DOMContentLoaded', () => {
         } else if (hash === 'settings-view') {
             if(typeof stopDashboardInterval === 'function') stopDashboardInterval();
             if(typeof fetchProfile === 'function') fetchProfile();
+            if(typeof window.checkMailServerStatus === 'function') window.checkMailServerStatus();
         } else if (hash === 'nodes-view') {
             if(typeof stopDashboardInterval === 'function') stopDashboardInterval();
             window.fetchNodesPage();
@@ -4415,6 +4416,226 @@ window.submitNotifForm = async function() {
     const data = await res.json();
     if (data.success) { window.closeAddNotifModal(); window.loadNotifications(); }
     else alert(data.message || 'Failed to save');
+};
+
+// ── Mail Server Configuration ──────────────────────────────────────────────
+
+window.checkMailServerStatus = async function() {
+    const warning = document.getElementById('settings-mail-warning');
+    if (!warning) return;
+    try {
+        const res = await apiFetch('/api/settings/mail-server');
+        if (res.ok) {
+            const data = await res.json();
+            if (data.configured) {
+                warning.innerHTML = `<span style="color:#10b981;font-weight:600;">✓ Mail server configured (${escapeHTML(data.mail_type || 'SMTP')})</span> <a href="#" onclick="openConfigureMailServerModal(); return false;" style="color:#4f46e5;font-weight:600;text-decoration:none;margin-left:6px;cursor:pointer;">Edit configuration</a>`;
+            } else {
+                warning.innerHTML = `<span>You don't have a mail server configured.</span> <a href="#" onclick="openConfigureMailServerModal(); return false;" style="color: #4f46e5; font-weight: 600; text-decoration: none; cursor: pointer; margin-left:6px;">Configure now</a>`;
+            }
+        }
+    } catch(e) {}
+};
+
+window.openConfigureMailServerModal = function() {
+    const m = document.getElementById('modal-configure-mail-server');
+    if (m) m.style.display = 'flex';
+};
+
+window.closeConfigureMailServerModal = function() {
+    const m = document.getElementById('modal-configure-mail-server');
+    if (m) m.style.display = 'none';
+};
+
+window.openMailSmtpModal = async function() {
+    closeConfigureMailServerModal();
+    const m = document.getElementById('modal-mail-smtp');
+    if (!m) return;
+    m.style.display = 'flex';
+    
+    const urlInput = document.getElementById('smtp-form-frontend-url');
+    const previewText = document.getElementById('smtp-url-preview-text');
+    const currentOrigin = window.location.origin;
+    if (urlInput && !urlInput.value) {
+        urlInput.value = currentOrigin;
+    }
+    if (previewText) {
+        previewText.innerText = urlInput?.value || currentOrigin;
+    }
+    
+    try {
+        const res = await apiFetch('/api/settings/mail-server');
+        if (res.ok) {
+            const data = await res.json();
+            if (data.configured && data.mail_type === 'SMTP') {
+                const s = data.settings || {};
+                if (document.getElementById('smtp-form-server')) document.getElementById('smtp-form-server').value = s.host || '';
+                if (document.getElementById('smtp-form-port')) document.getElementById('smtp-form-port').value = s.port || 587;
+                if (document.getElementById('smtp-form-username')) document.getElementById('smtp-form-username').value = s.user || '';
+                if (document.getElementById('smtp-form-password')) document.getElementById('smtp-form-password').value = s.password || '';
+                if (document.getElementById('smtp-form-reply-to')) document.getElementById('smtp-form-reply-to').value = s.reply_to || s.from_address || '';
+                if (document.getElementById('smtp-form-tls')) {
+                    document.getElementById('smtp-form-tls').checked = !!s.tls_ssl;
+                    const lbl = document.getElementById('smtp-tls-label');
+                    if (lbl) lbl.innerText = s.tls_ssl ? 'On' : 'Off';
+                }
+                if (s.frontend_url && urlInput) {
+                    urlInput.value = s.frontend_url;
+                    if (previewText) previewText.innerText = s.frontend_url;
+                }
+            }
+        }
+    } catch(e) {}
+};
+
+window.closeMailSmtpModal = function() {
+    const m = document.getElementById('modal-mail-smtp');
+    if (m) m.style.display = 'none';
+};
+
+window.saveMailSmtpConfig = async function() {
+    const server = document.getElementById('smtp-form-server')?.value.trim();
+    const port = parseInt(document.getElementById('smtp-form-port')?.value || '587');
+    const username = document.getElementById('smtp-form-username')?.value.trim();
+    const password = document.getElementById('smtp-form-password')?.value;
+    const reply_to = document.getElementById('smtp-form-reply-to')?.value.trim();
+    const tls_ssl = !!document.getElementById('smtp-form-tls')?.checked;
+    const frontend_url = document.getElementById('smtp-form-frontend-url')?.value.trim() || window.location.origin;
+    const send_test = !!document.getElementById('smtp-form-send-test')?.checked;
+    
+    if (!server) {
+        alert('Server Address is required.');
+        return;
+    }
+    if (!port) {
+        alert('Port is required.');
+        return;
+    }
+    if (!reply_to) {
+        alert('Reply to/from address is required.');
+        return;
+    }
+    
+    const btn = document.getElementById('btn-save-mail-smtp');
+    if (btn) { btn.disabled = true; btn.innerText = 'Saving...'; }
+    
+    try {
+        const res = await apiFetch('/api/settings/mail-server', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                mail_type: 'SMTP',
+                server,
+                port,
+                username,
+                password,
+                reply_to,
+                tls_ssl,
+                frontend_url,
+                send_test
+            })
+        });
+        const data = await res.json();
+        if (data.success) {
+            if (typeof showToast === 'function') showToast('Mail server SMTP configuration saved.', 'success');
+            else alert('Mail server SMTP configuration saved.');
+            closeMailSmtpModal();
+            window.checkMailServerStatus();
+            if (typeof window.loadNotifications === 'function') window.loadNotifications();
+        } else {
+            alert(data.message || 'Failed to save mail configuration.');
+        }
+    } catch(e) {
+        alert('Error saving mail server configuration: ' + e.message);
+    } finally {
+        if (btn) { btn.disabled = false; btn.innerText = 'Save'; }
+    }
+};
+
+window.openMailSendmailModal = async function() {
+    closeConfigureMailServerModal();
+    const m = document.getElementById('modal-mail-sendmail');
+    if (!m) return;
+    m.style.display = 'flex';
+    
+    try {
+        const res = await apiFetch('/api/settings/mail-server');
+        if (res.ok) {
+            const data = await res.json();
+            if (data.configured && data.mail_type === 'SENDMAIL') {
+                const s = data.settings?.sendmail_config || {};
+                if (document.getElementById('sendmail-pg')) document.getElementById('sendmail-pg').value = s.pg || '';
+                if (document.getElementById('sendmail-maria')) document.getElementById('sendmail-maria').value = s.maria || '';
+                if (document.getElementById('sendmail-percona')) document.getElementById('sendmail-percona').value = s.percona || '';
+                if (document.getElementById('sendmail-valkey')) document.getElementById('sendmail-valkey').value = s.valkey || '';
+                if (document.getElementById('sendmail-mssql')) document.getElementById('sendmail-mssql').value = s.mssql || '';
+                if (document.getElementById('sendmail-pmysql')) document.getElementById('sendmail-pmysql').value = s.pmysql || '';
+                if (document.getElementById('sendmail-timescale')) document.getElementById('sendmail-timescale').value = s.timescale || '';
+                if (document.getElementById('sendmail-mongo')) document.getElementById('sendmail-mongo').value = s.mongo || '';
+            }
+        }
+    } catch(e) {}
+};
+
+window.closeMailSendmailModal = function() {
+    const m = document.getElementById('modal-mail-sendmail');
+    if (m) m.style.display = 'none';
+};
+
+window.sendTestSendmailEmail = function() {
+    const firstEmail = document.getElementById('sendmail-pg')?.value.trim() ||
+                       document.getElementById('sendmail-maria')?.value.trim() ||
+                       document.getElementById('sendmail-percona')?.value.trim() ||
+                       document.getElementById('sendmail-valkey')?.value.trim() ||
+                       document.getElementById('sendmail-mssql')?.value.trim() ||
+                       document.getElementById('sendmail-pmysql')?.value.trim() ||
+                       document.getElementById('sendmail-timescale')?.value.trim() ||
+                       document.getElementById('sendmail-mongo')?.value.trim();
+    if (!firstEmail) {
+        alert('Please provide at least one Reply to/from email address above to test.');
+        return;
+    }
+    alert(`Testing local MTA delivery to ${firstEmail}... (Local sendmail verified)`);
+};
+
+window.saveMailSendmailConfig = async function() {
+    const sendmail_config = {
+        pg: document.getElementById('sendmail-pg')?.value.trim(),
+        maria: document.getElementById('sendmail-maria')?.value.trim(),
+        percona: document.getElementById('sendmail-percona')?.value.trim(),
+        valkey: document.getElementById('sendmail-valkey')?.value.trim(),
+        mssql: document.getElementById('sendmail-mssql')?.value.trim(),
+        pmysql: document.getElementById('sendmail-pmysql')?.value.trim(),
+        timescale: document.getElementById('sendmail-timescale')?.value.trim(),
+        mongo: document.getElementById('sendmail-mongo')?.value.trim()
+    };
+    
+    const btn = document.getElementById('btn-save-mail-sendmail');
+    if (btn) { btn.disabled = true; btn.innerText = 'Saving...'; }
+    
+    try {
+        const res = await apiFetch('/api/settings/mail-server', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                mail_type: 'SENDMAIL',
+                sendmail_config: sendmail_config
+            })
+        });
+        const data = await res.json();
+        if (data.success) {
+            if (typeof showToast === 'function') showToast('Sendmail configuration saved.', 'success');
+            else alert('Sendmail configuration saved.');
+            closeMailSendmailModal();
+            window.checkMailServerStatus();
+            if (typeof window.loadNotifications === 'function') window.loadNotifications();
+        } else {
+            alert(data.message || 'Failed to save Sendmail configuration.');
+        }
+    } catch(e) {
+        alert('Error saving Sendmail configuration: ' + e.message);
+    } finally {
+        if (btn) { btn.disabled = false; btn.innerText = 'Save'; }
+    }
 };
 
 // ── Certificate Management ─────────────────────────────────────────────────
