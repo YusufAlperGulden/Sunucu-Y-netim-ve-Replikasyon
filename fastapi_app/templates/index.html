@@ -2993,218 +2993,403 @@ Real OS metrics (CPU, RAM, Disk I/O) cannot be fetched directly from PostgreSQL 
 </div>
 
 
-<!-- ===== DEPLOY A CLUSTER WIZARD ===== -->
-<div id="modal-deploy-cluster" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.55);z-index:10000;align-items:center;justify-content:center;">
-  <div style="background:white;border-radius:16px;width:820px;max-width:96vw;max-height:90vh;display:flex;flex-direction:column;box-shadow:0 25px 60px rgba(0,0,0,0.25);overflow:hidden;">
+<!-- ===== CLUSTERCONTROL DEPLOY & IMPORT WIZARD ===== -->
+<div id="modal-deploy-cluster" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.55);z-index:10000;align-items:center;justify-content:center;font-family:'Inter', sans-serif;">
+  <div id="deploy-wizard-container" style="background:white;border-radius:16px;width:780px;max-width:96vw;max-height:92vh;display:flex;flex-direction:column;box-shadow:0 25px 60px rgba(0,0,0,0.25);overflow:hidden;animation:fadeInModal 0.2s ease-out;transition:width 0.2s ease;">
 
-    <!-- Header -->
-    <div style="display:flex;align-items:center;justify-content:space-between;padding:20px 28px;border-bottom:1px solid #e5e7eb;">
-      <div>
-        <h2 id="deploy-wizard-title" style="margin:0;font-size:1.25rem;font-weight:700;color:#111827;">Deploy a cluster</h2>
-        <p id="deploy-wizard-subtitle" style="margin:4px 0 0;font-size:0.85rem;color:#6b7280;">PostgreSQL Streaming veya SQL Server seçin</p>
-      </div>
-      <button onclick="closeDeployWizard()" style="background:none;border:none;cursor:pointer;padding:4px;color:#9ca3af;font-size:1.4rem;line-height:1;">&#x2715;</button>
-    </div>
-
-    <!-- Body: sidebar + content -->
-    <div style="display:flex;flex:1;overflow:hidden;">
-
-      <!-- Left sidebar: step list -->
-      <div id="deploy-step-sidebar" style="width:200px;min-width:200px;background:#f9fafb;border-right:1px solid #e5e7eb;padding:24px 0;display:none;flex-direction:column;gap:0;">
-        <!-- Steps injected by JS -->
+    <!-- ===================================================================== -->
+    <!-- STAGE 0: Action Selection (Screenshot 1)                             -->
+    <!-- ===================================================================== -->
+    <div id="deploy-stage-0" style="display:flex;flex-direction:column;padding:24px 36px 36px 36px;">
+      <!-- Top Close Button -->
+      <div style="display:flex;justify-content:flex-end;">
+        <button onclick="closeDeployWizard()" style="background:transparent;border:none;cursor:pointer;color:#9ca3af;padding:4px;display:flex;align-items:center;justify-content:center;border-radius:6px;" onmouseover="this.style.color='#111827'" onmouseout="this.style.color='#9ca3af'">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+        </button>
       </div>
 
-      <!-- Right: step content -->
-      <div style="flex:1;overflow-y:auto;padding:28px 32px;">
+      <div style="text-align:center;margin-top:-6px;margin-bottom:32px;">
+        <h2 style="font-size:1.65rem;font-weight:700;color:#111827;margin:0 0 10px 0;">Deploy a cluster</h2>
+        <p style="font-size:0.9rem;color:#4b5563;line-height:1.5;margin:0 auto;max-width:540px;">
+          Deploy a cluster managed by ClusterControl’s virtual DBA. Monitor failures, automate backups, node and cluster recovery.
+        </p>
+      </div>
 
-        <!-- Step 0: DB type selection -->
-        <div id="deploy-step-0" class="deploy-step">
-          <div style="display:flex;flex-direction:column;gap:16px;max-width:560px;margin:0 auto;">
-            <div id="deploy-type-postgresql" class="deploy-type-card" onclick="selectDeployType('postgresql')"
-              style="border:2px solid #e5e7eb;border-radius:12px;padding:20px 24px;cursor:pointer;transition:all 0.2s;">
-              <div style="display:flex;align-items:flex-start;gap:16px;">
-                <div style="font-size:2rem;">🐘</div>
-                <div>
-                  <div style="font-weight:700;font-size:1rem;color:#111827;">PostgreSQL Streaming</div>
-                  <div style="font-size:0.82rem;color:#6b7280;margin-top:4px;">Primary/Replica streaming replication. Desteklenen sürümler: 14, 15, 16, 17, 18</div>
-                </div>
-              </div>
-            </div>
-            <div id="deploy-type-mssql" class="deploy-type-card" onclick="selectDeployType('mssql')"
-              style="border:2px solid #e5e7eb;border-radius:12px;padding:20px 24px;cursor:pointer;transition:all 0.2s;">
-              <div style="display:flex;align-items:flex-start;gap:16px;">
-                <div style="font-size:2rem;">🪟</div>
-                <div>
-                  <div style="font-weight:700;font-size:1rem;color:#111827;">SQL Server (MSSQL)</div>
-                  <div style="font-size:0.82rem;color:#6b7280;margin-top:4px;">Microsoft SQL Server Always On / Standalone. Desteklenen: 2019, 2022</div>
-                </div>
-              </div>
+      <div style="display:flex;flex-direction:column;gap:18px;">
+        <!-- Card 1: Create a database cluster -->
+        <div onclick="selectDeployMode('create')" style="display:flex;align-items:flex-start;gap:18px;padding:24px;border:1px solid #e5e7eb;border-radius:14px;cursor:pointer;transition:all 0.2s;background:white;" onmouseover="this.style.borderColor='#4338ca';this.style.boxShadow='0 6px 20px rgba(67,56,202,0.08)';" onmouseout="this.style.borderColor='#e5e7eb';this.style.boxShadow='none';">
+          <div style="color:#4338ca;padding-top:2px;flex-shrink:0;">
+            <svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <circle cx="12" cy="12" r="10"></circle>
+              <line x1="12" y1="8" x2="12" y2="16"></line>
+              <line x1="8" y1="12" x2="16" y2="12"></line>
+            </svg>
+          </div>
+          <div>
+            <div style="font-size:1.12rem;font-weight:700;color:#111827;margin-bottom:6px;">Create a database cluster</div>
+            <div style="font-size:0.88rem;color:#4b5563;line-height:1.45;margin-bottom:12px;">Choose a database technology, configure and create an open source database service within a few minutes.</div>
+            <div style="font-size:0.75rem;color:#9ca3af;line-height:1.4;">
+              Supported databases: Elasticsearch, ClickHouse, Valkey Sentinel, Valkey, SQL Server, Redis, Redis Sentinel, MySQL (Primary/Replica), MySQL Galera, PostgreSQL (Primary/Replica), TimescaleDB (Primary/Replica), MongoDB ReplicaSet and MongoDB Shards
             </div>
           </div>
         </div>
 
-        <!-- Step 1: Cluster details -->
-        <div id="deploy-step-1" class="deploy-step" style="display:none;">
-          <h3 style="margin:0 0 20px;font-size:1rem;font-weight:600;color:#111827;">Cluster Detayları</h3>
-          <div style="display:flex;flex-direction:column;gap:16px;max-width:480px;">
-            <div>
-              <label style="font-size:0.85rem;font-weight:500;color:#374151;display:block;margin-bottom:6px;">Cluster Adı <span style="color:#9ca3af;font-weight:400;">(isteğe bağlı)</span></label>
-              <input id="deploy-cluster-name" type="text" placeholder="Otomatik üretilecek (boş bırakabilirsiniz)"
-                style="width:100%;padding:10px 12px;border:1px solid #d1d5db;border-radius:8px;font-size:0.9rem;box-sizing:border-box;outline:none;">
-              <div style="font-size:0.78rem;color:#9ca3af;margin-top:4px;">Boş bırakırsanız sistem otomatik bir isim oluşturur.</div>
-            </div>
-            <div>
-              <label style="font-size:0.85rem;font-weight:500;color:#374151;display:block;margin-bottom:6px;">Açıklama</label>
-              <input id="deploy-cluster-desc" type="text" placeholder="İsteğe bağlı açıklama"
-                style="width:100%;padding:10px 12px;border:1px solid #d1d5db;border-radius:8px;font-size:0.9rem;box-sizing:border-box;outline:none;">
+        <!-- Card 2: Import a database cluster -->
+        <div onclick="selectDeployMode('import')" style="display:flex;align-items:flex-start;gap:18px;padding:24px;border:1px solid #e5e7eb;border-radius:14px;cursor:pointer;transition:all 0.2s;background:white;" onmouseover="this.style.borderColor='#4338ca';this.style.boxShadow='0 6px 20px rgba(67,56,202,0.08)';" onmouseout="this.style.borderColor='#e5e7eb';this.style.boxShadow='none';">
+          <div style="color:#4338ca;padding-top:2px;flex-shrink:0;">
+            <svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"></path>
+              <polyline points="10 17 15 12 10 7"></polyline>
+              <line x1="15" y1="12" x2="3" y2="12"></line>
+            </svg>
+          </div>
+          <div>
+            <div style="font-size:1.12rem;font-weight:700;color:#111827;margin-bottom:6px;">Import a database cluster</div>
+            <div style="font-size:0.88rem;color:#4b5563;line-height:1.45;margin-bottom:12px;">Choose a database technology, configure and import an open source database within a few minutes.</div>
+            <div style="font-size:0.75rem;color:#9ca3af;line-height:1.4;">
+              Supported databases: Valkey Sentinel, Valkey, SQL Server, Redis, Redis Sentinel, MySQL (Primary/Replica), MySQL Galera, PostgreSQL (Primary/Replica), TimescaleDB (Primary/Replica), MongoDB ReplicaSet and MongoDB Shards
             </div>
           </div>
         </div>
-
-        <!-- Step 2: SSH Configuration -->
-        <div id="deploy-step-2" class="deploy-step" style="display:none;">
-          <h3 style="margin:0 0 6px;font-size:1rem;font-weight:600;color:#111827;">SSH Kimlik Bilgileri</h3>
-          <p style="margin:0 0 20px;font-size:0.82rem;color:#6b7280;">Primary node'a SSH erişim bilgilerini girin. Tüm node'lar aynı kimlik bilgilerini kullanır.</p>
-          <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;max-width:600px;">
-            <div>
-              <label style="font-size:0.82rem;font-weight:500;color:#374151;display:block;margin-bottom:5px;">* SSH Kullanıcı</label>
-              <input id="deploy-ssh-user" type="text" value="root" placeholder="root"
-                style="width:100%;padding:9px 12px;border:1px solid #d1d5db;border-radius:8px;font-size:0.88rem;box-sizing:border-box;">
-            </div>
-            <div>
-              <label style="font-size:0.82rem;font-weight:500;color:#374151;display:block;margin-bottom:5px;">SSH Port</label>
-              <input id="deploy-ssh-port" type="number" value="22" min="1" max="65535"
-                style="width:100%;padding:9px 12px;border:1px solid #d1d5db;border-radius:8px;font-size:0.88rem;box-sizing:border-box;">
-            </div>
-            <div style="grid-column:1/-1;">
-              <label style="font-size:0.82rem;font-weight:500;color:#374151;display:block;margin-bottom:5px;">Kimlik Doğrulama Yöntemi</label>
-              <select id="deploy-ssh-auth-type" onchange="toggleSshAuthFields()"
-                style="width:100%;padding:9px 12px;border:1px solid #d1d5db;border-radius:8px;font-size:0.88rem;box-sizing:border-box;background:white;">
-                <option value="password">Şifre</option>
-                <option value="key">PEM Özel Anahtar</option>
-              </select>
-            </div>
-            <div id="deploy-ssh-pass-field" style="grid-column:1/-1;">
-              <label style="font-size:0.82rem;font-weight:500;color:#374151;display:block;margin-bottom:5px;">SSH Şifresi</label>
-              <input id="deploy-ssh-password" type="password" placeholder="SSH şifresi"
-                style="width:100%;padding:9px 12px;border:1px solid #d1d5db;border-radius:8px;font-size:0.88rem;box-sizing:border-box;">
-            </div>
-            <div id="deploy-ssh-key-field" style="grid-column:1/-1;display:none;">
-              <label style="font-size:0.82rem;font-weight:500;color:#374151;display:block;margin-bottom:5px;">PEM Özel Anahtar</label>
-              <textarea id="deploy-ssh-key" rows="5" placeholder="-----BEGIN RSA PRIVATE KEY-----&#10;...&#10;-----END RSA PRIVATE KEY-----"
-                style="width:100%;padding:9px 12px;border:1px solid #d1d5db;border-radius:8px;font-size:0.8rem;font-family:monospace;box-sizing:border-box;resize:vertical;"></textarea>
-            </div>
-          </div>
-
-          <!-- SSH Test -->
-          <div style="margin-top:16px;max-width:600px;">
-            <div style="display:flex;align-items:center;gap:10px;">
-              <input id="deploy-ssh-test-host" type="text" placeholder="Test için IP adresi (ör: 10.0.0.1)"
-                style="flex:1;padding:9px 12px;border:1px solid #d1d5db;border-radius:8px;font-size:0.88rem;">
-              <button onclick="testSshConnection()" id="btn-test-ssh"
-                style="padding:9px 18px;background:#4f46e5;color:white;border:none;border-radius:8px;font-size:0.88rem;font-weight:500;cursor:pointer;white-space:nowrap;">
-                Bağlantıyı Test Et
-              </button>
-            </div>
-            <div id="deploy-ssh-test-result" style="margin-top:10px;font-size:0.85rem;display:none;"></div>
-          </div>
-
-          <!-- Security -->
-          <div style="margin-top:20px;max-width:600px;border-top:1px solid #f3f4f6;padding-top:18px;">
-            <div style="font-size:0.9rem;font-weight:600;color:#374151;margin-bottom:12px;">Güvenlik Ayarları</div>
-            <div style="display:flex;flex-direction:column;gap:10px;">
-              <label style="display:flex;align-items:center;gap:10px;cursor:pointer;font-size:0.88rem;color:#374151;">
-                <input id="deploy-disable-fw" type="checkbox" checked style="width:16px;height:16px;accent-color:#4f46e5;">
-                Güvenlik duvarını devre dışı bırak (Firewall)
-              </label>
-              <label style="display:flex;align-items:center;gap:10px;cursor:pointer;font-size:0.88rem;color:#374151;">
-                <input id="deploy-disable-selinux" type="checkbox" checked style="width:16px;height:16px;accent-color:#4f46e5;">
-                SELinux/AppArmor'u devre dışı bırak
-              </label>
-              <label style="display:flex;align-items:center;gap:10px;cursor:pointer;font-size:0.88rem;color:#374151;">
-                <input id="deploy-install-sw" type="checkbox" checked style="width:16px;height:16px;accent-color:#4f46e5;">
-                Yazılımı otomatik kur (Install software)
-              </label>
-            </div>
-            <div style="margin-top:14px;">
-              <div style="font-size:0.82rem;font-weight:500;color:#374151;margin-bottom:8px;">Yetki Yükseltme Komutu</div>
-              <div style="display:flex;gap:16px;">
-                <label style="display:flex;align-items:center;gap:6px;cursor:pointer;font-size:0.88rem;"><input type="radio" name="deploy-sudo" value="sudo" checked style="accent-color:#4f46e5;"> sudo</label>
-                <label style="display:flex;align-items:center;gap:6px;cursor:pointer;font-size:0.88rem;"><input type="radio" name="deploy-sudo" value="doas" style="accent-color:#4f46e5;"> doas</label>
-                <label style="display:flex;align-items:center;gap=6px;cursor:pointer;font-size:0.88rem;"><input type="radio" name="deploy-sudo" value="pbrun" style="accent-color:#4f46e5;"> pbrun</label>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <!-- Step 3: Node / DB configuration -->
-        <div id="deploy-step-3" class="deploy-step" style="display:none;">
-          <h3 style="margin:0 0 6px;font-size:1rem;font-weight:600;color:#111827;">Veritabanı Yapılandırması</h3>
-          <p style="margin:0 0 20px;font-size:0.82rem;color:#6b7280;">Kurulacak veritabanı sürümü ve bağlantı bilgilerini girin.</p>
-          <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;max-width:520px;">
-            <div>
-              <label style="font-size:0.82rem;font-weight:500;color:#374151;display:block;margin-bottom:5px;">* DB Sürümü</label>
-              <select id="deploy-db-version" style="width:100%;padding:9px 12px;border:1px solid #d1d5db;border-radius:8px;font-size:0.88rem;box-sizing:border-box;background:white;">
-                <!-- Populated by JS based on db_type -->
-              </select>
-            </div>
-            <div>
-              <label style="font-size:0.82rem;font-weight:500;color:#374151;display:block;margin-bottom:5px;">* DB Port</label>
-              <input id="deploy-db-port" type="number" value="5432"
-                style="width:100%;padding:9px 12px;border:1px solid #d1d5db;border-radius:8px;font-size:0.88rem;box-sizing:border-box;">
-            </div>
-            <div>
-              <label style="font-size:0.82rem;font-weight:500;color:#374151;display:block;margin-bottom:5px;">* DB Admin Kullanıcısı</label>
-              <input id="deploy-db-user" type="text" value="postgres"
-                style="width:100%;padding:9px 12px;border:1px solid #d1d5db;border-radius:8px;font-size:0.88rem;box-sizing:border-box;">
-            </div>
-            <div>
-              <label style="font-size:0.82rem;font-weight:500;color:#374151;display:block;margin-bottom:5px;">* DB Admin Şifresi</label>
-              <input id="deploy-db-pass" type="password" placeholder="Güçlü bir şifre girin"
-                style="width:100%;padding:9px 12px;border:1px solid #d1d5db;border-radius:8px;font-size:0.88rem;box-sizing:border-box;">
-            </div>
-            <div style="grid-column:1/-1;">
-              <label style="font-size:0.82rem;font-weight:500;color:#374151;display:block;margin-bottom:5px;">Data Directory</label>
-              <input id="deploy-db-datadir" type="text"
-                style="width:100%;padding:9px 12px;border:1px solid #d1d5db;border-radius:8px;font-size:0.88rem;box-sizing:border-box;">
-              <div style="font-size:0.75rem;color:#9ca3af;margin-top:3px;" id="deploy-db-datadir-hint"></div>
-            </div>
-          </div>
-        </div>
-
-        <!-- Step 4: Add nodes -->
-        <div id="deploy-step-4" class="deploy-step" style="display:none;">
-          <h3 style="margin:0 0 6px;font-size:1rem;font-weight:600;color:#111827;">Node'ları Ekle</h3>
-          <p style="margin:0 0 20px;font-size:0.82rem;color:#6b7280;">En az 1 Primary node gereklidir. Replica node'lar isteğe bağlıdır.</p>
-          <div id="deploy-nodes-list" style="display:flex;flex-direction:column;gap:10px;max-width:520px;"></div>
-          <button onclick="addDeployNode()" style="margin-top:12px;padding:8px 16px;background:transparent;border:1px dashed #d1d5db;border-radius:8px;font-size:0.85rem;color:#4f46e5;cursor:pointer;display:flex;align-items:center;gap:6px;">
-            &#43; Node Ekle
-          </button>
-        </div>
-
-        <!-- Step 5: Preview & Deploy -->
-        <div id="deploy-step-5" class="deploy-step" style="display:none;">
-          <h3 style="margin:0 0 6px;font-size:1rem;font-weight:600;color:#111827;">Önizleme</h3>
-          <p style="margin:0 0 20px;font-size:0.82rem;color:#6b7280;">Aşağıdaki bilgileri kontrol edin ve "Deploy" butonuna basın.</p>
-          <div id="deploy-preview-table" style="max-width:560px;"></div>
-          <div id="deploy-result-msg" style="margin-top:16px;font-size:0.9rem;display:none;padding:12px 16px;border-radius:8px;"></div>
-        </div>
-
-      </div><!-- end right content -->
-    </div><!-- end body -->
-
-    <!-- Footer: Back / Continue / Deploy -->
-    <div style="display:flex;align-items:center;justify-content:space-between;padding:16px 28px;border-top:1px solid #e5e7eb;background:#f9fafb;">
-      <div style="font-size:0.8rem;color:#ef4444;" id="deploy-required-hint">* Zorunlu alanlar</div>
-      <div style="display:flex;gap:10px;">
-        <button id="btn-deploy-back" onclick="deployWizardBack()" style="padding:9px 20px;background:white;border:1px solid #d1d5db;border-radius:8px;font-size:0.9rem;font-weight:500;cursor:pointer;color:#374151;display:none;">Geri</button>
-        <button id="btn-deploy-continue" onclick="deployWizardNext()" style="padding:9px 24px;background:#4f46e5;color:white;border:none;border-radius:8px;font-size:0.9rem;font-weight:600;cursor:pointer;">Devam</button>
-        <button id="btn-deploy-start" onclick="submitDeployWizard()" style="display:none;padding:9px 24px;background:#16a34a;color:white;border:none;border-radius:8px;font-size:0.9rem;font-weight:600;cursor:pointer;">🚀 Deploy</button>
       </div>
     </div>
 
-  </div><!-- end modal card -->
-</div><!-- end modal overlay -->
+    <!-- ===================================================================== -->
+    <!-- STAGE 1: Technology, Vendor & Version Selection (Screenshots 2 & 3) -->
+    <!-- ===================================================================== -->
+    <div id="deploy-stage-1" style="display:none;flex-direction:column;flex:1;overflow:hidden;">
+      <!-- Header -->
+      <div style="display:flex;align-items:center;justify-content:space-between;padding:18px 28px;border-bottom:1px solid #f3f4f6;">
+        <h2 id="deploy-stage1-title" style="margin:0;font-size:1.15rem;font-weight:700;color:#111827;">Deploy cluster</h2>
+        <button onclick="closeDeployWizard()" style="background:transparent;border:none;cursor:pointer;color:#9ca3af;padding:4px;display:flex;align-items:center;justify-content:center;border-radius:6px;" onmouseover="this.style.color='#111827'" onmouseout="this.style.color='#9ca3af'">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+        </button>
+      </div>
+
+      <!-- Filters & Card Content -->
+      <div style="padding:24px 28px;flex:1;overflow-y:auto;">
+        <!-- 3 Selects in Row -->
+        <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:16px;margin-bottom:24px;">
+          <!-- Database -->
+          <div>
+            <label style="display:flex;align-items:center;gap:4px;font-size:0.85rem;font-weight:500;color:#374151;margin-bottom:6px;">
+              <span style="color:#ef4444;">*</span> Database
+            </label>
+            <div style="position:relative;">
+              <select id="deploy-select-database" onchange="onDatabaseSelectChange()" style="width:100%;padding:10px 14px;border:1px solid #d1d5db;border-radius:8px;font-size:0.88rem;background:white;color:#111827;font-weight:500;outline:none;cursor:pointer;">
+                <!-- Populated by JS -->
+              </select>
+            </div>
+          </div>
+          <!-- Vendor -->
+          <div>
+            <label style="display:flex;align-items:center;gap:4px;font-size:0.85rem;font-weight:500;color:#374151;margin-bottom:6px;">
+              <span style="color:#ef4444;">*</span> Vendor
+            </label>
+            <div style="position:relative;">
+              <select id="deploy-select-vendor" onchange="onVendorSelectChange()" style="width:100%;padding:10px 14px;border:1px solid #d1d5db;border-radius:8px;font-size:0.88rem;background:white;color:#111827;font-weight:500;outline:none;cursor:pointer;">
+                <!-- Populated by JS -->
+              </select>
+            </div>
+          </div>
+          <!-- Version -->
+          <div>
+            <label style="display:flex;align-items:center;gap:4px;font-size:0.85rem;font-weight:500;color:#374151;margin-bottom:6px;">
+              <span style="color:#ef4444;">*</span> Version
+            </label>
+            <div style="position:relative;">
+              <select id="deploy-select-version" onchange="onVersionSelectChange()" style="width:100%;padding:10px 14px;border:1px solid #d1d5db;border-radius:8px;font-size:0.88rem;background:white;color:#111827;font-weight:500;outline:none;cursor:pointer;">
+                <!-- Populated by JS -->
+              </select>
+            </div>
+          </div>
+        </div>
+
+        <!-- Large Technology Preview Card (Matching Screenshot 2 & 3) -->
+        <div style="position:relative;border:1px solid #e5e7eb;border-radius:16px;padding:32px;background:white;overflow:hidden;min-height:260px;">
+          <!-- Subtle mascot watermark in background -->
+          <div id="deploy-card-watermark" style="position:absolute;top:10px;left:10px;opacity:0.06;pointer-events:none;transform:scale(1.3);transform-origin:top left;">
+            <svg width="220" height="220" viewBox="0 0 24 24" fill="none" stroke="#4338ca" stroke-width="1.5"><circle cx="12" cy="12" r="10"></circle><path d="M12 2a14.5 14.5 0 0 0 0 20 14.5 14.5 0 0 0 0-20"></path><path d="M2 12h20"></path></svg>
+          </div>
+
+          <div style="position:relative;z-index:1;">
+            <!-- Icon & Title -->
+            <div style="display:flex;align-items:center;gap:18px;margin-bottom:20px;">
+              <div id="deploy-card-icon" style="width:54px;height:54px;display:flex;align-items:center;justify-content:center;font-size:2.2rem;border-radius:10px;background:#f5f3ff;">
+                🐘
+              </div>
+              <h2 id="deploy-card-title" style="margin:0;font-size:1.55rem;font-weight:700;color:#111827;">PostgreSQL Logical</h2>
+            </div>
+
+            <!-- Metadata 3 Columns -->
+            <div style="display:grid;grid-template-columns:140px 140px 140px;gap:16px;margin-bottom:20px;font-size:0.88rem;">
+              <div>
+                <div style="color:#6b7280;font-size:0.8rem;margin-bottom:2px;">Database:</div>
+                <div id="deploy-meta-db" style="color:#111827;font-weight:500;">PostgreSQL Logical</div>
+              </div>
+              <div>
+                <div style="color:#6b7280;font-size:0.8rem;margin-bottom:2px;">Vendor:</div>
+                <div id="deploy-meta-vendor" style="color:#111827;font-weight:500;">PostgreSQL</div>
+              </div>
+              <div>
+                <div style="color:#6b7280;font-size:0.8rem;margin-bottom:2px;">Version:</div>
+                <div id="deploy-meta-version" style="color:#111827;font-weight:500;">18</div>
+              </div>
+            </div>
+
+            <!-- Description -->
+            <div style="margin-bottom:20px;">
+              <div style="color:#6b7280;font-size:0.8rem;margin-bottom:4px;">Description:</div>
+              <p id="deploy-card-desc" style="margin:0;font-size:0.88rem;color:#374151;line-height:1.5;">
+                PostgreSQL, also known as Postgres, is a free and open-source relational database management system emphasizing extensibility and SQL compliance.
+              </p>
+            </div>
+
+            <!-- Learn More Link -->
+            <div>
+              <a id="deploy-card-learnmore" href="https://www.postgresql.org/docs/" target="_blank" style="display:inline-flex;align-items:center;gap:6px;color:#4338ca;font-size:0.85rem;font-weight:600;text-decoration:none;">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></svg>
+                Learn more
+              </a>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Footer -->
+      <div style="display:flex;justify-content:flex-end;gap:12px;padding:16px 28px;border-top:1px solid #f3f4f6;background:#fafafa;">
+        <button type="button" onclick="deployGoToStage(0)" style="padding:9px 24px;border:1px solid #d1d5db;background:white;color:#374151;border-radius:8px;font-size:0.9rem;font-weight:500;cursor:pointer;" onmouseover="this.style.background='#f9fafb'" onmouseout="this.style.background='white'">Back</button>
+        <button type="button" onclick="deployGoToStage(2)" style="padding:9px 28px;background:#3a1c94;color:white;border:none;border-radius:8px;font-size:0.9rem;font-weight:500;cursor:pointer;transition:background 0.15s;" onmouseover="this.style.background='#2b1070'" onmouseout="this.style.background='#3a1c94'">Continue</button>
+      </div>
+    </div>
+
+    <!-- ===================================================================== -->
+    <!-- STAGE 2: 6-Step Deploy Wizard with Left Stepper (Screenshot 4)        -->
+    <!-- ===================================================================== -->
+    <div id="deploy-stage-2" style="display:none;flex-direction:column;flex:1;overflow:hidden;">
+      <!-- Header -->
+      <div style="display:flex;align-items:center;justify-content:space-between;padding:18px 28px;border-bottom:1px solid #f3f4f6;">
+        <h2 id="deploy-wizard-cluster-title" style="margin:0;font-size:1.15rem;font-weight:700;color:#111827;">Deploy PostgreSQL Logical cluster</h2>
+        <button onclick="closeDeployWizard()" style="background:transparent;border:none;cursor:pointer;color:#9ca3af;padding:4px;display:flex;align-items:center;justify-content:center;border-radius:6px;" onmouseover="this.style.color='#111827'" onmouseout="this.style.color='#9ca3af'">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+        </button>
+      </div>
+
+      <!-- Stepper & Body -->
+      <div style="display:flex;flex:1;overflow:hidden;">
+        <!-- Left Stepper Navigation -->
+        <div id="deploy-stepper-sidebar" style="width:230px;min-width:230px;background:#ffffff;border-right:1px solid #f3f4f6;padding:28px 20px;display:flex;flex-direction:column;position:relative;">
+          <!-- Vertical Line -->
+          <div style="position:absolute;left:34px;top:40px;bottom:50px;width:2px;background:#e5e7eb;z-index:0;"></div>
+          <!-- 6 Steps -->
+          <div id="stepper-step-1" onclick="deployJumpToStep(1)" style="display:flex;align-items:center;gap:12px;margin-bottom:28px;position:relative;z-index:1;cursor:pointer;">
+            <div class="stepper-dot" id="stepper-dot-1" style="width:28px;height:28px;border-radius:50%;background:#3a1c94;color:white;display:flex;align-items:center;justify-content:center;font-size:0.8rem;font-weight:600;flex-shrink:0;">1</div>
+            <span class="stepper-label" id="stepper-label-1" style="font-size:0.88rem;color:#111827;font-weight:600;">Cluster details</span>
+          </div>
+          <div id="stepper-step-2" onclick="deployJumpToStep(2)" style="display:flex;align-items:center;gap:12px;margin-bottom:28px;position:relative;z-index:1;cursor:pointer;">
+            <div class="stepper-dot" id="stepper-dot-2" style="width:28px;height:28px;border-radius:50%;background:white;border:2px solid #d1d5db;color:#6b7280;display:flex;align-items:center;justify-content:center;font-size:0.8rem;font-weight:600;flex-shrink:0;">2</div>
+            <span class="stepper-label" id="stepper-label-2" style="font-size:0.88rem;color:#6b7280;font-weight:500;">SSH configuration</span>
+          </div>
+          <div id="stepper-step-3" onclick="deployJumpToStep(3)" style="display:flex;align-items:center;gap:12px;margin-bottom:28px;position:relative;z-index:1;cursor:pointer;">
+            <div class="stepper-dot" id="stepper-dot-3" style="width:28px;height:28px;border-radius:50%;background:white;border:2px solid #d1d5db;color:#6b7280;display:flex;align-items:center;justify-content:center;font-size:0.8rem;font-weight:600;flex-shrink:0;">3</div>
+            <span class="stepper-label" id="stepper-label-3" style="font-size:0.88rem;color:#6b7280;font-weight:500;">Node configuration</span>
+          </div>
+          <div id="stepper-step-4" onclick="deployJumpToStep(4)" style="display:flex;align-items:center;gap:12px;margin-bottom:28px;position:relative;z-index:1;cursor:pointer;">
+            <div class="stepper-dot" id="stepper-dot-4" style="width:28px;height:28px;border-radius:50%;background:white;border:2px solid #d1d5db;color:#6b7280;display:flex;align-items:center;justify-content:center;font-size:0.8rem;font-weight:600;flex-shrink:0;">4</div>
+            <span class="stepper-label" id="stepper-label-4" style="font-size:0.88rem;color:#6b7280;font-weight:500;">Add nodes</span>
+          </div>
+          <div id="stepper-step-5" onclick="deployJumpToStep(5)" style="display:flex;align-items:center;gap:12px;margin-bottom:28px;position:relative;z-index:1;cursor:pointer;">
+            <div class="stepper-dot" id="stepper-dot-5" style="width:28px;height:28px;border-radius:50%;background:white;border:2px solid #d1d5db;color:#6b7280;display:flex;align-items:center;justify-content:center;font-size:0.8rem;font-weight:600;flex-shrink:0;">5</div>
+            <span class="stepper-label" id="stepper-label-5" style="font-size:0.88rem;color:#6b7280;font-weight:500;">Extensions</span>
+          </div>
+          <div id="stepper-step-6" onclick="deployJumpToStep(6)" style="display:flex;align-items:center;gap:12px;position:relative;z-index:1;cursor:pointer;">
+            <div class="stepper-dot" id="stepper-dot-6" style="width:28px;height:28px;border-radius:50%;background:white;border:2px solid #d1d5db;color:#6b7280;display:flex;align-items:center;justify-content:center;font-size:0.8rem;font-weight:600;flex-shrink:0;">6</div>
+            <span class="stepper-label" id="stepper-label-6" style="font-size:0.88rem;color:#6b7280;font-weight:500;">Preview</span>
+          </div>
+        </div>
+
+        <!-- Right Content Panes -->
+        <div style="flex:1;overflow-y:auto;padding:28px 32px;">
+
+          <!-- Step 1: Cluster details (Screenshot 4) -->
+          <div id="wizard-pane-1" class="wizard-pane">
+            <h3 style="font-size:1.15rem;font-weight:700;color:#111827;margin:0 0 20px 0;">Name your cluster</h3>
+            <div style="margin-bottom:24px;">
+              <label style="display:flex;align-items:center;gap:6px;font-size:0.88rem;font-weight:500;color:#374151;margin-bottom:6px;">
+                Name
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#9ca3af" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="16" x2="12" y2="12"></line><line x1="12" y1="8" x2="12.01" y2="8"></line></svg>
+                <span style="color:#6b7280;font-weight:400;">(optional)</span>
+              </label>
+              <input type="text" id="deploy-cluster-name" placeholder="Enter a name" style="width:100%;padding:10px 14px;border:1px solid #d1d5db;border-radius:8px;font-size:0.9rem;box-sizing:border-box;outline:none;" onfocus="this.style.borderColor='#4338ca'" onblur="this.style.borderColor='#d1d5db'">
+              <div style="font-size:0.82rem;color:#6b7280;margin-top:6px;">Leave empty and we will generate one for you.</div>
+            </div>
+
+            <div>
+              <label style="display:block;font-size:0.88rem;font-weight:500;color:#374151;margin-bottom:6px;">
+                Tags
+              </label>
+              <div style="position:relative;">
+                <input type="text" id="deploy-cluster-tags" placeholder="Type to add tags" style="width:100%;padding:10px 14px;border:1px solid #d1d5db;border-radius:8px;font-size:0.9rem;box-sizing:border-box;outline:none;" onfocus="this.style.borderColor='#4338ca'" onblur="this.style.borderColor='#d1d5db'">
+                <div style="position:absolute;right:14px;top:50%;transform:translateY(-50%);color:#9ca3af;pointer-events:none;">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"></polyline></svg>
+                </div>
+              </div>
+              <div style="font-size:0.82rem;color:#6b7280;margin-top:6px;">Add tags to search or group your database clusters</div>
+            </div>
+          </div>
+
+          <!-- Step 2: SSH Configuration -->
+          <div id="wizard-pane-2" class="wizard-pane" style="display:none;">
+            <h3 style="margin:0 0 6px;font-size:1.15rem;font-weight:700;color:#111827;">SSH configuration</h3>
+            <p style="margin:0 0 20px;font-size:0.85rem;color:#6b7280;">Enter SSH credentials to access the target hosts. All nodes will inherit these credentials.</p>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px;">
+              <div>
+                <label style="font-size:0.85rem;font-weight:500;color:#374151;display:block;margin-bottom:5px;"><span style="color:#ef4444;">*</span> SSH User</label>
+                <input id="deploy-ssh-user" type="text" value="root" placeholder="root" style="width:100%;padding:9px 12px;border:1px solid #d1d5db;border-radius:8px;font-size:0.88rem;box-sizing:border-box;">
+              </div>
+              <div>
+                <label style="font-size:0.85rem;font-weight:500;color:#374151;display:block;margin-bottom:5px;"><span style="color:#ef4444;">*</span> SSH Port</label>
+                <input id="deploy-ssh-port" type="number" value="22" min="1" max="65535" style="width:100%;padding:9px 12px;border:1px solid #d1d5db;border-radius:8px;font-size:0.88rem;box-sizing:border-box;">
+              </div>
+              <div style="grid-column:1/-1;">
+                <label style="font-size:0.85rem;font-weight:500;color:#374151;display:block;margin-bottom:5px;">Authentication Method</label>
+                <select id="deploy-ssh-auth-type" onchange="toggleSshAuthFields()" style="width:100%;padding:9px 12px;border:1px solid #d1d5db;border-radius:8px;font-size:0.88rem;box-sizing:border-box;background:white;">
+                  <option value="password">Password</option>
+                  <option value="key">PEM Private Key</option>
+                </select>
+              </div>
+              <div id="deploy-ssh-pass-field" style="grid-column:1/-1;">
+                <label style="font-size:0.85rem;font-weight:500;color:#374151;display:block;margin-bottom:5px;">SSH Password</label>
+                <input id="deploy-ssh-password" type="password" placeholder="Enter SSH password" style="width:100%;padding:9px 12px;border:1px solid #d1d5db;border-radius:8px;font-size:0.88rem;box-sizing:border-box;">
+              </div>
+              <div id="deploy-ssh-key-field" style="grid-column:1/-1;display:none;">
+                <label style="font-size:0.85rem;font-weight:500;color:#374151;display:block;margin-bottom:5px;">PEM Private Key</label>
+                <textarea id="deploy-ssh-key" rows="4" placeholder="-----BEGIN RSA PRIVATE KEY-----&#10;...&#10;-----END RSA PRIVATE KEY-----" style="width:100%;padding:9px 12px;border:1px solid #d1d5db;border-radius:8px;font-size:0.8rem;font-family:monospace;box-sizing:border-box;resize:vertical;"></textarea>
+              </div>
+            </div>
+
+            <!-- SSH Connection Test -->
+            <div style="margin-top:16px;">
+              <div style="display:flex;align-items:center;gap:10px;">
+                <input id="deploy-ssh-test-host" type="text" placeholder="IP to test (e.g. 192.168.1.100)" style="flex:1;padding:9px 12px;border:1px solid #d1d5db;border-radius:8px;font-size:0.88rem;">
+                <button type="button" onclick="testSshConnection()" id="btn-test-ssh" style="padding:9px 18px;background:#4338ca;color:white;border:none;border-radius:8px;font-size:0.88rem;font-weight:500;cursor:pointer;white-space:nowrap;">Test Connection</button>
+              </div>
+              <div id="deploy-ssh-test-result" style="margin-top:10px;font-size:0.85rem;display:none;"></div>
+            </div>
+
+            <!-- Security toggles -->
+            <div style="margin-top:20px;border-top:1px solid #f3f4f6;padding-top:16px;">
+              <div style="font-size:0.88rem;font-weight:600;color:#374151;margin-bottom:10px;">Security & Provisioning</div>
+              <div style="display:flex;flex-direction:column;gap:8px;">
+                <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:0.85rem;color:#374151;">
+                  <input id="deploy-disable-fw" type="checkbox" checked style="width:16px;height:16px;accent-color:#4338ca;"> Disable Firewall
+                </label>
+                <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:0.85rem;color:#374151;">
+                  <input id="deploy-disable-selinux" type="checkbox" checked style="width:16px;height:16px;accent-color:#4338ca;"> Disable SELinux / AppArmor
+                </label>
+                <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:0.85rem;color:#374151;">
+                  <input id="deploy-install-sw" type="checkbox" checked style="width:16px;height:16px;accent-color:#4338ca;"> Automatically Install Database Software
+                </label>
+              </div>
+            </div>
+          </div>
+
+          <!-- Step 3: Node / DB Configuration -->
+          <div id="wizard-pane-3" class="wizard-pane" style="display:none;">
+            <h3 style="margin:0 0 6px;font-size:1.15rem;font-weight:700;color:#111827;">Node configuration</h3>
+            <p style="margin:0 0 20px;font-size:0.85rem;color:#6b7280;">Specify administrative credentials and database listening port.</p>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;">
+              <div>
+                <label style="font-size:0.85rem;font-weight:500;color:#374151;display:block;margin-bottom:5px;"><span style="color:#ef4444;">*</span> DB Port</label>
+                <input id="deploy-db-port" type="number" value="5432" style="width:100%;padding:9px 12px;border:1px solid #d1d5db;border-radius:8px;font-size:0.88rem;box-sizing:border-box;">
+              </div>
+              <div>
+                <label style="font-size:0.85rem;font-weight:500;color:#374151;display:block;margin-bottom:5px;"><span style="color:#ef4444;">*</span> Admin User</label>
+                <input id="deploy-db-user" type="text" value="postgres" style="width:100%;padding:9px 12px;border:1px solid #d1d5db;border-radius:8px;font-size:0.88rem;box-sizing:border-box;">
+              </div>
+              <div style="grid-column:1/-1;">
+                <label style="font-size:0.85rem;font-weight:500;color:#374151;display:block;margin-bottom:5px;"><span style="color:#ef4444;">*</span> Admin Password</label>
+                <input id="deploy-db-pass" type="password" placeholder="Enter administrative password" style="width:100%;padding:9px 12px;border:1px solid #d1d5db;border-radius:8px;font-size:0.88rem;box-sizing:border-box;">
+              </div>
+              <div style="grid-column:1/-1;">
+                <label style="font-size:0.85rem;font-weight:500;color:#374151;display:block;margin-bottom:5px;">Data Directory</label>
+                <input id="deploy-db-datadir" type="text" placeholder="/var/lib/postgresql/18/main" style="width:100%;padding:9px 12px;border:1px solid #d1d5db;border-radius:8px;font-size:0.88rem;box-sizing:border-box;">
+                <div style="font-size:0.75rem;color:#9ca3af;margin-top:3px;" id="deploy-db-datadir-hint">Default: /var/lib/postgresql/data</div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Step 4: Add Nodes -->
+          <div id="wizard-pane-4" class="wizard-pane" style="display:none;">
+            <h3 style="margin:0 0 6px;font-size:1.15rem;font-weight:700;color:#111827;">Add nodes</h3>
+            <p style="margin:0 0 20px;font-size:0.85rem;color:#6b7280;">Specify the primary host IP and any optional standby / replica nodes.</p>
+            <div id="deploy-nodes-list" style="display:flex;flex-direction:column;gap:12px;"></div>
+            <button type="button" onclick="addDeployNode()" style="margin-top:14px;padding:8px 16px;background:transparent;border:1px dashed #d1d5db;border-radius:8px;font-size:0.85rem;color:#4338ca;cursor:pointer;display:flex;align-items:center;gap:6px;font-weight:500;" onmouseover="this.style.borderColor='#4338ca'" onmouseout="this.style.borderColor='#d1d5db'">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg> Add node
+            </button>
+          </div>
+
+          <!-- Step 5: Extensions -->
+          <div id="wizard-pane-5" class="wizard-pane" style="display:none;">
+            <h3 style="margin:0 0 6px;font-size:1.15rem;font-weight:700;color:#111827;">Extensions</h3>
+            <p style="margin:0 0 20px;font-size:0.85rem;color:#6b7280;">Select modules and plugins to automatically initialize on your cluster nodes.</p>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+              <label style="display:flex;align-items:flex-start;gap:10px;padding:12px;border:1px solid #e5e7eb;border-radius:8px;cursor:pointer;">
+                <input type="checkbox" checked style="margin-top:3px;accent-color:#4338ca;">
+                <div>
+                  <div style="font-weight:600;font-size:0.85rem;color:#111827;">pg_stat_statements</div>
+                  <div style="font-size:0.75rem;color:#6b7280;">Tracks query execution statistics across all nodes</div>
+                </div>
+              </label>
+              <label style="display:flex;align-items:flex-start;gap:10px;padding:12px;border:1px solid #e5e7eb;border-radius:8px;cursor:pointer;">
+                <input type="checkbox" style="margin-top:3px;accent-color:#4338ca;">
+                <div>
+                  <div style="font-weight:600;font-size:0.85rem;color:#111827;">pg_trgm</div>
+                  <div style="font-size:0.75rem;color:#6b7280;">Trigram matching for text similarity search</div>
+                </div>
+              </label>
+              <label style="display:flex;align-items:flex-start;gap:10px;padding:12px;border:1px solid #e5e7eb;border-radius:8px;cursor:pointer;">
+                <input type="checkbox" style="margin-top:3px;accent-color:#4338ca;">
+                <div>
+                  <div style="font-weight:600;font-size:0.85rem;color:#111827;">uuid-ossp</div>
+                  <div style="font-size:0.75rem;color:#6b7280;">Generate universally unique identifiers (UUIDs)</div>
+                </div>
+              </label>
+              <label style="display:flex;align-items:flex-start;gap:10px;padding:12px;border:1px solid #e5e7eb;border-radius:8px;cursor:pointer;">
+                <input type="checkbox" style="margin-top:3px;accent-color:#4338ca;">
+                <div>
+                  <div style="font-weight:600;font-size:0.85rem;color:#111827;">pgcrypto</div>
+                  <div style="font-size:0.75rem;color:#6b7280;">Cryptographic functions for PostgreSQL</div>
+                </div>
+              </label>
+            </div>
+          </div>
+
+          <!-- Step 6: Preview -->
+          <div id="wizard-pane-6" class="wizard-pane" style="display:none;">
+            <h3 style="margin:0 0 6px;font-size:1.15rem;font-weight:700;color:#111827;">Preview</h3>
+            <p style="margin:0 0 20px;font-size:0.85rem;color:#6b7280;">Review your cluster deployment topology before proceeding.</p>
+            <div id="deploy-preview-table" style="max-width:100%;"></div>
+            <div id="deploy-result-msg" style="margin-top:16px;font-size:0.9rem;display:none;padding:12px 16px;border-radius:8px;"></div>
+          </div>
+
+        </div>
+      </div>
+
+      <!-- Footer -->
+      <div style="display:flex;align-items:center;justify-content:space-between;padding:16px 28px;border-top:1px solid #f3f4f6;background:#fafafa;">
+        <div style="font-size:0.82rem;color:#ef4444;" id="deploy-stepper-required"><span style="color:#ef4444;">*</span> Required</div>
+        <div style="display:flex;gap:12px;">
+          <button type="button" id="btn-stepper-back" onclick="deployStepperBack()" style="padding:9px 24px;border:1px solid #d1d5db;background:white;color:#374151;border-radius:8px;font-size:0.9rem;font-weight:500;cursor:pointer;" onmouseover="this.style.background='#f9fafb'" onmouseout="this.style.background='white'">Cancel</button>
+          <button type="button" id="btn-stepper-continue" onclick="deployStepperNext()" style="padding:9px 28px;background:#3a1c94;color:white;border:none;border-radius:8px;font-size:0.9rem;font-weight:500;cursor:pointer;transition:background 0.15s;" onmouseover="this.style.background='#2b1070'" onmouseout="this.style.background='#3a1c94'">Continue</button>
+          <button type="button" id="btn-stepper-deploy" onclick="submitDeployWizard()" style="display:none;padding:9px 28px;background:#16a34a;color:white;border:none;border-radius:8px;font-size:0.9rem;font-weight:600;cursor:pointer;">🚀 Deploy</button>
+        </div>
+      </div>
+
+    </div>
+
+  </div>
+</div>
 
 <!-- ========================================================================= -->
 <!-- CLUSTERCONTROL MAIL SERVER CONFIGURATION MODALS                           -->
@@ -3778,6 +3963,6 @@ Real OS metrics (CPU, RAM, Disk I/O) cannot be fetched directly from PostgreSQL 
   </div>
 </div>
 
-<script src="/static/main.js?v=95"></script>
+<script src="/static/main.js?v=96"></script>
 </body>
 </html>

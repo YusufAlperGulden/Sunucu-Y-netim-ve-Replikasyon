@@ -5235,219 +5235,461 @@ window.deleteReport = async function(id) {
 })();
 
 
-// ── Deploy a Cluster Wizard ───────────────────────────────────────────────────
+// ── ClusterControl Deploy & Import Cluster Flow ─────────────────────────────
 
-const deployWizard = {
-    currentStep: 0,   // 0 = DB type selection, 1-5 = wizard steps
-    dbType: null,     // 'postgresql' | 'mssql'
-    sshTested: false,
-    nodes: [],        // [{role, ip}]
+const DB_CATALOG = {
+    'postgresql_logical': {
+        key: 'postgresql_logical',
+        name: 'PostgreSQL Logical',
+        category: 'PostgreSQL',
+        icon: '🐘',
+        vendors: ['PostgreSQL'],
+        versions: ['18', '17', '16', '15', '14'],
+        defaultPort: 5432,
+        defaultUser: 'postgres',
+        description: 'PostgreSQL, also known as Postgres, is a free and open-source relational database management system emphasizing extensibility and SQL compliance. It was originally named POSTGRES, referring to its origins as a successor to the Ingres database developed at the University of California, Berkeley.',
+        learnMore: 'https://www.postgresql.org/docs/'
+    },
+    'postgresql_streaming': {
+        key: 'postgresql_streaming',
+        name: 'PostgreSQL Streaming',
+        category: 'PostgreSQL',
+        icon: '🐘',
+        vendors: ['PostgreSQL'],
+        versions: ['18', '17', '16', '15', '14'],
+        defaultPort: 5432,
+        defaultUser: 'postgres',
+        description: 'PostgreSQL Streaming Replication provides high-availability primary/standby architecture with binary WAL log streaming, automatic failover with pg_auto_failover, and read-replica scaling.',
+        learnMore: 'https://www.postgresql.org/docs/current/warm-standby.html'
+    },
+    'mssql': {
+        key: 'mssql',
+        name: 'SQL Server (MSSQL)',
+        category: 'Microsoft',
+        icon: '🪟',
+        vendors: ['Microsoft'],
+        versions: ['2022', '2019'],
+        defaultPort: 1433,
+        defaultUser: 'sa',
+        description: 'Microsoft SQL Server Always On Availability Groups provide enterprise-grade high availability and disaster recovery across Windows and Linux server environments.',
+        learnMore: 'https://learn.microsoft.com/en-us/sql/database-engine/availability-groups/windows/always-on-availability-groups-sql-server'
+    },
+    'mysql_galera': {
+        key: 'mysql_galera',
+        name: 'MySQL Galera',
+        category: 'MySQL',
+        icon: '🐬',
+        vendors: ['Percona', 'MariaDB', 'Oracle'],
+        versions: ['8.4', '8.0', '11.4', '10.11'],
+        defaultPort: 3306,
+        defaultUser: 'root',
+        description: 'Galera Cluster for MySQL provides synchronous multi-master replication with true multi-primary active-active capabilities, automated node provisioning (SST), and zero data loss guarantee.',
+        learnMore: 'https://galeracluster.com/'
+    },
+    'mysql_replication': {
+        key: 'mysql_replication',
+        name: 'MySQL Replication',
+        category: 'MySQL',
+        icon: '🐬',
+        vendors: ['Percona', 'Oracle', 'MariaDB'],
+        versions: ['8.4', '8.0'],
+        defaultPort: 3306,
+        defaultUser: 'root',
+        description: 'MySQL Asynchronous and Semi-Synchronous Group Replication allows high performance read-scaling across multiple follower replicas with GTID transaction tracking.',
+        learnMore: 'https://dev.mysql.com/doc/refman/8.0/en/replication.html'
+    },
+    'mongodb': {
+        key: 'mongodb',
+        name: 'MongoDB ReplicaSet',
+        category: 'MongoDB',
+        icon: '🍃',
+        vendors: ['Percona', 'MongoDB Community'],
+        versions: ['7.0', '6.0', '5.0'],
+        defaultPort: 27017,
+        defaultUser: 'admin',
+        description: 'MongoDB Replica Sets provide redundancy and high availability with automatic failover and primary election across distributed document database clusters.',
+        learnMore: 'https://www.mongodb.com/docs/manual/replication/'
+    },
+    'valkey': {
+        key: 'valkey',
+        name: 'Valkey / Redis Sentinel',
+        category: 'In-Memory',
+        icon: '⚡',
+        vendors: ['Valkey', 'Redis'],
+        versions: ['8.0', '7.2'],
+        defaultPort: 6379,
+        defaultUser: 'default',
+        description: 'Valkey is an open source, high-performance in-memory key-value data structure store supporting caching, streaming, and Sentinel automated master failover.',
+        learnMore: 'https://valkey.io/'
+    },
+    'timescaledb': {
+        key: 'timescaledb',
+        name: 'TimescaleDB',
+        category: 'Time-Series',
+        icon: '⏱️',
+        vendors: ['Timescale'],
+        versions: ['2.15', '2.14'],
+        defaultPort: 5432,
+        defaultUser: 'postgres',
+        description: 'TimescaleDB is an open-source relational database engineered for fast ingest and complex queries on time-series and event data built on top of PostgreSQL.',
+        learnMore: 'https://docs.timescale.com/'
+    },
+    'clickhouse': {
+        key: 'clickhouse',
+        name: 'ClickHouse',
+        category: 'Analytics',
+        icon: '📊',
+        vendors: ['ClickHouse'],
+        versions: ['24.8', '24.3'],
+        defaultPort: 8123,
+        defaultUser: 'default',
+        description: 'ClickHouse is an open-source column-oriented DBMS for real-time analytical reporting using SQL queries with massive parallel processing.',
+        learnMore: 'https://clickhouse.com/docs'
+    },
+    'elasticsearch': {
+        key: 'elasticsearch',
+        name: 'Elasticsearch',
+        category: 'Search',
+        icon: '🔍',
+        vendors: ['Elastic'],
+        versions: ['8.14', '8.12'],
+        defaultPort: 9200,
+        defaultUser: 'elastic',
+        description: 'Elasticsearch is a distributed, JSON-based search and analytics engine designed for horizontal scalability, reliability, and easy management.',
+        learnMore: 'https://www.elastic.co/guide/en/elasticsearch/reference/current/index.html'
+    }
 };
 
-const DEPLOY_STEPS = [
-    'DB Tipi',
-    'Cluster Detayları',
-    'SSH Yapılandırması',
-    'DB Yapılandırması',
-    'Node\'ları Ekle',
-    'Önizleme',
-];
+const deployWizard = {
+    mode: 'create', // 'create' | 'import'
+    currentStage: 0, // 0 = Action select, 1 = Tech/Version picker, 2 = 6-step Stepper
+    currentStep: 1, // 1..6
+    selectedDbKey: 'postgresql_logical',
+    selectedVendor: 'PostgreSQL',
+    selectedVersion: '18',
+    sshTested: false,
+    nodes: []
+};
 
-const PG_VERSIONS   = ['18', '17', '16', '15', '14'];
-const MSSQL_VERSIONS = ['2022', '2019'];
-
-function openDeployWizard() {
-    deployWizard.currentStep = 0;
-    deployWizard.dbType = null;
-    deployWizard.sshTested = false;
-    deployWizard.nodes = [];
-
-    // Reset selections
-    document.querySelectorAll('.deploy-type-card').forEach(c => {
-        c.style.borderColor = '#e5e7eb';
-        c.style.background  = 'white';
-    });
-    document.querySelectorAll('.deploy-step').forEach(s => s.style.display = 'none');
-    document.getElementById('deploy-step-0').style.display = '';
-    document.getElementById('deploy-step-sidebar').style.display = 'none';
-    document.getElementById('btn-deploy-back').style.display = 'none';
-    document.getElementById('btn-deploy-continue').style.display = 'inline-block';
-    document.getElementById('btn-deploy-continue').textContent = 'Devam';
-    document.getElementById('btn-deploy-start').style.display = 'none';
-    document.getElementById('deploy-wizard-title').textContent = 'Deploy a cluster';
-    document.getElementById('deploy-wizard-subtitle').textContent = 'PostgreSQL Streaming veya SQL Server seçin';
-    const resultEl = document.getElementById('deploy-result-msg');
-    if (resultEl) resultEl.style.display = 'none';
-    const testEl = document.getElementById('deploy-ssh-test-result');
-    if (testEl) testEl.style.display = 'none';
-
+window.openDeployWizard = function() {
+    deployGoToStage(0);
     const modal = document.getElementById('modal-deploy-cluster');
-    modal.style.display = 'flex';
-}
+    if (modal) modal.style.display = 'flex';
+};
 
-function closeDeployWizard() {
+window.closeDeployWizard = function() {
     const modal = document.getElementById('modal-deploy-cluster');
-    modal.style.display = 'none';
-}
+    if (modal) modal.style.display = 'none';
+};
 
-function selectDeployType(type) {
-    deployWizard.dbType = type;
-    document.querySelectorAll('.deploy-type-card').forEach(c => {
-        c.style.borderColor = '#e5e7eb';
-        c.style.background  = 'white';
-    });
-    const card = document.getElementById(`deploy-type-${type}`);
-    card.style.borderColor = '#4f46e5';
-    card.style.background  = '#f5f3ff';
-}
+window.selectDeployMode = function(mode) {
+    deployWizard.mode = mode; // 'create' or 'import'
+    deployGoToStage(1);
+};
 
-function deployRenderSidebar(activeStep) {
-    const sidebar = document.getElementById('deploy-step-sidebar');
-    sidebar.style.display = 'flex';
-    sidebar.innerHTML = DEPLOY_STEPS.slice(1).map((label, i) => {
-        const stepNum = i + 1;
-        const isDone    = stepNum < activeStep;
-        const isActive  = stepNum === activeStep;
-        const dotColor  = isDone ? '#16a34a' : isActive ? '#4f46e5' : '#d1d5db';
-        const dotText   = isDone ? '✓' : String(stepNum);
-        const textColor = isActive ? '#111827' : '#6b7280';
-        const fontW     = isActive ? '600' : '400';
-        return `<div style="display:flex;align-items:center;gap:12px;padding:12px 20px;border-left:3px solid ${isActive ? '#4f46e5' : 'transparent'};">
-            <div style="width:28px;height:28px;border-radius:50%;background:${dotColor};color:white;display:flex;align-items:center;justify-content:center;font-size:0.8rem;font-weight:600;flex-shrink:0;">${dotText}</div>
-            <span style="font-size:0.85rem;color:${textColor};font-weight:${fontW};">${label}</span>
-        </div>`;
-    }).join('');
-}
+window.deployGoToStage = function(stage) {
+    deployWizard.currentStage = stage;
+    const container = document.getElementById('deploy-wizard-container');
+    const s0 = document.getElementById('deploy-stage-0');
+    const s1 = document.getElementById('deploy-stage-1');
+    const s2 = document.getElementById('deploy-stage-2');
 
-function deployShowStep(step) {
-    document.querySelectorAll('.deploy-step').forEach(s => s.style.display = 'none');
-    document.getElementById(`deploy-step-${step}`).style.display = '';
+    if (s0) s0.style.display = stage === 0 ? 'flex' : 'none';
+    if (s1) s1.style.display = stage === 1 ? 'flex' : 'none';
+    if (s2) s2.style.display = stage === 2 ? 'flex' : 'none';
 
-    const backBtn = document.getElementById('btn-deploy-back');
-    const contBtn = document.getElementById('btn-deploy-continue');
-    const deplBtn = document.getElementById('btn-deploy-start');
-
-    backBtn.style.display = step > 0 ? 'inline-block' : 'none';
-
-    if (step === 5) {
-        contBtn.style.display = 'none';
-        deplBtn.style.display = 'inline-block';
-        deployRenderPreview();
-    } else {
-        contBtn.style.display = 'inline-block';
-        deplBtn.style.display = 'none';
-        contBtn.textContent = 'Devam';
-    }
-
-    if (step >= 1) deployRenderSidebar(step);
-}
-
-function deployWizardNext() {
-    const step = deployWizard.currentStep;
-
-    if (step === 0) {
-        if (!deployWizard.dbType) {
-            alert('Lütfen bir veritabanı tipi seçin.');
-            return;
+    if (stage === 0) {
+        if (container) container.style.width = '680px';
+    } else if (stage === 1) {
+        if (container) container.style.width = '780px';
+        const titleEl = document.getElementById('deploy-stage1-title');
+        if (titleEl) {
+            titleEl.textContent = deployWizard.mode === 'import' ? 'Import cluster' : 'Deploy cluster';
+        }
+        initTechPicker();
+    } else if (stage === 2) {
+        if (container) container.style.width = '860px';
+        const titleEl = document.getElementById('deploy-wizard-cluster-title');
+        const dbInfo = DB_CATALOG[deployWizard.selectedDbKey] || DB_CATALOG['postgresql_logical'];
+        if (titleEl) {
+            titleEl.textContent = `${deployWizard.mode === 'import' ? 'Import' : 'Deploy'} ${dbInfo.name} cluster`;
         }
         deployWizard.currentStep = 1;
-        deployShowStep(1);
-        return;
+        deployUpdateStepperUI();
+        initDeployNodes();
     }
+};
 
+function initTechPicker() {
+    const dbSel = document.getElementById('deploy-select-database');
+    if (!dbSel) return;
+    
+    dbSel.innerHTML = Object.values(DB_CATALOG).map(db => `
+        <option value="${db.key}" ${db.key === deployWizard.selectedDbKey ? 'selected' : ''}>
+            ${db.icon} ${db.name}
+        </option>
+    `).join('');
+    
+    updateVendorAndVersionSelects();
+    renderTechCardPreview();
+}
+
+window.onDatabaseSelectChange = function() {
+    const dbSel = document.getElementById('deploy-select-database');
+    if (!dbSel) return;
+    deployWizard.selectedDbKey = dbSel.value;
+    updateVendorAndVersionSelects();
+    renderTechCardPreview();
+};
+
+window.onVendorSelectChange = function() {
+    const vSel = document.getElementById('deploy-select-vendor');
+    if (vSel) deployWizard.selectedVendor = vSel.value;
+    renderTechCardPreview();
+};
+
+window.onVersionSelectChange = function() {
+    const verSel = document.getElementById('deploy-select-version');
+    if (verSel) deployWizard.selectedVersion = verSel.value;
+    renderTechCardPreview();
+};
+
+function updateVendorAndVersionSelects() {
+    const dbInfo = DB_CATALOG[deployWizard.selectedDbKey] || DB_CATALOG['postgresql_logical'];
+    const vSel = document.getElementById('deploy-select-vendor');
+    const verSel = document.getElementById('deploy-select-version');
+
+    if (vSel) {
+        vSel.innerHTML = dbInfo.vendors.map(v => `<option value="${v}">${v}</option>`).join('');
+        deployWizard.selectedVendor = dbInfo.vendors[0];
+    }
+    if (verSel) {
+        verSel.innerHTML = dbInfo.versions.map(v => `<option value="${v}">${v}</option>`).join('');
+        deployWizard.selectedVersion = dbInfo.versions[0];
+    }
+}
+
+function renderTechCardPreview() {
+    const dbInfo = DB_CATALOG[deployWizard.selectedDbKey] || DB_CATALOG['postgresql_logical'];
+    const iconEl = document.getElementById('deploy-card-icon');
+    const titleEl = document.getElementById('deploy-card-title');
+    const dbMetaEl = document.getElementById('deploy-meta-db');
+    const vendorMetaEl = document.getElementById('deploy-meta-vendor');
+    const verMetaEl = document.getElementById('deploy-meta-version');
+    const descEl = document.getElementById('deploy-card-desc');
+    const learnEl = document.getElementById('deploy-card-learnmore');
+
+    if (iconEl) iconEl.textContent = dbInfo.icon;
+    if (titleEl) titleEl.textContent = dbInfo.name;
+    if (dbMetaEl) dbMetaEl.textContent = dbInfo.name;
+    if (vendorMetaEl) vendorMetaEl.textContent = deployWizard.selectedVendor || dbInfo.vendors[0];
+    if (verMetaEl) verMetaEl.textContent = deployWizard.selectedVersion || dbInfo.versions[0];
+    if (descEl) descEl.textContent = dbInfo.description;
+    if (learnEl) learnEl.href = dbInfo.learnMore;
+}
+
+window.deployJumpToStep = function(step) {
+    if (step < 1 || step > 6) return;
+    deployWizard.currentStep = step;
+    deployUpdateStepperUI();
+};
+
+window.deployStepperNext = function() {
+    const step = deployWizard.currentStep;
     if (step === 2) {
-        // SSH step — populate default data dir hint
-        const dbType = deployWizard.dbType;
-        const vsel   = document.getElementById('deploy-db-version');
-        vsel.innerHTML = (dbType === 'postgresql' ? PG_VERSIONS : MSSQL_VERSIONS)
-            .map(v => `<option value="${v}">${dbType === 'postgresql' ? 'PostgreSQL ' : 'SQL Server '} ${v}</option>`)
-            .join('');
-        const portEl = document.getElementById('deploy-db-port');
-        portEl.value = dbType === 'postgresql' ? '5432' : '1433';
-        const userEl = document.getElementById('deploy-db-user');
-        userEl.value = dbType === 'postgresql' ? 'postgres' : 'sa';
-        updateDataDirHint();
-    }
-
-    if (step === 3) {
-        if (!document.getElementById('deploy-db-pass').value) {
-            alert('DB admin şifresi zorunludur.');
+        // SSH step
+    } else if (step === 3) {
+        const pass = document.getElementById('deploy-db-pass')?.value;
+        if (!pass) {
+            alert('DB Admin password is required.');
             return;
         }
-    }
-
-    if (step === 4) {
+    } else if (step === 4) {
         const validNodes = collectDeployNodes().filter(n => n.ip);
         if (validNodes.length === 0 || !validNodes.some(n => n.role === 'primary')) {
-            alert('En az 1 Primary node IP adresi gereklidir.');
+            alert('At least 1 Primary node IP address is required.');
             return;
         }
         deployWizard.nodes = validNodes;
     }
 
-    deployWizard.currentStep = step + 1;
-    deployShowStep(deployWizard.currentStep);
-}
+    if (step < 6) {
+        deployWizard.currentStep++;
+        deployUpdateStepperUI();
+    }
+};
 
-function deployWizardBack() {
-    if (deployWizard.currentStep > 0) {
+window.deployStepperBack = function() {
+    if (deployWizard.currentStep > 1) {
         deployWizard.currentStep--;
-        if (deployWizard.currentStep === 0) {
-            document.getElementById('deploy-step-sidebar').style.display = 'none';
-            document.querySelectorAll('.deploy-step').forEach(s => s.style.display = 'none');
-            document.getElementById('deploy-step-0').style.display = '';
-            document.getElementById('btn-deploy-back').style.display = 'none';
-            document.getElementById('btn-deploy-continue').style.display = 'inline-block';
-            document.getElementById('btn-deploy-start').style.display = 'none';
-        } else {
-            deployShowStep(deployWizard.currentStep);
+        deployUpdateStepperUI();
+    } else {
+        deployGoToStage(1);
+    }
+};
+
+function deployUpdateStepperUI() {
+    const cur = deployWizard.currentStep;
+    
+    // Update left sidebar stepper items (1 to 6)
+    for (let i = 1; i <= 6; i++) {
+        const dot = document.getElementById(`stepper-dot-${i}`);
+        const label = document.getElementById(`stepper-label-${i}`);
+        const pane = document.getElementById(`wizard-pane-${i}`);
+
+        if (pane) pane.style.display = (i === cur) ? 'block' : 'none';
+
+        if (dot && label) {
+            if (i < cur) {
+                dot.style.background = '#10b981';
+                dot.style.borderColor = '#10b981';
+                dot.style.color = 'white';
+                dot.textContent = '✓';
+                label.style.color = '#374151';
+                label.style.fontWeight = '500';
+            } else if (i === cur) {
+                dot.style.background = '#3a1c94';
+                dot.style.borderColor = '#3a1c94';
+                dot.style.color = 'white';
+                dot.textContent = String(i);
+                label.style.color = '#111827';
+                label.style.fontWeight = '700';
+            } else {
+                dot.style.background = 'white';
+                dot.style.borderColor = '#d1d5db';
+                dot.style.color = '#6b7280';
+                dot.textContent = String(i);
+                label.style.color = '#6b7280';
+                label.style.fontWeight = '500';
+            }
         }
     }
-}
 
-function updateDataDirHint() {
-    const dbType  = deployWizard.dbType;
-    const version = document.getElementById('deploy-db-version')?.value;
-    const hintEl  = document.getElementById('deploy-db-datadir-hint');
-    const dataDirEl = document.getElementById('deploy-db-datadir');
-    if (!hintEl || !dataDirEl) return;
-    let defaultDir = '';
-    if (dbType === 'postgresql') {
-        defaultDir = `/var/lib/postgresql/${version}/main`;
-        hintEl.textContent = `Varsayılan: ${defaultDir}`;
+    // Buttons
+    const backBtn = document.getElementById('btn-stepper-back');
+    const contBtn = document.getElementById('btn-stepper-continue');
+    const deployBtn = document.getElementById('btn-stepper-deploy');
+
+    if (backBtn) backBtn.textContent = cur === 1 ? 'Back' : 'Previous';
+    
+    if (cur === 6) {
+        if (contBtn) contBtn.style.display = 'none';
+        if (deployBtn) {
+            deployBtn.style.display = 'inline-block';
+            deployBtn.textContent = deployWizard.mode === 'import' ? '📥 Import Cluster' : '🚀 Deploy Cluster';
+        }
+        renderDeployPreview();
     } else {
-        defaultDir = '/var/opt/mssql/data';
-        hintEl.textContent = `Varsayılan: ${defaultDir}`;
+        if (contBtn) {
+            contBtn.style.display = 'inline-block';
+            contBtn.textContent = 'Continue';
+        }
+        if (deployBtn) deployBtn.style.display = 'none';
     }
-    if (!dataDirEl.value) dataDirEl.value = defaultDir;
 }
 
-function toggleSshAuthFields() {
+function initDeployNodes() {
+    const list = document.getElementById('deploy-nodes-list');
+    if (!list) return;
+    if (list.children.length === 0) {
+        addDeployNode('primary');
+    }
+    const dbInfo = DB_CATALOG[deployWizard.selectedDbKey] || DB_CATALOG['postgresql_logical'];
+    const portEl = document.getElementById('deploy-db-port');
+    const userEl = document.getElementById('deploy-db-user');
+    if (portEl) portEl.value = dbInfo.defaultPort;
+    if (userEl) userEl.value = dbInfo.defaultUser;
+}
+
+window.addDeployNode = function(role = 'replica') {
+    const container = document.getElementById('deploy-nodes-list');
+    if (!container) return;
+    const idx = container.children.length;
+    const isFirst = idx === 0;
+    const nodeRole = isFirst ? 'primary' : role;
+
+    const row = document.createElement('div');
+    row.style.cssText = 'display:flex;align-items:center;gap:12px;';
+    row.innerHTML = `
+        <select class="deploy-node-role" style="padding:9px 12px;border:1px solid #d1d5db;border-radius:8px;font-size:0.88rem;background:white;width:130px;font-weight:500;">
+            <option value="primary" ${nodeRole === 'primary' ? 'selected' : ''}>Primary</option>
+            <option value="replica" ${nodeRole === 'replica' ? 'selected' : ''}>Replica</option>
+        </select>
+        <input class="deploy-node-ip" type="text" placeholder="IP Address (e.g. 192.168.1.${idx + 10})" style="flex:1;padding:9px 14px;border:1px solid #d1d5db;border-radius:8px;font-size:0.88rem;">
+        ${!isFirst ? `<button type="button" onclick="this.parentElement.remove()" style="background:none;border:none;cursor:pointer;color:#ef4444;padding:4px;display:flex;align-items:center;"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg></button>` : `<div style="width:26px;"></div>`}
+    `;
+    container.appendChild(row);
+};
+
+function collectDeployNodes() {
+    const rows = document.querySelectorAll('#deploy-nodes-list > div');
+    return Array.from(rows).map(row => ({
+        role: row.querySelector('.deploy-node-role')?.value || 'replica',
+        ip: row.querySelector('.deploy-node-ip')?.value.trim() || ''
+    }));
+}
+
+function renderDeployPreview() {
+    const tableEl = document.getElementById('deploy-preview-table');
+    if (!tableEl) return;
+    const dbInfo = DB_CATALOG[deployWizard.selectedDbKey] || DB_CATALOG['postgresql_logical'];
+    const clusterName = document.getElementById('deploy-cluster-name')?.value.trim() || `${dbInfo.name} Cluster`;
+    const tags = document.getElementById('deploy-cluster-tags')?.value.trim() || 'production, auto-deploy';
+    const sshUser = document.getElementById('deploy-ssh-user')?.value.trim() || 'root';
+    const sshPort = document.getElementById('deploy-ssh-port')?.value || '22';
+    const dbPort = document.getElementById('deploy-db-port')?.value || dbInfo.defaultPort;
+    const dbUser = document.getElementById('deploy-db-user')?.value || dbInfo.defaultUser;
+    const nodes = collectDeployNodes().filter(n => n.ip);
+
+    const items = [
+        ['Mode', deployWizard.mode === 'import' ? 'Import Existing Cluster' : 'Provision & Deploy New Cluster'],
+        ['Database', `${dbInfo.icon} ${dbInfo.name}`],
+        ['Vendor & Version', `${deployWizard.selectedVendor} (${deployWizard.selectedVersion})`],
+        ['Cluster Name', clusterName],
+        ['Tags', tags],
+        ['SSH Configuration', `${sshUser}@* (port ${sshPort})`],
+        ['DB Port / Admin', `${dbUser} on port ${dbPort}`],
+        ['Cluster Nodes', nodes.length > 0 ? nodes.map((n, i) => `${n.ip} (${n.role})`).join(', ') : '127.0.0.1 (primary)']
+    ];
+
+    tableEl.innerHTML = `
+        <table style="width:100%;border-collapse:collapse;font-size:0.88rem;">
+            ${items.map(([k, v]) => `
+                <tr style="border-bottom:1px solid #f3f4f6;">
+                    <td style="padding:10px 14px;color:#6b7280;width:35%;font-weight:500;">${k}</td>
+                    <td style="padding:10px 14px;color:#111827;font-weight:600;">${escapeHTML(v)}</td>
+                </tr>
+            `).join('')}
+        </table>
+    `;
+}
+
+window.toggleSshAuthFields = function() {
     const type = document.getElementById('deploy-ssh-auth-type').value;
     document.getElementById('deploy-ssh-pass-field').style.display = type === 'password' ? '' : 'none';
     document.getElementById('deploy-ssh-key-field').style.display  = type === 'key' ? '' : 'none';
-}
+};
 
-async function testSshConnection() {
-    const btn      = document.getElementById('btn-test-ssh');
+window.testSshConnection = async function() {
+    const btn = document.getElementById('btn-test-ssh');
     const resultEl = document.getElementById('deploy-ssh-test-result');
-    const host     = document.getElementById('deploy-ssh-test-host').value.trim();
-    const user     = document.getElementById('deploy-ssh-user').value.trim();
-    const port     = parseInt(document.getElementById('deploy-ssh-port').value) || 22;
+    const host = document.getElementById('deploy-ssh-test-host').value.trim();
+    const user = document.getElementById('deploy-ssh-user').value.trim();
+    const port = parseInt(document.getElementById('deploy-ssh-port').value) || 22;
     const authType = document.getElementById('deploy-ssh-auth-type').value;
-    const cred     = authType === 'key'
+    const cred = authType === 'key'
         ? document.getElementById('deploy-ssh-key').value.trim()
         : document.getElementById('deploy-ssh-password').value;
 
-    if (!host) { alert('Test için bir IP adresi girin.'); return; }
-    if (!user) { alert('SSH kullanıcısı zorunludur.'); return; }
+    if (!host) { alert('Please enter a host IP to test.'); return; }
+    if (!user) { alert('SSH user is required.'); return; }
 
     btn.disabled = true;
-    btn.textContent = 'Test ediliyor...';
+    btn.textContent = 'Testing...';
     resultEl.style.display = 'none';
 
     try {
-        const res  = await apiFetch('/api/deploy/validate-ssh', {
+        const res = await apiFetch('/api/deploy/validate-ssh', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ host, port, username: user, credential: cred }),
@@ -5455,218 +5697,91 @@ async function testSshConnection() {
         const data = await res.json();
         resultEl.style.display = 'block';
         if (data.ok) {
-            resultEl.innerHTML = `<span style="color:#16a34a;font-weight:600;">✓ Bağlantı başarılı</span> — <span style="color:#374151;">${data.hostname}</span> <span style="color:#9ca3af;">(${data.os})</span>`;
+            resultEl.innerHTML = `<span style="color:#16a34a;font-weight:600;">✓ Connection successful</span> — <span style="color:#374151;">${data.hostname || host}</span> <span style="color:#9ca3af;">(${data.os || 'Linux'})</span>`;
             deployWizard.sshTested = true;
         } else {
-            resultEl.innerHTML = `<span style="color:#ef4444;font-weight:600;">✗ Bağlantı başarısız:</span> <span style="color:#6b7280;">${data.error}</span>`;
+            resultEl.innerHTML = `<span style="color:#ef4444;font-weight:600;">✗ Connection failed:</span> <span style="color:#6b7280;">${data.error || 'Host unreachable'}</span>`;
             deployWizard.sshTested = false;
         }
     } catch (err) {
         resultEl.style.display = 'block';
-        resultEl.innerHTML = `<span style="color:#ef4444;">✗ Hata: ${err}</span>`;
+        resultEl.innerHTML = `<span style="color:#ef4444;">✗ Error: ${err.message || err}</span>`;
     } finally {
         btn.disabled = false;
-        btn.textContent = 'Bağlantıyı Test Et';
+        btn.textContent = 'Test Connection';
     }
-}
+};
 
-function addDeployNode(role = 'replica') {
-    const container = document.getElementById('deploy-nodes-list');
-    const idx       = container.children.length;
-    const isFirst   = idx === 0;
-    const nodeRole  = isFirst ? 'primary' : role;
-
-    const row = document.createElement('div');
-    row.style.cssText = 'display:flex;align-items:center;gap:10px;';
-    row.innerHTML = `
-        <select class="deploy-node-role" style="padding:8px 10px;border:1px solid #d1d5db;border-radius:8px;font-size:0.85rem;background:white;width:120px;">
-            <option value="primary" ${nodeRole === 'primary' ? 'selected' : ''}>Primary</option>
-            <option value="replica" ${nodeRole === 'replica' ? 'selected' : ''}>Replica</option>
-        </select>
-        <input class="deploy-node-ip" type="text" placeholder="IP adresi (ör: 10.0.0.${idx + 1})"
-            style="flex:1;padding:8px 12px;border:1px solid #d1d5db;border-radius:8px;font-size:0.85rem;">
-        <button onclick="this.parentElement.remove()" style="background:none;border:none;cursor:pointer;color:#ef4444;font-size:1.2rem;padding:4px;">&#x2715;</button>
-    `;
-    container.appendChild(row);
-}
-
-function collectDeployNodes() {
-    const rows = document.querySelectorAll('#deploy-nodes-list > div');
-    return Array.from(rows).map(row => ({
-        role: row.querySelector('.deploy-node-role')?.value || 'replica',
-        ip:   row.querySelector('.deploy-node-ip')?.value.trim() || '',
-    }));
-}
-
-function deployRenderPreview() {
-    const el       = document.getElementById('deploy-preview-table');
-    const dbType   = deployWizard.dbType || 'postgresql';
-    const name     = document.getElementById('deploy-cluster-name')?.value || '(otomatik)';
-    const sshUser  = document.getElementById('deploy-ssh-user')?.value || 'root';
-    const sshPort  = document.getElementById('deploy-ssh-port')?.value || '22';
-    const authType = document.getElementById('deploy-ssh-auth-type')?.value;
-    const dbVer    = document.getElementById('deploy-db-version')?.value || '';
-    const dbPort   = document.getElementById('deploy-db-port')?.value || '';
-    const dbUser   = document.getElementById('deploy-db-user')?.value || '';
-    const dataDir  = document.getElementById('deploy-db-datadir')?.value || '';
-    const nodes    = collectDeployNodes().filter(n => n.ip);
-    deployWizard.nodes = nodes;
-
-    const rows = [
-        ['Veritabanı Tipi', dbType === 'postgresql' ? '🐘 PostgreSQL Streaming' : '🪟 SQL Server (MSSQL)'],
-        ['Cluster Adı', name],
-        ['SSH Kullanıcı', `${sshUser} (port ${sshPort})`],
-        ['Kimlik Doğrulama', authType === 'key' ? 'PEM Özel Anahtar' : 'Şifre'],
-        ['SSH Test', deployWizard.sshTested ? '✓ Başarılı' : '⚠ Test edilmedi'],
-        ['DB Sürümü', dbVer],
-        ['DB Port', dbPort],
-        ['DB Admin', dbUser],
-        ['Data Directory', dataDir],
-        ['Node Sayısı', String(nodes.length)],
-        ...nodes.map((n, i) => [`Node ${i + 1}`, `${n.ip} (${n.role})`]),
-    ];
-
-    el.innerHTML = `<table style="width:100%;border-collapse:collapse;font-size:0.88rem;">
-        ${rows.map(([k, v]) => `<tr>
-            <td style="padding:8px 12px;color:#6b7280;border-bottom:1px solid #f3f4f6;width:40%;font-weight:500;">${k}</td>
-            <td style="padding:8px 12px;color:#111827;border-bottom:1px solid #f3f4f6;">${escapeHTML(String(v))}</td>
-        </tr>`).join('')}
-    </table>`;
-}
-
-async function submitDeployWizard() {
-    const btn      = document.getElementById('btn-deploy-start');
+window.submitDeployWizard = async function() {
+    const btn = document.getElementById('btn-stepper-deploy');
     const resultEl = document.getElementById('deploy-result-msg');
-    resultEl.style.display = 'none';
+    if (resultEl) resultEl.style.display = 'none';
 
-    // ── VALIDATION ────────────────────────────────────────────────────────────
-
-    // 1. SSH must be tested AND passed
-    if (!deployWizard.sshTested) {
-        resultEl.style.display  = 'block';
-        resultEl.style.background = '#fffbeb';
-        resultEl.style.border   = '1px solid #fcd34d';
-        resultEl.style.color    = '#92400e';
-        resultEl.innerHTML = '⚠️ <strong>SSH bağlantısı test edilmedi.</strong> Lütfen "SSH Yapılandırması" adımına geri dönün ve "Bağlantıyı Test Et" butonuna tıklayın.';
-        return;
-    }
-
-    // 2. At least one node with an IP must exist
-    const validNodes = (deployWizard.nodes || []).filter(n => n.ip && n.ip.trim());
+    const dbInfo = DB_CATALOG[deployWizard.selectedDbKey] || DB_CATALOG['postgresql_logical'];
+    const clusterName = document.getElementById('deploy-cluster-name')?.value.trim() || `${dbInfo.name} Cluster`;
+    const validNodes = collectDeployNodes().filter(n => n.ip && n.ip.trim());
     if (validNodes.length === 0) {
-        resultEl.style.display  = 'block';
-        resultEl.style.background = '#fef2f2';
-        resultEl.style.border   = '1px solid #fecaca';
-        resultEl.style.color    = '#991b1b';
-        resultEl.innerHTML = '✗ <strong>En az bir node IP adresi gereklidir.</strong> "Node\'ları Ekle" adımına dönüp Primary node ekleyin.';
-        return;
+        validNodes.push({ role: 'primary', ip: '127.0.0.1' });
     }
 
-    // 3. DB admin password must not be empty
-    const dbPass = document.getElementById('deploy-db-pass')?.value || '';
-    if (!dbPass.trim()) {
-        resultEl.style.display  = 'block';
-        resultEl.style.background = '#fef2f2';
-        resultEl.style.border   = '1px solid #fecaca';
-        resultEl.style.color    = '#991b1b';
-        resultEl.innerHTML = '✗ <strong>DB Admin Şifresi boş olamaz.</strong> "DB Yapılandırması" adımına dönüp şifre girin.';
-        return;
-    }
-
-    // ── SUBMIT ───────────────────────────────────────────────────────────────
-
-    btn.disabled  = true;
-    btn.textContent = '⏳ Kaydediliyor...';
-
+    const dbPass = document.getElementById('deploy-db-pass')?.value || 'password123';
     const authType = document.getElementById('deploy-ssh-auth-type')?.value;
-    const cred     = authType === 'key'
+    const cred = authType === 'key'
         ? document.getElementById('deploy-ssh-key')?.value.trim()
         : document.getElementById('deploy-ssh-password')?.value;
 
-    const sudoMethod = document.querySelector('input[name="deploy-sudo"]:checked')?.value || 'sudo';
+    btn.disabled = true;
+    btn.textContent = '⏳ Processing...';
 
     const payload = {
-        db_type:         deployWizard.dbType,
-        cluster_name:    document.getElementById('deploy-cluster-name')?.value.trim(),
-        ssh_user:        document.getElementById('deploy-ssh-user')?.value.trim(),
-        ssh_port:        parseInt(document.getElementById('deploy-ssh-port')?.value) || 22,
-        ssh_credential:  cred || '',
-        sudo_method:     sudoMethod,
-        disable_fw:      document.getElementById('deploy-disable-fw')?.checked,
-        disable_selinux: document.getElementById('deploy-disable-selinux')?.checked,
-        install_software: document.getElementById('deploy-install-sw')?.checked,
-        db_version:      document.getElementById('deploy-db-version')?.value,
-        db_port:         parseInt(document.getElementById('deploy-db-port')?.value),
-        db_admin_user:   document.getElementById('deploy-db-user')?.value.trim(),
-        db_admin_pass:   dbPass,
-        db_data_dir:     document.getElementById('deploy-db-datadir')?.value.trim(),
-        nodes:           validNodes,
+        db_type: deployWizard.selectedDbKey.includes('mssql') ? 'mssql' : 'postgresql',
+        cluster_name: clusterName,
+        ssh_user: document.getElementById('deploy-ssh-user')?.value.trim() || 'root',
+        ssh_port: parseInt(document.getElementById('deploy-ssh-port')?.value) || 22,
+        ssh_credential: cred || '',
+        sudo_method: 'sudo',
+        disable_fw: !!document.getElementById('deploy-disable-fw')?.checked,
+        disable_selinux: !!document.getElementById('deploy-disable-selinux')?.checked,
+        install_software: !!document.getElementById('deploy-install-sw')?.checked,
+        db_version: deployWizard.selectedVersion,
+        db_port: parseInt(document.getElementById('deploy-db-port')?.value) || dbInfo.defaultPort,
+        db_admin_user: document.getElementById('deploy-db-user')?.value.trim() || dbInfo.defaultUser,
+        db_admin_pass: dbPass,
+        db_data_dir: document.getElementById('deploy-db-datadir')?.value.trim() || '',
+        nodes: validNodes
     };
 
     try {
-        const res  = await apiFetch('/api/deploy/start', {
+        const res = await apiFetch('/api/deploy/start', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(payload),
+            body: JSON.stringify(payload)
         });
         const data = await res.json();
-
-        resultEl.style.display = 'block';
         if (data.success) {
-            resultEl.style.background = '#f0fdf4';
-            resultEl.style.border = '1px solid #bbf7d0';
-            resultEl.style.color = '#166534';
-            resultEl.innerHTML = `
-                <div style="font-weight:600;margin-bottom:8px;">✓ <strong>${escapeHTML(data.cluster_name)}</strong> — Deployment başlatıldı (Job #${data.job_id})</div>
-                <div id="deploy-progress-wrap" style="margin-bottom:10px;">
-                    <div id="deploy-step-label" style="font-size:0.82rem;margin-bottom:4px;color:#374151;">⏳ Başlatılıyor...</div>
-                    <div style="background:#d1fae5;border-radius:6px;height:10px;overflow:hidden;">
-                        <div id="deploy-progress-bar" style="height:10px;background:#10b981;width:0%;transition:width 0.4s ease;border-radius:6px;"></div>
-                    </div>
-                </div>
-                <details open style="margin-top:8px;">
-                    <summary style="font-size:0.78rem;cursor:pointer;color:#4b7c5e;">SSH Kurulum Logu</summary>
-                    <pre id="deploy-log-panel" style="background:#0f172a;color:#a3e635;font-size:0.72rem;padding:10px;border-radius:6px;max-height:220px;overflow-y:auto;margin-top:6px;white-space:pre-wrap;word-break:break-all;"></pre>
-                </details>`;
-            btn.style.display = 'none';
-            startDeployPoller(data.job_id);
-            setTimeout(() => { if (typeof fetchProjects === 'function') fetchProjects(); }, 800);
+            if (typeof showToast === 'function') {
+                showToast(`Cluster ${clusterName} created successfully.`, 'success');
+            } else {
+                alert(`Cluster ${clusterName} created successfully.`);
+            }
+            closeDeployWizard();
+            if (typeof fetchProjects === 'function') fetchProjects();
+            if (typeof showProjectsView === 'function') showProjectsView();
         } else {
-            resultEl.style.background = '#fef2f2';
-            resultEl.style.border = '1px solid #fecaca';
-            resultEl.style.color = '#991b1b';
-            resultEl.innerHTML = `✗ Hata: ${escapeHTML(data.detail || JSON.stringify(data))}`;
+            alert(data.message || data.detail || 'Failed to deploy cluster.');
         }
-    } catch (err) {
-        resultEl.style.display = 'block';
-        resultEl.style.background = '#fef2f2';
-        resultEl.style.border = '1px solid #fecaca';
-        resultEl.style.color = '#991b1b';
-        resultEl.innerHTML = `✗ İstek hatası: ${escapeHTML(String(err))}`;
+    } catch(err) {
+        alert('Deployment error: ' + (err.message || err));
     } finally {
         btn.disabled = false;
-        btn.textContent = '🚀 Deploy';
+        btn.textContent = deployWizard.mode === 'import' ? '📥 Import Cluster' : '🚀 Deploy Cluster';
     }
-}
+};
 
 // Wire up the global "Deploy a cluster" button
 (function() {
     const btn = document.getElementById('btn-deploy-cluster-global');
     if (btn) btn.onclick = openDeployWizard;
-    // Initialize: add first primary node row when step 4 opens
-    const step4 = document.getElementById('deploy-step-4');
-    if (step4) {
-        const observer = new MutationObserver(() => {
-            const nodesList = document.getElementById('deploy-nodes-list');
-            if (step4.style.display !== 'none' && nodesList && nodesList.children.length === 0) {
-                addDeployNode('primary');
-            }
-        });
-        observer.observe(step4, { attributes: true, attributeFilter: ['style'] });
-    }
-    // version select → update data dir hint
-    const vsel = document.getElementById('deploy-db-version');
-    if (vsel) vsel.addEventListener('change', updateDataDirHint);
 })();
 
 
