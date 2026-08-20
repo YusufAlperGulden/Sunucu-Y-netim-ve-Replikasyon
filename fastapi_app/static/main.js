@@ -193,7 +193,7 @@ document.addEventListener('DOMContentLoaded', () => {
         let hash = window.location.hash.substring(1) || 'projects-view';
         
         // If hash is a changelog section anchor (e.g. v1-4-2), show changelog-view and scroll
-        const changelogAnchors = ['v1-6-3', 'v1-6-2', 'v1-6-1', 'v1-6-0', 'v1-5-9', 'v1-5-8', 'v1-5-7', 'v1-5-6', 'v1-5-5', 'v1-5-4', 'v1-5-3', 'v1-5-2', 'v1-5-1', 'v1-5-0', 'v1-4-9', 'v1-4-8', 'v1-4-7', 'v1-4-6', 'v1-4-5', 'v1-4-4', 'v1-4-3', 'v1-4-2', 'v1-4-1', 'release-cycle', 'whats-new'];
+        const changelogAnchors = ['v1-7-0', 'v1-6-4', 'v1-6-3', 'v1-6-2', 'v1-6-1', 'v1-6-0', 'v1-5-9', 'v1-5-8', 'v1-5-7', 'v1-5-6', 'v1-5-5', 'v1-5-4', 'v1-5-3', 'v1-5-2', 'v1-5-1', 'v1-5-0', 'v1-4-9', 'v1-4-8', 'v1-4-7', 'v1-4-6', 'v1-4-5', 'v1-4-4', 'v1-4-3', 'v1-4-2', 'v1-4-1', 'release-cycle', 'whats-new'];
         if (changelogAnchors.includes(hash)) {
             document.querySelectorAll('.view-section').forEach(s => s.style.display = 'none');
             const cv = document.getElementById('changelog-view');
@@ -3190,14 +3190,22 @@ async function fetchActivityJobs() {
     if (!tbody) return;
     tbody.innerHTML = '<tr class="cc-loading-row"><td colspan="7"><div class="cc-loading-container"><div class="cc-spinner cc-spinner-lg"></div><span style="color:#9ca3af;font-size:0.85rem;">Loading jobs...</span></div></td></tr>';
     try {
-        const res = await apiFetch('/api/backups');
-        if (!res.ok) { tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;padding:40px;color:#9ca3af;">No backup jobs found.</td></tr>'; return; }
+        const res = await apiFetch('/api/jobs');
+        if (!res.ok) { tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;padding:40px;color:#9ca3af;">Failed to load jobs.</td></tr>'; return; }
         const jobs = await res.json();
-        if (!jobs || jobs.length === 0) { tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;padding:40px;color:#9ca3af;">No backup jobs found.</td></tr>'; return; }
+        if (!jobs || jobs.length === 0) { tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;padding:40px;color:#9ca3af;">No background jobs found.</td></tr>'; return; }
+        const statusColor = { SUCCESS:'#10b981', FAILED:'#ef4444', IN_PROGRESS:'#f59e0b', QUEUED:'#6b7280', VALIDATING:'#3b82f6', BOOTSTRAPPING:'#8b5cf6', CATCHING_UP:'#0ea5e9', RECOVERING:'#f97316' };
         tbody.innerHTML = jobs.map(j => {
-            const sc = j.status === 'completed' ? '#10b981' : (j.status === 'failed' ? '#ef4444' : '#f59e0b');
-            const sl = j.status === 'completed' ? 'Completed' : (j.status === 'failed' ? 'Failed' : (j.status || 'Paused'));
-            return '<tr style="border-bottom: 1px solid #f3f4f6;"><td style="padding: 12px 20px; font-size: 0.85rem;">' + escapeHTML(j.backup_name || j.name || 'Backup Job') + '</td><td style="padding: 12px 20px;"><span style="color:' + sc + ';font-size:0.8rem;display:inline-flex;align-items:center;gap:5px;"><div style=\"width:6px;height:6px;border-radius:50%;background:' + sc + '\"></div>' + sl + '</span></td><td style="padding: 12px 20px; font-size: 0.85rem; color: #6b7280;">' + escapeHTML(j.cluster_name || j.project_name || '-') + '</td><td style="padding: 12px 20px; font-size: 0.85rem; color: #6b7280;">' + escapeHTML(j.created_by || 'system') + '</td><td style="padding: 12px 20px; font-size: 0.85rem; color: #6b7280;">' + escapeHTML(j.created_at || '-') + '</td><td style="padding: 12px 20px; font-size: 0.85rem; color: #6b7280;">' + (j.duration || '0s') + '</td><td style="padding: 12px 20px;"><button style="padding: 4px 10px; font-size: 0.75rem; border: 1px solid #e5e7eb; border-radius: 4px; cursor: pointer; background: white;">...</button></td></tr>';
+            const sc = statusColor[j.status] || '#9ca3af';
+            return `<tr style="border-bottom:1px solid #f3f4f6;">
+              <td style="padding:12px 20px;font-size:0.85rem;">${j.id}</td>
+              <td style="padding:12px 20px;font-size:0.85rem;color:#6b7280;">${escapeHTML(j.cluster)}</td>
+              <td style="padding:12px 20px;"><span style="color:${sc};font-size:0.8rem;display:inline-flex;align-items:center;gap:5px;"><div style="width:6px;height:6px;border-radius:50%;background:${sc}"></div>${j.status}</span></td>
+              <td style="padding:12px 20px;font-size:0.85rem;color:#6b7280;">${escapeHTML(j.started)}</td>
+              <td style="padding:12px 20px;font-size:0.85rem;color:#6b7280;">${escapeHTML(j.completed || '-')}</td>
+              <td style="padding:12px 20px;font-size:0.85rem;color:#6b7280;">${j.duration || '-'}</td>
+              <td style="padding:12px 20px;font-size:0.8rem;color:#6b7280;max-width:200px;overflow:hidden;text-overflow:ellipsis;">${escapeHTML(j.message || '-')}</td>
+            </tr>`;
         }).join('');
     } catch(e) { tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;padding:40px;color:#9ca3af;">Failed to load jobs.</td></tr>'; }
 }
@@ -3452,4 +3460,302 @@ window.switchSettingsTab = function(tabName) {
             contentEl.style.display = (t === tabName) ? (t === 'profile' || t === 'diagnostics' ? 'flex' : 'block') : 'none';
         }
     });
+    // Trigger data load for the active tab
+    if (tabName === 'cloud')         window.loadCloudCredentials && window.loadCloudCredentials();
+    if (tabName === 'notifications') window.loadNotifications && window.loadNotifications();
+    if (tabName === 'certificates')  window.loadCertificates && window.loadCertificates();
+    if (tabName === 'license')       window.loadLicense && window.loadLicense();
+    if (tabName === 'addons')        window.loadAddons && window.loadAddons();
+    if (tabName === 'profile')       window.loadLdapConfigs && window.loadLdapConfigs(); // LDAP is in Users, not here
 };
+
+// ─────────────────────────────────────────────────────────────────────────────
+// SETTINGS TAB LOADERS
+// ─────────────────────────────────────────────────────────────────────────────
+
+// ── Cloud Storage Credentials ──────────────────────────────────────────────
+window.loadCloudCredentials = async function() {
+    const tbody = document.getElementById('cloud-cred-tbody');
+    if (!tbody) return;
+    tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;padding:20px;color:#9ca3af;">Loading...</td></tr>';
+    try {
+        const res = await apiFetch('/api/cloud-credentials');
+        if (!res.ok) { tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;padding:20px;color:#ef4444;">Failed to load credentials.</td></tr>'; return; }
+        const creds = await res.json();
+        if (!creds.length) { tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;padding:20px;color:#9ca3af;">No cloud credentials added yet.</td></tr>'; return; }
+        tbody.innerHTML = creds.map(c => `<tr style="border-bottom:1px solid #f3f4f6;">
+            <td style="padding:10px 16px;font-size:0.85rem;font-weight:600;">${escapeHTML(c.label)}</td>
+            <td style="padding:10px 16px;font-size:0.85rem;color:#6b7280;">${escapeHTML(c.provider)}</td>
+            <td style="padding:10px 16px;font-size:0.85rem;color:#6b7280;">${escapeHTML(c.bucket || '-')}</td>
+            <td style="padding:10px 16px;font-size:0.85rem;color:#6b7280;">${escapeHTML(c.created_at)}</td>
+            <td style="padding:10px 16px;">
+              <button onclick="testCloudCred(${c.id})" style="padding:4px 10px;font-size:0.75rem;border:1px solid #e5e7eb;border-radius:4px;cursor:pointer;background:white;margin-right:6px;">Test</button>
+              <button onclick="deleteCloudCred(${c.id})" style="padding:4px 10px;font-size:0.75rem;border:1px solid #fee2e2;border-radius:4px;cursor:pointer;background:white;color:#ef4444;">Delete</button>
+            </td>
+        </tr>`).join('');
+    } catch(e) { tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;padding:20px;color:#9ca3af;">Error loading credentials.</td></tr>'; }
+};
+
+window.testCloudCred = async function(id) {
+    const res = await apiFetch(`/api/cloud-credentials/${id}/test`, { method: 'POST' });
+    const data = await res.json();
+    alert(data.message);
+};
+window.deleteCloudCred = async function(id) {
+    if (!confirm('Delete this credential?')) return;
+    await apiFetch(`/api/cloud-credentials/${id}`, { method: 'DELETE' });
+    window.loadCloudCredentials();
+};
+window.openAddCloudCredModal = function() {
+    const modal = document.getElementById('modal-add-cloud-cred');
+    if (modal) modal.style.display = 'flex';
+};
+window.closeAddCloudCredModal = function() {
+    const modal = document.getElementById('modal-add-cloud-cred');
+    if (modal) modal.style.display = 'none';
+};
+window.submitCloudCredForm = async function() {
+    const provider = document.getElementById('cloud-cred-provider')?.value || 'AWS S3';
+    const label = document.getElementById('cloud-cred-label')?.value || '';
+    const key_id = document.getElementById('cloud-cred-keyid')?.value || '';
+    const secret = document.getElementById('cloud-cred-secret')?.value || '';
+    const bucket = document.getElementById('cloud-cred-bucket')?.value || '';
+    const region = document.getElementById('cloud-cred-region')?.value || '';
+    if (!label.trim()) { alert('Label is required'); return; }
+    const res = await apiFetch('/api/cloud-credentials', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({ provider, label, key_id, secret, bucket, region }) });
+    const data = await res.json();
+    if (data.success) { window.closeAddCloudCredModal(); window.loadCloudCredentials(); }
+    else alert(data.message || 'Failed to save credential');
+};
+
+// ── Notification Services ──────────────────────────────────────────────────
+window.loadNotifications = async function() {
+    const tbody = document.getElementById('notif-services-tbody');
+    if (!tbody) return;
+    tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;padding:20px;color:#9ca3af;">Loading...</td></tr>';
+    try {
+        const res = await apiFetch('/api/notifications');
+        if (!res.ok) { tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;padding:20px;color:#ef4444;">Failed to load.</td></tr>'; return; }
+        const svcs = await res.json();
+        if (!svcs.length) { tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;padding:20px;color:#9ca3af;">No notification services added yet.</td></tr>'; return; }
+        tbody.innerHTML = svcs.map(s => `<tr style="border-bottom:1px solid #f3f4f6;">
+            <td style="padding:10px 16px;font-size:0.85rem;font-weight:600;">${escapeHTML(s.label)}</td>
+            <td style="padding:10px 16px;font-size:0.85rem;color:#6b7280;">${escapeHTML(s.service_type)}</td>
+            <td style="padding:10px 16px;font-size:0.85rem;color:#6b7280;">${escapeHTML(s.host || s.webhook_url || '-')}</td>
+            <td style="padding:10px 16px;"><span style="color:${s.active?'#10b981':'#9ca3af'};font-size:0.8rem;">${s.active?'Active':'Inactive'}</span></td>
+            <td style="padding:10px 16px;">
+              <button onclick="testNotifService(${s.id})" style="padding:4px 10px;font-size:0.75rem;border:1px solid #e5e7eb;border-radius:4px;cursor:pointer;background:white;margin-right:6px;">Test</button>
+              <button onclick="deleteNotifService(${s.id})" style="padding:4px 10px;font-size:0.75rem;border:1px solid #fee2e2;border-radius:4px;cursor:pointer;background:white;color:#ef4444;">Delete</button>
+            </td>
+        </tr>`).join('');
+    } catch(e) { tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;padding:20px;color:#9ca3af;">Error loading services.</td></tr>'; }
+};
+
+window.testNotifService = async function(id) {
+    const res = await apiFetch(`/api/notifications/${id}/test`, { method: 'POST' });
+    const data = await res.json();
+    alert(data.message);
+};
+window.deleteNotifService = async function(id) {
+    if (!confirm('Delete this notification service?')) return;
+    await apiFetch(`/api/notifications/${id}`, { method: 'DELETE' });
+    window.loadNotifications();
+};
+window.openAddNotifModal = function() {
+    const m = document.getElementById('modal-add-notif'); if (m) m.style.display = 'flex';
+};
+window.closeAddNotifModal = function() {
+    const m = document.getElementById('modal-add-notif'); if (m) m.style.display = 'none';
+};
+window.submitNotifForm = async function() {
+    const service_type = document.getElementById('notif-type')?.value || 'SMTP';
+    const label = document.getElementById('notif-label')?.value || '';
+    if (!label.trim()) { alert('Label is required'); return; }
+    let settings = {};
+    if (service_type === 'SMTP') {
+        settings = {
+            host: document.getElementById('notif-smtp-host')?.value || '',
+            port: document.getElementById('notif-smtp-port')?.value || '587',
+            user: document.getElementById('notif-smtp-user')?.value || '',
+            password: document.getElementById('notif-smtp-pass')?.value || '',
+            from: document.getElementById('notif-smtp-from')?.value || ''
+        };
+    } else if (service_type === 'Slack') {
+        settings = { webhook_url: document.getElementById('notif-slack-webhook')?.value || '' };
+    }
+    const res = await apiFetch('/api/notifications', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({ service_type, label, settings }) });
+    const data = await res.json();
+    if (data.success) { window.closeAddNotifModal(); window.loadNotifications(); }
+    else alert(data.message || 'Failed to save');
+};
+
+// ── Certificate Management ─────────────────────────────────────────────────
+window.loadCertificates = async function(nodeId) {
+    const tbody = document.getElementById('cert-tbody');
+    if (!tbody) return;
+    tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;padding:20px;color:#9ca3af;">Loading certificates...</td></tr>';
+    const url = nodeId ? `/api/certificates?node_id=${nodeId}` : '/api/certificates';
+    try {
+        const res = await apiFetch(url);
+        if (!res.ok) { tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;padding:20px;color:#ef4444;">Failed to load.</td></tr>'; return; }
+        const certs = await res.json();
+        if (!certs.length) { tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;padding:20px;color:#9ca3af;">No certificates found. Select a node and click "Scan" to discover certificates.</td></tr>'; return; }
+        tbody.innerHTML = certs.map(c => {
+            const exp = c.expires_at ? new Date(c.expires_at) : null;
+            const expColor = exp ? (exp < new Date() ? '#ef4444' : (exp < new Date(Date.now()+30*86400000) ? '#f59e0b' : '#10b981')) : '#9ca3af';
+            return `<tr style="border-bottom:1px solid #f3f4f6;">
+                <td style="padding:10px 16px;font-size:0.85rem;font-weight:600;">${escapeHTML(c.common_name || '-')}</td>
+                <td style="padding:10px 16px;font-size:0.85rem;color:#6b7280;">${escapeHTML(c.cert_type)}</td>
+                <td style="padding:10px 16px;font-size:0.85rem;color:#6b7280;">${escapeHTML(c.node_name || '-')}</td>
+                <td style="padding:10px 16px;font-size:0.85rem;color:${expColor};">${escapeHTML(c.expires_at || '-')}</td>
+                <td style="padding:10px 16px;font-size:0.8rem;color:#9ca3af;max-width:180px;overflow:hidden;text-overflow:ellipsis;" title="${escapeHTML(c.file_path)}">${escapeHTML(c.file_path || '-')}</td>
+                <td style="padding:10px 16px;"><button onclick="deleteCert(${c.id})" style="padding:4px 10px;font-size:0.75rem;border:1px solid #fee2e2;border-radius:4px;cursor:pointer;background:white;color:#ef4444;">Delete</button></td>
+            </tr>`;
+        }).join('');
+    } catch(e) { tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;padding:20px;color:#9ca3af;">Error loading certificates.</td></tr>'; }
+};
+window.deleteCert = async function(id) {
+    if (!confirm('Delete this certificate record?')) return;
+    await apiFetch(`/api/certificates/${id}`, { method: 'DELETE' });
+    window.loadCertificates();
+};
+window.scanNodeCerts = async function(nodeId) {
+    if (!nodeId) { alert('Please select a node first'); return; }
+    const btn = document.getElementById('btn-scan-certs');
+    if (btn) { btn.disabled = true; btn.innerText = 'Scanning...'; }
+    try {
+        const res = await apiFetch(`/api/certificates/scan/${nodeId}`, { method: 'POST' });
+        const data = await res.json();
+        alert(data.success ? `Found ${data.found} certificate(s): ${(data.certificates||[]).join(', ')}` : (data.message || 'Scan failed'));
+        window.loadCertificates(nodeId);
+    } finally {
+        if (btn) { btn.disabled = false; btn.innerText = 'Scan Node'; }
+    }
+};
+
+// ── License ────────────────────────────────────────────────────────────────
+window.loadLicense = async function() {
+    try {
+        const res = await apiFetch('/api/license');
+        if (!res.ok) return;
+        const d = await res.json();
+        const el = id => document.getElementById(id);
+        if (el('lic-owner'))       el('lic-owner').innerText       = d.owner || '-';
+        if (el('lic-type'))        el('lic-type').innerText        = d.type  || 'Enterprise';
+        if (el('lic-expires'))     el('lic-expires').innerText     = d.expires || '-';
+        if (el('lic-nodes-used'))  el('lic-nodes-used').innerText  = `${d.total_nodes} / ${d.node_limit}`;
+        if (el('lic-nodes-avail')) el('lic-nodes-avail').innerText = `${d.nodes_available} nodes available`;
+        // Update progress bar
+        const bar = el('lic-nodes-bar');
+        if (bar) {
+            bar.style.width = `${Math.min(d.percent_used, 100)}%`;
+            bar.style.background = d.percent_used >= 90 ? '#ef4444' : (d.percent_used >= 70 ? '#f59e0b' : '#10b981');
+        }
+        const pct = el('lic-nodes-pct');
+        if (pct) pct.innerText = `${d.percent_used}%`;
+    } catch(e) { console.warn('License load error:', e); }
+};
+
+// ── Addons ─────────────────────────────────────────────────────────────────
+window.loadAddons = async function() {
+    try {
+        const res = await apiFetch('/api/addons');
+        if (!res.ok) return;
+        const d = await res.json();
+        const setToggle = (key, data) => {
+            const chk = document.getElementById(`addon-toggle-${key}`);
+            const urlEl = document.getElementById(`addon-url-${key}`);
+            if (chk) chk.checked = data.enabled;
+            if (urlEl) urlEl.value = data.api_url || '';
+        };
+        if (d.kubernetes) setToggle('kubernetes', d.kubernetes);
+        if (d.ops_center) setToggle('ops_center', d.ops_center);
+    } catch(e) { console.warn('Addons load error:', e); }
+};
+window.saveAddon = async function(key) {
+    const chk = document.getElementById(`addon-toggle-${key}`);
+    const urlEl = document.getElementById(`addon-url-${key}`);
+    const enabled = chk ? chk.checked : false;
+    const api_url = urlEl ? urlEl.value : '';
+    const res = await apiFetch(`/api/addons/${key}`, { method: 'PUT', headers: {'Content-Type':'application/json'}, body: JSON.stringify({ enabled, api_url }) });
+    const data = await res.json();
+    alert(data.success ? 'Addon settings saved.' : (data.message || 'Failed'));
+};
+window.testAddon = async function(key) {
+    const res = await apiFetch(`/api/addons/${key}/test`, { method: 'POST' });
+    const data = await res.json();
+    alert(data.message);
+};
+
+// ── LDAP (User Management tab) ─────────────────────────────────────────────
+window.loadLdapConfigs = async function() {
+    const tbody = document.getElementById('ldap-configs-tbody');
+    if (!tbody) return;
+    tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;padding:20px;color:#9ca3af;">Loading...</td></tr>';
+    try {
+        const res = await apiFetch('/api/ldap');
+        if (!res.ok) { tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;padding:20px;color:#9ca3af;">No LDAP configurations created yet.</td></tr>'; return; }
+        const configs = await res.json();
+        if (!configs.length) { tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;padding:20px;color:#9ca3af;">No LDAP configurations created yet.</td></tr>'; return; }
+        tbody.innerHTML = configs.map(c => `<tr style="border-bottom:1px solid #f3f4f6;">
+            <td style="padding:10px 16px;font-size:0.85rem;font-weight:600;">${escapeHTML(c.label)}</td>
+            <td style="padding:10px 16px;font-size:0.85rem;color:#6b7280;">${escapeHTML(c.server_url)}</td>
+            <td style="padding:10px 16px;font-size:0.85rem;color:#6b7280;">${escapeHTML(c.base_dn)}</td>
+            <td style="padding:10px 16px;"><span style="color:${c.active?'#10b981':'#9ca3af'};font-size:0.8rem;">${c.active?'Active':'Inactive'}</span></td>
+            <td style="padding:10px 16px;">
+              <button onclick="testLdapConfig(${c.id})" style="padding:4px 10px;font-size:0.75rem;border:1px solid #e5e7eb;border-radius:4px;cursor:pointer;background:white;margin-right:6px;">Test</button>
+              <button onclick="deleteLdapConfig(${c.id})" style="padding:4px 10px;font-size:0.75rem;border:1px solid #fee2e2;border-radius:4px;cursor:pointer;background:white;color:#ef4444;">Delete</button>
+            </td>
+        </tr>`).join('');
+    } catch(e) { tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;padding:20px;color:#9ca3af;">Error loading LDAP configs.</td></tr>'; }
+};
+window.testLdapConfig = async function(id) {
+    const res = await apiFetch(`/api/ldap/${id}/test`, { method: 'POST' });
+    const data = await res.json();
+    alert(data.message);
+};
+window.deleteLdapConfig = async function(id) {
+    if (!confirm('Delete this LDAP configuration?')) return;
+    await apiFetch(`/api/ldap/${id}`, { method: 'DELETE' });
+    window.loadLdapConfigs();
+};
+window.openAddLdapModal = function() {
+    const m = document.getElementById('modal-add-ldap'); if (m) m.style.display = 'flex';
+};
+window.closeAddLdapModal = function() {
+    const m = document.getElementById('modal-add-ldap'); if (m) m.style.display = 'none';
+};
+window.submitLdapForm = async function() {
+    const payload = {
+        label: document.getElementById('ldap-label')?.value || '',
+        server_url: document.getElementById('ldap-server-url')?.value || '',
+        base_dn: document.getElementById('ldap-base-dn')?.value || '',
+        bind_user: document.getElementById('ldap-bind-user')?.value || '',
+        bind_pass: document.getElementById('ldap-bind-pass')?.value || '',
+        user_filter: document.getElementById('ldap-user-filter')?.value || '(objectClass=person)'
+    };
+    if (!payload.label || !payload.server_url || !payload.base_dn) { alert('Label, Server URL and Base DN are required'); return; }
+    const res = await apiFetch('/api/ldap', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify(payload) });
+    const data = await res.json();
+    if (data.success) { window.closeAddLdapModal(); window.loadLdapConfigs(); }
+    else alert(data.message || 'Failed to save');
+};
+
+// ── Reports — Download & Delete buttons ────────────────────────────────────
+window.downloadReport = function(id) {
+    window.open(`/api/reports/${id}/download`, '_blank');
+};
+window.deleteReport = async function(id) {
+    if (!confirm('Delete this report?')) return;
+    await apiFetch(`/api/reports/${id}`, { method: 'DELETE' });
+    if (typeof window.fetchReports === 'function') window.fetchReports();
+};
+
+// Load LDAP when LDAP tab in User Management is clicked
+(function() {
+    const ldapBtn = document.getElementById('tab-btn-ldap');
+    if (ldapBtn) {
+        ldapBtn.addEventListener('click', () => { window.loadLdapConfigs && window.loadLdapConfigs(); });
+    }
+})();
+

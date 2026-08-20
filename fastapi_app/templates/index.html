@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Sunucu Yönetim ve Replikasyon</title>
-    <link rel="stylesheet" href="/static/style.css?v=71">
+    <link rel="stylesheet" href="/static/style.css?v=72">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 </head>
 <body>
@@ -419,39 +419,51 @@
                                 
                                 <button id="btn-save-project-settings" style="background: #3a1c94; color: white; border: none; border-radius: 4px; padding: 8px 16px; font-size: 0.9rem; cursor: pointer; margin-top: 8px;">Ayarları Kaydet</button>
                             </div>
+                                            <div style="font-size: 0.75rem; font-weight: 600; color: #9ca3af; margin-bottom: 12px; letter-spacing: 0.5px;">WHEN TO ENABLE IT</div>
+                                <ul style="font-size: 0.85rem; color: #4b5563; padding-left: 20px; margin-bottom: 24px; line-height: 1.5;">
+                                    <li style="margin-bottom: 8px;">Your infrastructure runs on Kubernetes and you want to operate databases as native cluster resources.</li>
+                                    <li style="margin-bottom: 8px;">You want database operators to automate deployment, scaling and recovery on K8s.</li>
+                                    <li>You need to manage Kubernetes-based database clusters from the same console as the rest of your fleet.</li>
+                                </ul>
                         </div>
                     </div>
 
                     <!-- Cloud Storage Content -->
                     <div id="settings-content-cloud" class="settings-content-pane" style="display: none; padding: 24px; flex-direction: column;">
                         <div style="display: flex; justify-content: flex-end; margin-bottom: 24px;">
-                            <button style="background: #3a1c94; color: white; border: none; border-radius: 4px; padding: 8px 16px; font-size: 0.9rem; cursor: pointer; display: flex; align-items: center; gap: 8px;">
+                            <button onclick="window.openAddCloudCredModal()" style="background: #3a1c94; color: white; border: none; border-radius: 4px; padding: 8px 16px; font-size: 0.9rem; cursor: pointer; display: flex; align-items: center; gap: 8px;">
                                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="16"></line><line x1="8" y1="12" x2="16" y2="12"></line></svg> Add cloud storage credentials
                             </button>
                         </div>
-                        <div style="background: #f9fafb; display: grid; grid-template-columns: 80px 1fr 1fr 2fr; padding: 12px 16px; font-weight: 600; font-size: 0.85rem; color: #4b5563; border-bottom: 1px solid #e5e7eb;">
-                            <div>ID</div><div>Name</div><div>Provider</div><div>Comment</div>
-                        </div>
-                        <div style="display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 60px 0; color: #6b7280; font-size: 0.9rem;">
-                            <svg width="64" height="64" viewBox="0 0 24 24" fill="#e5e7eb" stroke="#d1d5db" stroke-width="1" style="margin-bottom: 16px;"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path></svg>
-                            You haven't created credentials yet. When you do, it'll show up here.
-                        </div>
+                        <table style="width:100%;border-collapse:collapse;">
+                            <thead><tr style="background:#f9fafb;font-weight:600;font-size:0.85rem;color:#4b5563;">
+                                <th style="padding:12px 16px;text-align:left;border-bottom:1px solid #e5e7eb;">Name</th>
+                                <th style="padding:12px 16px;text-align:left;border-bottom:1px solid #e5e7eb;">Provider</th>
+                                <th style="padding:12px 16px;text-align:left;border-bottom:1px solid #e5e7eb;">Bucket</th>
+                                <th style="padding:12px 16px;text-align:left;border-bottom:1px solid #e5e7eb;">Added</th>
+                                <th style="padding:12px 16px;text-align:left;border-bottom:1px solid #e5e7eb;">Actions</th>
+                            </tr></thead>
+                            <tbody id="cloud-cred-tbody"><tr><td colspan="5" style="text-align:center;padding:40px;color:#9ca3af;">No cloud credentials added yet.</td></tr></tbody>
+                        </table>
                     </div>
 
                     <!-- Notification Services Content -->
                     <div id="settings-content-notifications" class="settings-content-pane" style="display: none; padding: 24px; flex-direction: column;">
                         <div style="display: flex; justify-content: flex-end; margin-bottom: 24px;">
-                            <button style="background: #3a1c94; color: white; border: none; border-radius: 4px; padding: 8px 16px; font-size: 0.9rem; cursor: pointer; display: flex; align-items: center; gap: 8px;">
+                            <button onclick="window.openAddNotifModal()" style="background: #3a1c94; color: white; border: none; border-radius: 4px; padding: 8px 16px; font-size: 0.9rem; cursor: pointer; display: flex; align-items: center; gap: 8px;">
                                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="16"></line><line x1="8" y1="12" x2="16" y2="12"></line></svg> Add new integration
                             </button>
                         </div>
-                        <div style="background: #f9fafb; display: grid; grid-template-columns: 1.5fr 1fr 1fr 1.5fr 1fr; padding: 12px 16px; font-weight: 600; font-size: 0.85rem; color: #4b5563; border-bottom: 1px solid #e5e7eb;">
-                            <div>Name</div><div>Service</div><div>Active</div><div>Send Alarms From</div><div>Trigger events</div>
-                        </div>
-                        <div style="display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 60px 0; color: #6b7280; font-size: 0.9rem;">
-                            <svg width="64" height="64" viewBox="0 0 24 24" fill="#e5e7eb" stroke="#d1d5db" stroke-width="1" style="margin-bottom: 16px;"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path></svg>
-                            You haven't created integration
-                        </div>
+                        <table style="width:100%;border-collapse:collapse;">
+                            <thead><tr style="background:#f9fafb;font-weight:600;font-size:0.85rem;color:#4b5563;">
+                                <th style="padding:12px 16px;text-align:left;border-bottom:1px solid #e5e7eb;">Name</th>
+                                <th style="padding:12px 16px;text-align:left;border-bottom:1px solid #e5e7eb;">Service</th>
+                                <th style="padding:12px 16px;text-align:left;border-bottom:1px solid #e5e7eb;">Host / Webhook</th>
+                                <th style="padding:12px 16px;text-align:left;border-bottom:1px solid #e5e7eb;">Status</th>
+                                <th style="padding:12px 16px;text-align:left;border-bottom:1px solid #e5e7eb;">Actions</th>
+                            </tr></thead>
+                            <tbody id="notif-services-tbody"><tr><td colspan="5" style="text-align:center;padding:40px;color:#9ca3af;">No notification services added yet.</td></tr></tbody>
+                        </table>
                     </div>
 
                     <!-- Certificate Management Content -->
@@ -655,3 +667,115 @@
                 </div>
             </div>
             
+
+<!-- ===== CLOUD CREDENTIAL MODAL ===== -->
+<div id="modal-add-cloud-cred" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:9999;align-items:center;justify-content:center;">
+  <div style="background:white;border-radius:8px;padding:32px;width:480px;max-width:95vw;">
+    <h3 style="margin:0 0 20px;font-size:1.1rem;color:#111827;">Add Cloud Storage Credentials</h3>
+    <div style="display:flex;flex-direction:column;gap:14px;">
+      <div><label style="font-size:0.85rem;color:#4b5563;display:block;margin-bottom:4px;">Provider</label>
+        <select id="cloud-cred-provider" style="width:100%;padding:8px 10px;border:1px solid #d1d5db;border-radius:4px;font-size:0.9rem;">
+          <option>AWS S3</option><option>GCS</option><option>Azure Blob</option>
+        </select>
+      </div>
+      <div><label style="font-size:0.85rem;color:#4b5563;display:block;margin-bottom:4px;">Label *</label>
+        <input id="cloud-cred-label" type="text" placeholder="e.g. Production S3 Backups" style="width:100%;padding:8px 10px;border:1px solid #d1d5db;border-radius:4px;font-size:0.9rem;box-sizing:border-box;">
+      </div>
+      <div><label style="font-size:0.85rem;color:#4b5563;display:block;margin-bottom:4px;">Access Key ID</label>
+        <input id="cloud-cred-keyid" type="text" placeholder="AKIAIOSFODNN7EXAMPLE" style="width:100%;padding:8px 10px;border:1px solid #d1d5db;border-radius:4px;font-size:0.9rem;box-sizing:border-box;">
+      </div>
+      <div><label style="font-size:0.85rem;color:#4b5563;display:block;margin-bottom:4px;">Secret Access Key</label>
+        <input id="cloud-cred-secret" type="password" placeholder="••••••••" style="width:100%;padding:8px 10px;border:1px solid #d1d5db;border-radius:4px;font-size:0.9rem;box-sizing:border-box;">
+      </div>
+      <div style="display:flex;gap:12px;">
+        <div style="flex:1;"><label style="font-size:0.85rem;color:#4b5563;display:block;margin-bottom:4px;">Bucket</label>
+          <input id="cloud-cred-bucket" type="text" placeholder="my-backup-bucket" style="width:100%;padding:8px 10px;border:1px solid #d1d5db;border-radius:4px;font-size:0.9rem;box-sizing:border-box;">
+        </div>
+        <div style="flex:1;"><label style="font-size:0.85rem;color:#4b5563;display:block;margin-bottom:4px;">Region</label>
+          <input id="cloud-cred-region" type="text" placeholder="us-east-1" style="width:100%;padding:8px 10px;border:1px solid #d1d5db;border-radius:4px;font-size:0.9rem;box-sizing:border-box;">
+        </div>
+      </div>
+    </div>
+    <div style="display:flex;justify-content:flex-end;gap:12px;margin-top:24px;">
+      <button onclick="window.closeAddCloudCredModal()" style="padding:8px 20px;border:1px solid #d1d5db;border-radius:4px;background:white;cursor:pointer;font-size:0.9rem;">Cancel</button>
+      <button onclick="window.submitCloudCredForm()" style="padding:8px 20px;border:none;border-radius:4px;background:#3a1c94;color:white;cursor:pointer;font-size:0.9rem;font-weight:600;">Save Credentials</button>
+    </div>
+  </div>
+</div>
+
+<!-- ===== NOTIFICATION SERVICE MODAL ===== -->
+<div id="modal-add-notif" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:9999;align-items:center;justify-content:center;">
+  <div style="background:white;border-radius:8px;padding:32px;width:480px;max-width:95vw;">
+    <h3 style="margin:0 0 20px;font-size:1.1rem;color:#111827;">Add Notification Service</h3>
+    <div style="display:flex;flex-direction:column;gap:14px;">
+      <div><label style="font-size:0.85rem;color:#4b5563;display:block;margin-bottom:4px;">Service Type</label>
+        <select id="notif-type" onchange="document.getElementById('notif-smtp-fields').style.display=this.value==='SMTP'?'flex':'none';document.getElementById('notif-slack-fields').style.display=this.value==='Slack'?'block':'none';" style="width:100%;padding:8px 10px;border:1px solid #d1d5db;border-radius:4px;font-size:0.9rem;">
+          <option>SMTP</option><option>Slack</option><option>PagerDuty</option>
+        </select>
+      </div>
+      <div><label style="font-size:0.85rem;color:#4b5563;display:block;margin-bottom:4px;">Label *</label>
+        <input id="notif-label" type="text" placeholder="e.g. Production Alerts SMTP" style="width:100%;padding:8px 10px;border:1px solid #d1d5db;border-radius:4px;font-size:0.9rem;box-sizing:border-box;">
+      </div>
+      <!-- SMTP Fields -->
+      <div id="notif-smtp-fields" style="display:flex;flex-direction:column;gap:10px;">
+        <div style="display:flex;gap:10px;">
+          <div style="flex:2;"><label style="font-size:0.85rem;color:#4b5563;display:block;margin-bottom:4px;">SMTP Host</label>
+            <input id="notif-smtp-host" type="text" placeholder="smtp.gmail.com" style="width:100%;padding:8px 10px;border:1px solid #d1d5db;border-radius:4px;font-size:0.9rem;box-sizing:border-box;">
+          </div>
+          <div style="flex:1;"><label style="font-size:0.85rem;color:#4b5563;display:block;margin-bottom:4px;">Port</label>
+            <input id="notif-smtp-port" type="number" value="587" style="width:100%;padding:8px 10px;border:1px solid #d1d5db;border-radius:4px;font-size:0.9rem;box-sizing:border-box;">
+          </div>
+        </div>
+        <div><label style="font-size:0.85rem;color:#4b5563;display:block;margin-bottom:4px;">SMTP User</label>
+          <input id="notif-smtp-user" type="text" placeholder="alerts@company.com" style="width:100%;padding:8px 10px;border:1px solid #d1d5db;border-radius:4px;font-size:0.9rem;box-sizing:border-box;">
+        </div>
+        <div><label style="font-size:0.85rem;color:#4b5563;display:block;margin-bottom:4px;">SMTP Password</label>
+          <input id="notif-smtp-pass" type="password" placeholder="••••••••" style="width:100%;padding:8px 10px;border:1px solid #d1d5db;border-radius:4px;font-size:0.9rem;box-sizing:border-box;">
+        </div>
+        <div><label style="font-size:0.85rem;color:#4b5563;display:block;margin-bottom:4px;">From Address</label>
+          <input id="notif-smtp-from" type="text" placeholder="ClusterControl &lt;no-reply@company.com&gt;" style="width:100%;padding:8px 10px;border:1px solid #d1d5db;border-radius:4px;font-size:0.9rem;box-sizing:border-box;">
+        </div>
+      </div>
+      <!-- Slack Fields -->
+      <div id="notif-slack-fields" style="display:none;">
+        <label style="font-size:0.85rem;color:#4b5563;display:block;margin-bottom:4px;">Slack Webhook URL</label>
+        <input id="notif-slack-webhook" type="text" placeholder="https://hooks.slack.com/services/..." style="width:100%;padding:8px 10px;border:1px solid #d1d5db;border-radius:4px;font-size:0.9rem;box-sizing:border-box;">
+      </div>
+    </div>
+    <div style="display:flex;justify-content:flex-end;gap:12px;margin-top:24px;">
+      <button onclick="window.closeAddNotifModal()" style="padding:8px 20px;border:1px solid #d1d5db;border-radius:4px;background:white;cursor:pointer;font-size:0.9rem;">Cancel</button>
+      <button onclick="window.submitNotifForm()" style="padding:8px 20px;border:none;border-radius:4px;background:#3a1c94;color:white;cursor:pointer;font-size:0.9rem;font-weight:600;">Save Integration</button>
+    </div>
+  </div>
+</div>
+
+<!-- ===== LDAP CONFIGURATION MODAL ===== -->
+<div id="modal-add-ldap" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:9999;align-items:center;justify-content:center;">
+  <div style="background:white;border-radius:8px;padding:32px;width:480px;max-width:95vw;">
+    <h3 style="margin:0 0 20px;font-size:1.1rem;color:#111827;">Add LDAP / Active Directory Configuration</h3>
+    <div style="display:flex;flex-direction:column;gap:14px;">
+      <div><label style="font-size:0.85rem;color:#4b5563;display:block;margin-bottom:4px;">Label *</label>
+        <input id="ldap-label" type="text" placeholder="e.g. Corporate AD" style="width:100%;padding:8px 10px;border:1px solid #d1d5db;border-radius:4px;font-size:0.9rem;box-sizing:border-box;">
+      </div>
+      <div><label style="font-size:0.85rem;color:#4b5563;display:block;margin-bottom:4px;">Server URL *</label>
+        <input id="ldap-server-url" type="text" placeholder="ldap://dc.company.com:389" style="width:100%;padding:8px 10px;border:1px solid #d1d5db;border-radius:4px;font-size:0.9rem;box-sizing:border-box;">
+      </div>
+      <div><label style="font-size:0.85rem;color:#4b5563;display:block;margin-bottom:4px;">Base DN *</label>
+        <input id="ldap-base-dn" type="text" placeholder="DC=company,DC=com" style="width:100%;padding:8px 10px;border:1px solid #d1d5db;border-radius:4px;font-size:0.9rem;box-sizing:border-box;">
+      </div>
+      <div><label style="font-size:0.85rem;color:#4b5563;display:block;margin-bottom:4px;">Bind User (optional)</label>
+        <input id="ldap-bind-user" type="text" placeholder="CN=svc-account,DC=company,DC=com" style="width:100%;padding:8px 10px;border:1px solid #d1d5db;border-radius:4px;font-size:0.9rem;box-sizing:border-box;">
+      </div>
+      <div><label style="font-size:0.85rem;color:#4b5563;display:block;margin-bottom:4px;">Bind Password</label>
+        <input id="ldap-bind-pass" type="password" placeholder="••••••••" style="width:100%;padding:8px 10px;border:1px solid #d1d5db;border-radius:4px;font-size:0.9rem;box-sizing:border-box;">
+      </div>
+      <div><label style="font-size:0.85rem;color:#4b5563;display:block;margin-bottom:4px;">User Filter</label>
+        <input id="ldap-user-filter" type="text" value="(objectClass=person)" style="width:100%;padding:8px 10px;border:1px solid #d1d5db;border-radius:4px;font-size:0.9rem;box-sizing:border-box;">
+      </div>
+    </div>
+    <div style="display:flex;justify-content:flex-end;gap:12px;margin-top:24px;">
+      <button onclick="window.closeAddLdapModal()" style="padding:8px 20px;border:1px solid #d1d5db;border-radius:4px;background:white;cursor:pointer;font-size:0.9rem;">Cancel</button>
+      <button onclick="window.submitLdapForm()" style="padding:8px 20px;border:none;border-radius:4px;background:#3a1c94;color:white;cursor:pointer;font-size:0.9rem;font-weight:600;">Save & Test</button>
+    </div>
+  </div>
+</div>

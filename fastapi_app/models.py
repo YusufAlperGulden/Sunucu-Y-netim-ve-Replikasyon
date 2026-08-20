@@ -1,6 +1,6 @@
 import os
 import datetime
-from sqlalchemy import create_engine, Column, Integer, String, ForeignKey, DateTime, text, Index, Float
+from sqlalchemy import create_engine, Column, Integer, String, ForeignKey, DateTime, text, Index, Float, Boolean
 from sqlalchemy.orm import declarative_base, relationship, sessionmaker
 from vault import encrypt
 
@@ -144,3 +144,70 @@ class User(Base):
     password_hash = Column(String(255), nullable=False)
     role = Column(String(20), default="viewer") # "admin" or "viewer"
     created_at = Column(DateTime, default=datetime.datetime.utcnow)
+
+
+class CloudCredential(Base):
+    """Cloud storage provider credentials (AWS S3, GCS, Azure Blob)."""
+    __tablename__ = 'cloud_credentials'
+    id = Column(Integer, primary_key=True, index=True)
+    provider = Column(String(50), nullable=False)          # 'AWS S3', 'GCS', 'Azure'
+    label = Column(String(100), nullable=False)
+    encrypted_key_id = Column(String(500), nullable=True)  # Access key / Client ID
+    encrypted_secret = Column(String(500), nullable=True)  # Secret / credentials JSON
+    bucket = Column(String(255), nullable=True)
+    region = Column(String(100), nullable=True)
+    created_at = Column(DateTime, default=datetime.datetime.utcnow)
+
+
+class NotificationService(Base):
+    """SMTP / Slack / PagerDuty notification configurations."""
+    __tablename__ = 'notification_services'
+    id = Column(Integer, primary_key=True, index=True)
+    service_type = Column(String(50), nullable=False)  # 'SMTP', 'Slack', 'PagerDuty'
+    label = Column(String(100), nullable=False)
+    # Stored as encrypted JSON string containing all settings
+    encrypted_settings = Column(String(2000), nullable=True)
+    active = Column(Boolean, default=True)
+    created_at = Column(DateTime, default=datetime.datetime.utcnow)
+
+
+class CertificateRecord(Base):
+    """TLS/CA certificate records scanned from nodes via SSH."""
+    __tablename__ = 'certificates'
+    id = Column(Integer, primary_key=True, index=True)
+    node_id = Column(Integer, ForeignKey('nodes.id', ondelete='CASCADE'), nullable=True)
+    cert_type = Column(String(50), default='TLS')  # 'TLS', 'CA', 'Client'
+    common_name = Column(String(255), nullable=True)
+    subject_alt_names = Column(String(500), nullable=True)
+    expires_at = Column(DateTime, nullable=True)
+    issuer = Column(String(255), nullable=True)
+    file_path = Column(String(500), nullable=True)
+    created_at = Column(DateTime, default=datetime.datetime.utcnow)
+
+    node = relationship('DatabaseNode')
+
+
+class LDAPConfig(Base):
+    """LDAP / Active Directory server configurations."""
+    __tablename__ = 'ldap_configs'
+    id = Column(Integer, primary_key=True, index=True)
+    label = Column(String(100), nullable=False)
+    server_url = Column(String(255), nullable=False)     # e.g. ldap://dc.company.com:389
+    base_dn = Column(String(255), nullable=False)        # e.g. DC=company,DC=com
+    bind_user = Column(String(255), nullable=True)
+    encrypted_bind_pass = Column(String(500), nullable=True)
+    user_filter = Column(String(255), default='(objectClass=person)')
+    active = Column(Boolean, default=True)
+    created_at = Column(DateTime, default=datetime.datetime.utcnow)
+
+
+class AddonSetting(Base):
+    """Addon configuration (Kubernetes, Ops-Center)."""
+    __tablename__ = 'addon_settings'
+    id = Column(Integer, primary_key=True, index=True)
+    addon_key = Column(String(100), unique=True, nullable=False)  # 'kubernetes', 'ops_center'
+    enabled = Column(Boolean, default=False)
+    api_url = Column(String(500), nullable=True)
+    extra_json = Column(String(1000), nullable=True)
+    updated_at = Column(DateTime, default=datetime.datetime.utcnow, onupdate=datetime.datetime.utcnow)
+
