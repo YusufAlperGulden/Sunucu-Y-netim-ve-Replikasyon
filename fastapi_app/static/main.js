@@ -203,6 +203,21 @@ document.addEventListener('DOMContentLoaded', () => {
     const sidebarLinks = document.querySelectorAll('.sidebar-nav > a, .sidebar-nav > div > a, a[data-view="changelog-view"]');
     const viewSections = document.querySelectorAll('.view-section');
     
+    window.switchView = function(viewName, subtab) {
+        let hash = viewName;
+        if (!hash.endsWith('-view')) {
+            hash = hash + '-view';
+        }
+        if (subtab) {
+            window.pendingActivitySubtab = subtab;
+        }
+        if (window.location.hash === '#' + hash) {
+            handleRouting();
+        } else {
+            window.location.hash = hash;
+        }
+    };
+
     function handleRouting() {
         let hash = window.location.hash.substring(1) || 'projects-view';
         
@@ -249,10 +264,19 @@ document.addEventListener('DOMContentLoaded', () => {
             if(typeof stopDashboardInterval === 'function') stopDashboardInterval();
         } else if (hash === 'activity-view' || hash === 'audit-logs-view') {
             if(typeof stopDashboardInterval === 'function') stopDashboardInterval();
-            setTimeout(() => { const auditBtn = document.getElementById('ac-tab-audit'); if(auditBtn && typeof window.switchActivityTab === 'function') window.switchActivityTab('audit', auditBtn); else if(typeof window.fetchAuditLogs === 'function') window.fetchAuditLogs(); }, 50);
-            // Set Audit Log as active default tab
-            const auditBtn = document.getElementById('ac-tab-audit');
-            if(auditBtn) window.switchActivityTab('audit', auditBtn);
+            const subtab = window.pendingActivitySubtab || 'alarms';
+            window.pendingActivitySubtab = null;
+            setTimeout(() => {
+                const targetBtn = document.getElementById('ac-tab-' + subtab);
+                if (targetBtn && typeof window.switchActivityTab === 'function') {
+                    window.switchActivityTab(subtab, targetBtn);
+                } else {
+                    const auditBtn = document.getElementById('ac-tab-audit');
+                    if (auditBtn && typeof window.switchActivityTab === 'function') {
+                        window.switchActivityTab('audit', auditBtn);
+                    }
+                }
+            }, 50);
         } else if (hash === 'settings-view') {
             if(typeof stopDashboardInterval === 'function') stopDashboardInterval();
             if(typeof fetchProfile === 'function') fetchProfile();

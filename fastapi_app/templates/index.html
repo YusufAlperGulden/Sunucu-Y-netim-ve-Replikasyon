@@ -224,7 +224,7 @@
 
                 <!-- FOOTER -->
                 <div style="display:flex;justify-content:space-between;align-items:center;margin-top:16px;padding-top:12px;border-top:1px solid #f3f4f6;font-size:0.85rem;color:#6b7280;">
-                    <div>You have <span id="alarms-unmuted-count" style="font-weight:700;color:#111827;">0</span> unmuted alarms. To see all alarms, go to <a href="#" onclick="switchView('activity');closeAlarmsPanel();" style="color:#3a1c94;font-weight:600;text-decoration:none;">Activity center</a>.</div>
+                    <div>You have <span id="alarms-unmuted-count" style="font-weight:700;color:#111827;">0</span> unmuted alarms. To see all alarms, go to <a href="#activity-view" onclick="switchView('activity-view', 'alarms'); closeAlarmsPanel(); return false;" style="color:#3a1c94;font-weight:600;text-decoration:none;cursor:pointer;">Activity center</a>.</div>
                     <button onclick="closeAlarmsPanel()" style="padding:6px 18px;border:1px solid #d1d5db;background:white;color:#374151;border-radius:6px;cursor:pointer;font-weight:500;box-shadow:0 1px 2px rgba(0,0,0,0.05);" onmouseover="this.style.background='#f9fafb'" onmouseout="this.style.background='white'">Close</button>
                 </div>
             </div>
@@ -1595,7 +1595,7 @@ Real OS metrics (CPU, RAM, Disk I/O) cannot be fetched directly from PostgreSQL 
         </div>
     </div>
 
-    <script src="/static/main.js?v=92"></script>
+    <script src="/static/main.js?v=93"></script>
 
 
 
@@ -3495,6 +3495,6 @@ Real OS metrics (CPU, RAM, Disk I/O) cannot be fetched directly from PostgreSQL 
   </div>
 </div>
 
-<script src="/static/main.js?v=92"></script>
+<script src="/static/main.js?v=93"></script>
 </body>
 </html>
