@@ -143,29 +143,29 @@
                         <span id="header-username-display">admin</span>
                     </div>
 
-                    <!-- Dropdown panel -->
-                    <div id="profile-dropdown" style="display:none;position:absolute;top:calc(100% + 10px);right:0;width:270px;background:white;border-radius:12px;box-shadow:0 8px 30px rgba(0,0,0,0.15);border:1px solid #e5e7eb;z-index:9999;overflow:hidden;">
+                    <!-- Dropdown panel (ClusterControl Style with Popup Animation) -->
+                    <div id="profile-dropdown" style="display:none;position:absolute;top:calc(100% + 10px);right:0;width:280px;background:white;border-radius:16px;box-shadow:0 16px 40px rgba(0,0,0,0.12), 0 2px 6px rgba(0,0,0,0.04);border:1px solid #e5e7eb;z-index:9999;overflow:hidden;transform-origin:top right;">
                         <!-- User info header -->
-                        <div style="display:flex;align-items:center;gap:14px;padding:18px 20px;border-bottom:1px solid #f3f4f6;">
-                            <div id="dropdown-profile-avatar" style="width:46px;height:46px;border-radius:50%;background:#ede9fe;color:#4f46e5;font-size:1rem;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0;">AD</div>
-                            <div>
-                                <div id="dropdown-profile-name" style="font-weight:700;font-size:0.95rem;color:#111827;">Admin</div>
-                                <div id="dropdown-profile-email" style="font-size:0.8rem;color:#6b7280;margin-top:2px;">admin@localhost</div>
-                                <div id="dropdown-profile-timezone" style="font-size:0.78rem;color:#9ca3af;margin-top:1px;">UTC</div>
+                        <div style="display:flex;align-items:center;gap:14px;padding:20px 22px;border-bottom:1px solid #f3f4f6;">
+                            <div id="dropdown-profile-avatar" style="width:48px;height:48px;border-radius:50%;background:#ffe4e6;color:#e11d48;font-size:1.05rem;font-weight:600;display:flex;align-items:center;justify-content:center;flex-shrink:0;">AD</div>
+                            <div style="overflow:hidden;">
+                                <div id="dropdown-profile-name" style="font-weight:700;font-size:0.95rem;color:#111827;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">Admin</div>
+                                <div id="dropdown-profile-email" style="font-size:0.82rem;color:#6b7280;margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">admin@localhost</div>
+                                <div id="dropdown-profile-timezone" style="font-size:0.8rem;color:#9ca3af;margin-top:2px;">UTC</div>
                             </div>
                         </div>
                         <!-- Actions -->
                         <div style="padding:8px 0;">
-                            <div onclick="profileGoTo('profile');closeProfileMenu();" style="display:flex;align-items:center;gap:12px;padding:11px 20px;cursor:pointer;font-size:0.88rem;color:#374151;transition:background 0.15s;" onmouseover="this.style.background='#f9fafb'" onmouseout="this.style.background='transparent'">
+                            <div onclick="profileGoTo('profile');closeProfileMenu();" style="display:flex;align-items:center;gap:12px;padding:12px 22px;cursor:pointer;font-size:0.88rem;color:#374151;transition:background 0.15s;" onmouseover="this.style.background='#f9fafb'" onmouseout="this.style.background='transparent'">
                                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
                                 View profile
                             </div>
-                            <div onclick="profileGoTo('license');closeProfileMenu();" style="display:flex;align-items:center;gap:12px;padding:11px 20px;cursor:pointer;font-size:0.88rem;color:#374151;transition:background 0.15s;" onmouseover="this.style.background='#f9fafb'" onmouseout="this.style.background='transparent'">
+                            <div onclick="profileGoTo('license');closeProfileMenu();" style="display:flex;align-items:center;gap:12px;padding:12px 22px;cursor:pointer;font-size:0.88rem;color:#374151;transition:background 0.15s;" onmouseover="this.style.background='#f9fafb'" onmouseout="this.style.background='transparent'">
                                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="3" width="20" height="14" rx="2"></rect><path d="M8 21h8M12 17v4"></path></svg>
                                 License
                             </div>
                             <div style="height:1px;background:#f3f4f6;margin:4px 0;"></div>
-                            <div onclick="profileLogout();" style="display:flex;align-items:center;gap:12px;padding:11px 20px;cursor:pointer;font-size:0.88rem;color:#ef4444;transition:background 0.15s;" onmouseover="this.style.background='#fef2f2'" onmouseout="this.style.background='transparent'">
+                            <div onclick="profileLogout();" style="display:flex;align-items:center;gap:12px;padding:12px 22px;cursor:pointer;font-size:0.88rem;color:#ef4444;transition:background 0.15s;" onmouseover="this.style.background='#fef2f2'" onmouseout="this.style.background='transparent'">
                                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#ef4444" stroke-width="2"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path><polyline points="16 17 21 12 16 7"></polyline><line x1="21" y1="12" x2="9" y2="12"></line></svg>
                                 Logout
                             </div>
@@ -1561,11 +1561,41 @@ Real OS metrics (CPU, RAM, Disk I/O) cannot be fetched directly from PostgreSQL 
     padding: 40px 20px;
 }
 
+/* ---- PROFILE DROPDOWN POPUP ANIMATION ---- */
+@keyframes ccProfilePopIn {
+    0% {
+        opacity: 0;
+        transform: translateY(-8px) scale(0.96);
+    }
+    100% {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+    }
+}
+@keyframes ccProfilePopOut {
+    0% {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+    }
+    100% {
+        opacity: 0;
+        transform: translateY(-6px) scale(0.96);
+    }
+}
+.cc-profile-popup-in {
+    animation: ccProfilePopIn 0.2s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+    transform-origin: top right;
+}
+.cc-profile-popup-out {
+    animation: ccProfilePopOut 0.15s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+    transform-origin: top right;
+}
+
 </style>
         </div>
     </div>
 
-    <script src="/static/main.js?v=91"></script>
+    <script src="/static/main.js?v=92"></script>
 
 
 
@@ -2340,6 +2370,21 @@ Real OS metrics (CPU, RAM, Disk I/O) cannot be fetched directly from PostgreSQL 
 
       <!-- SETTINGS VIEW -->
             <div id="settings-view" class="view-section" style="display: none;">
+                <!-- Top Header Bar matching ClusterControl UI -->
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; padding: 0 4px;">
+                    <div style="display: flex; align-items: center; gap: 10px; font-size: 1.35rem; font-weight: 600; color: #111827;">
+                        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <circle cx="12" cy="12" r="3"></circle>
+                            <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path>
+                        </svg>
+                        Settings
+                    </div>
+                    <div id="settings-mail-warning" style="display: flex; align-items: center; gap: 8px; font-size: 0.9rem; color: #374151;">
+                        <span>You don't have a mail server configured.</span>
+                        <a href="#" onclick="switchSettingsTab('notifications'); return false;" style="color: #4f46e5; font-weight: 600; text-decoration: none; cursor: pointer;">Configure now</a>
+                    </div>
+                </div>
+
                 <div style="background: var(--glass-bg); border-radius: 8px; border: 1px solid var(--border); box-shadow: 0 4px 6px rgba(0,0,0,0.05); min-height: 500px; display: flex; flex-direction: column;">
                     
                     <!-- Horizontal Tab Bar (ClusterControl 7-Tabs Layout) -->
@@ -2354,19 +2399,19 @@ Real OS metrics (CPU, RAM, Disk I/O) cannot be fetched directly from PostgreSQL 
                         <div class="settings-tab" onclick="switchSettingsTab('project')" id="tab-settings-project" style="padding: 16px 0; color: #6b7280; font-weight: 500; border-bottom: 2px solid transparent; cursor: pointer; white-space:nowrap;">Project Configuration</div>
                     </div>
 
-                    <!-- Profile Content -->
+                    <!-- Profile Content (ClusterControl Style) -->
                     <div id="settings-content-profile" class="settings-content-pane" style="flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 40px;">
-                        <div id="profile-page-avatar" style="width: 90px; height: 90px; border-radius: 50%; background: #e0e7ff; color: #4338ca; display: flex; align-items: center; justify-content: center; font-size: 2.2rem; font-weight: 500; margin-bottom: 20px; text-transform: uppercase;">AD</div>
-                        <div id="profile-fullname" style="font-size: 2rem; font-weight: 600; color: var(--text-main); margin-bottom: 4px;">Admin</div>
-                        <div id="profile-role" style="font-size: 0.95rem; color: var(--text-muted); margin-bottom: 28px; text-transform: uppercase; letter-spacing: 0.5px;">ADMIN</div>
+                        <div id="profile-page-avatar" style="width: 90px; height: 90px; border-radius: 50%; background: #ffe4e6; color: #e11d48; display: flex; align-items: center; justify-content: center; font-size: 2.2rem; font-weight: 500; margin-bottom: 18px; text-transform: uppercase;">AD</div>
+                        <div id="profile-fullname" style="font-size: 1.85rem; font-weight: 600; color: var(--text-main); margin-bottom: 2px;">Admin</div>
+                        <div id="profile-email-subtitle" style="font-size: 0.95rem; color: #6b7280; margin-bottom: 26px;">admin@localhost</div>
                         <div style="display: flex; flex-direction: column; gap: 12px; font-size: 0.95rem; margin-bottom: 36px; color: var(--text-secondary);">
-                            <div style="display: flex; gap: 8px; justify-content: center;"><span style="color: var(--text-muted); width: 80px; text-align: right;">Time zone:</span><span id="profile-timezone-text" style="width: 180px;">UTC</span></div>
-                            <div style="display: flex; gap: 8px; justify-content: center;"><span style="color: var(--text-muted); width: 80px; text-align: right;">Username:</span><span id="profile-username" style="width: 180px; font-weight: 500;">admin</span></div>
-                            <div style="display: flex; gap: 8px; justify-content: center;"><span style="color: var(--text-muted); width: 80px; text-align: right;">Team:</span><span id="profile-team" style="width: 180px;">admins</span></div>
-                            <div style="display: flex; gap: 8px; justify-content: center;"><span style="color: var(--text-muted); width: 80px; text-align: right;">Origin:</span><span id="profile-origin" style="width: 180px;">Local DB</span></div>
+                            <div style="display: flex; gap: 8px; justify-content: center;"><span style="color: var(--text-muted); width: 90px; text-align: right;">Time zone:</span><span id="profile-timezone-text" style="width: 180px;">UTC</span></div>
+                            <div style="display: flex; gap: 8px; justify-content: center;"><span style="color: var(--text-muted); width: 90px; text-align: right;">Username:</span><span id="profile-username" style="width: 180px; font-weight: 500;">admin</span></div>
+                            <div style="display: flex; gap: 8px; justify-content: center;"><span style="color: var(--text-muted); width: 90px; text-align: right;">Team:</span><span id="profile-team" style="width: 180px;">admins</span></div>
+                            <div style="display: flex; gap: 8px; justify-content: center;"><span style="color: var(--text-muted); width: 90px; text-align: right;">Origin:</span><span id="profile-origin" style="width: 180px;">cmon</span></div>
                         </div>
                         <div style="display: flex; flex-direction: column; align-items: center; gap: 16px; margin-bottom: 40px;">
-                            <button id="btn-profile-settings" onclick="openProfileSettingsModal()" style="background: #3a1c94; color: white; border: none; border-radius: 6px; padding: 10px 28px; font-size: 0.95rem; font-weight: 500; cursor: pointer; transition: background 0.15s;" onmouseover="this.style.background='#2b1070'" onmouseout="this.style.background='#3a1c94'">Settings</button>
+                            <button id="btn-profile-settings" onclick="openProfileSettingsModal()" style="background: #3a1c94; color: white; border: none; border-radius: 6px; padding: 10px 32px; font-size: 0.95rem; font-weight: 500; cursor: pointer; transition: background 0.15s;" onmouseover="this.style.background='#2b1070'" onmouseout="this.style.background='#3a1c94'">Settings</button>
                             <a href="#" onclick="openChangePasswordModal(event)" style="color: #3a1c94; text-decoration: none; font-size: 0.95rem;">Change password</a>
                         </div>
                     </div>
@@ -3450,6 +3495,6 @@ Real OS metrics (CPU, RAM, Disk I/O) cannot be fetched directly from PostgreSQL 
   </div>
 </div>
 
-<script src="/static/main.js?v=91"></script>
+<script src="/static/main.js?v=92"></script>
 </body>
 </html>

@@ -3891,8 +3891,11 @@ function applyProfileData(data) {
     const pageTeam   = document.getElementById('profile-team');
     const pageTz     = document.getElementById('profile-timezone-text');
 
+    const pageEmailSubtitle = document.getElementById('profile-email-subtitle');
+
     if (pageAvatar) pageAvatar.textContent = initials;
     if (pageName)   pageName.textContent   = fullName;
+    if (pageEmailSubtitle) pageEmailSubtitle.textContent = email;
     if (pageRole)   pageRole.textContent   = role;
     if (pageUser)   pageUser.textContent   = username;
     if (pageTeam)   pageTeam.textContent   = team;
@@ -5400,22 +5403,30 @@ async function submitDeployWizard() {
 // ── Profile Dropdown ─────────────────────────────────────────────────────────
 
 function toggleProfileMenu(e) {
-    e.stopPropagation();
+    if (e) e.stopPropagation();
     const dd = document.getElementById('profile-dropdown');
     if (!dd) return;
-    const isOpen = dd.style.display !== 'none';
+    const isOpen = dd.style.display !== 'none' && !dd.classList.contains('cc-profile-popup-out');
     if (isOpen) {
         closeProfileMenu();
     } else {
-        dd.style.display = 'block';
-        // Populate with latest profile data
         populateProfileMenu();
+        dd.style.display = 'block';
+        dd.classList.remove('cc-profile-popup-out');
+        dd.classList.add('cc-profile-popup-in');
     }
 }
 
 function closeProfileMenu() {
     const dd = document.getElementById('profile-dropdown');
-    if (dd) dd.style.display = 'none';
+    if (!dd || dd.style.display === 'none') return;
+    dd.classList.remove('cc-profile-popup-in');
+    dd.classList.add('cc-profile-popup-out');
+    setTimeout(() => {
+        if (dd.classList.contains('cc-profile-popup-out')) {
+            dd.style.display = 'none';
+        }
+    }, 150);
 }
 
 // Close when clicking outside
@@ -5427,11 +5438,12 @@ document.addEventListener('click', function(e) {
 });
 
 function populateProfileMenu() {
-    // Try to read from already-loaded profile data (window.cachedProfileData set by fetchProfile)
     const data = window.cachedProfileData || {};
     const username = data.username || document.getElementById('header-username-display')?.textContent || 'admin';
     const email    = data.email    || (username + '@localhost');
-    const name     = data.name     || (username.charAt(0).toUpperCase() + username.slice(1));
+    const name     = (data.first_name || data.last_name)
+        ? `${data.first_name || ''} ${data.last_name || ''}`.trim()
+        : (data.name || (username.charAt(0).toUpperCase() + username.slice(1)));
     const tz       = data.timezone || 'UTC';
 
     // Build initials (up to 2 letters)
@@ -5440,10 +5452,10 @@ function populateProfileMenu() {
         ? (words[0][0] + words[1][0]).toUpperCase()
         : name.slice(0, 2).toUpperCase();
 
-    const avatarEl  = document.getElementById('profile-avatar');
-    const nameEl    = document.getElementById('profile-display-name');
-    const emailEl   = document.getElementById('profile-email');
-    const tzEl      = document.getElementById('profile-timezone');
+    const avatarEl  = document.getElementById('dropdown-profile-avatar') || document.getElementById('profile-avatar');
+    const nameEl    = document.getElementById('dropdown-profile-name') || document.getElementById('profile-display-name');
+    const emailEl   = document.getElementById('dropdown-profile-email') || document.getElementById('profile-email');
+    const tzEl      = document.getElementById('dropdown-profile-timezone') || document.getElementById('profile-timezone');
 
     if (avatarEl)  avatarEl.textContent  = initials;
     if (nameEl)    nameEl.textContent    = name;
