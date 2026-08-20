@@ -134,24 +134,48 @@ def get_projects(db: Session = Depends(get_db)):
 
 @app.post("/api/projects", dependencies=[Depends(verify_credentials)])
 def add_project(project: ProjectCreate, db: Session = Depends(get_db)):
-    db_proj = Project(name=project.name, description=project.description)
-    db.add(db_proj)
-    db.commit()
-    db.refresh(db_proj)
+    name = (project.name or "").strip()
+    desc = (project.description or "").strip()
+    if not name:
+        return JSONResponse(status_code=400, content={"success": False, "detail": "Cluster adı boş bırakılamaz. Lütfen bir cluster adı giriniz."})
     
-    from models import AuditLog
-    audit = AuditLog(project_id=db_proj.id, action="Project Created", details=f"Name: {project.name}")
-    db.add(audit)
-    db.commit()
-    return {"success": True, "id": db_proj.id}
+    # Check if a project with the same name already exists
+    existing = db.query(Project).filter(Project.name.ilike(name)).first()
+    if existing:
+        return JSONResponse(status_code=400, content={"success": False, "detail": f"'{name}' isminde bir cluster zaten mevcut. Lütfen farklı bir isim deneyiniz."})
+        
+    try:
+        db_proj = Project(name=name, description=desc)
+        db.add(db_proj)
+        db.commit()
+        db.refresh(db_proj)
+        
+        from models import AuditLog
+        audit = AuditLog(project_id=db_proj.id, action="Project Created", details=f"Name: {name}")
+        db.add(audit)
+        db.commit()
+        return {"success": True, "id": db_proj.id, "name": db_proj.name, "description": db_proj.description}
+    except Exception as e:
+        db.rollback()
+        return JSONResponse(status_code=400, content={"success": False, "detail": f"Cluster oluşturulamadı: {str(e)}"})
 
 @app.put("/api/projects/{project_id}", dependencies=[Depends(verify_credentials)])
 def update_project(project_id: int, project: ProjectCreate, db: Session = Depends(get_db)):
     proj = db.query(Project).filter(Project.id == project_id).first()
     if not proj:
-        return JSONResponse(status_code=404, content={"message": "Project not found"})
-    proj.name = project.name
-    proj.description = project.description
+        return JSONResponse(status_code=404, content={"success": False, "detail": "Belirtilen cluster bulunamadı."})
+    
+    name = (project.name or "").strip()
+    desc = (project.description or "").strip()
+    if not name:
+        return JSONResponse(status_code=400, content={"success": False, "detail": "Cluster adı boş bırakılamaz."})
+        
+    existing = db.query(Project).filter(Project.name.ilike(name), Project.id != project_id).first()
+    if existing:
+        return JSONResponse(status_code=400, content={"success": False, "detail": f"'{name}' ismi başka bir cluster tarafından kullanılmaktadır. Lütfen farklı bir isim deneyiniz."})
+        
+    proj.name = name
+    proj.description = desc
     db.commit()
     
     # Check if there are project settings and apply them to the new node
@@ -300,27 +324,36 @@ def get_project_detail(project_id: int, db: Session = Depends(get_db)):
 
 @app.post("/api/projects/{project_id}/nodes", dependencies=[Depends(verify_credentials)])
 async def add_node(project_id: int, node: NodeCreate, background_tasks: BackgroundTasks, db: Session = Depends(get_db)):
+    name = (node.name or "").strip()
+    if not name:
+        return JSONResponse(status_code=400, content={"success": False, "detail": "Sunucu adı boş bırakılamaz.", "message": "Sunucu adı boş bırakılamaz."})
+
     if node.role.lower() not in ['primary', 'standby']:
-        return JSONResponse(status_code=400, content={"success": False, "message": "Geçersiz rol. Sadece Primary veya Standby eklenebilir."})
+        return JSONResponse(status_code=400, content={"success": False, "detail": "Geçersiz rol. Sadece Primary veya Standby eklenebilir.", "message": "Geçersiz rol. Sadece Primary veya Standby eklenebilir."})
 
     proj = db.query(Project).filter(Project.id == project_id).first()
     if not proj:
-        return JSONResponse(status_code=404, content={"message": "Project not found"})
+        return JSONResponse(status_code=404, content={"success": False, "detail": "Belirtilen cluster bulunamadı.", "message": "Belirtilen cluster bulunamadı."})
         
+    # Check duplicate node name in the project
+    existing_node_name = next((n for n in proj.nodes if n.name and n.name.lower() == name.lower()), None)
+    if existing_node_name:
+        return JSONResponse(status_code=400, content={"success": False, "detail": f"Bu cluster altında '{name}' isminde bir sunucu zaten mevcut.", "message": f"Bu cluster altında '{name}' isminde bir sunucu zaten mevcut."})
+
     if node.role.lower() == 'primary':
         existing_primary = next((n for n in proj.nodes if n.role.lower() == 'primary'), None)
         if existing_primary:
-            return JSONResponse(status_code=400, content={"success": False, "message": "Bir projede sadece 1 adet Primary (Ana) sunucu bulunabilir."})
+            return JSONResponse(status_code=400, content={"success": False, "detail": "Bu cluster'da zaten 1 adet Primary (Ana) sunucu bulunmaktadır. İkinci bir Primary eklenemez.", "message": "Bu cluster'da zaten 1 adet Primary (Ana) sunucu bulunmaktadır. İkinci bir Primary eklenemez."})
     
     from vault import decrypt
     for n in db.query(DatabaseNode).all():
         if decrypt(n.encrypted_url) == node.url:
-            return JSONResponse(status_code=400, content={"success": False, "message": "Bu sunucu bağlantı URL'si zaten başka bir projede veya rolde kayıtlı. Sistem güvenliği için aynı veritabanı birden fazla node olarak eklenemez."})
+            return JSONResponse(status_code=400, content={"success": False, "detail": "Bu sunucu bağlantı URL'si sistemde zaten kayıtlı. Aynı veritabanı birden fazla node olarak eklenemez.", "message": "Bu sunucu bağlantı URL'si sistemde zaten kayıtlı. Aynı veritabanı birden fazla node olarak eklenemez."})
 
     # 1. PING (Test Connection)
     is_alive = await test_connection(node.url)
     if not is_alive:
-        return JSONResponse(status_code=400, content={"success": False, "message": "Connection test failed. Sunucuya ulaşılamıyor veya URL hatalı."})
+        return JSONResponse(status_code=400, content={"success": False, "detail": "Bağlantı testi başarısız oldu. Sunucuya ulaşılamıyor veya URL hatalı.", "message": "Bağlantı testi başarısız oldu. Sunucuya ulaşılamıyor veya URL hatalı."})
     
     # 2. SAVE (Vault Encryption)
     db_node = DatabaseNode(project_id=proj.id, role=node.role, name=node.name)

@@ -1641,8 +1641,13 @@ window.exportAuditLogsCsv = function() {
     formEditProj.addEventListener('submit', async (e) => {
         e.preventDefault();
         const id = document.getElementById('edit-proj-id').value;
-        const name = document.getElementById('edit-proj-name').value;
-        const desc = document.getElementById('edit-proj-desc').value;
+        const name = document.getElementById('edit-proj-name').value.trim();
+        const desc = document.getElementById('edit-proj-desc').value.trim();
+
+        if (!name) {
+            alert('Cluster adı boş bırakılamaz.');
+            return;
+        }
 
         try {
             const response = await apiFetch(`/api/projects/${id}`, {
@@ -1656,7 +1661,7 @@ window.exportAuditLogsCsv = function() {
                 modalEditProj.style.display = 'none';
                 formEditProj.reset();
                 fetchProjects();
-        fetchRecentAlarms();
+                fetchRecentAlarms();
                 
                 // Update detail view if it's currently showing the edited project
                 if (currentProjectId == id && detailView && detailView.style.display !== 'none') {
@@ -1664,22 +1669,23 @@ window.exportAuditLogsCsv = function() {
                     const el_detail_proj_desc = document.getElementById('detail-proj-desc'); if(el_detail_proj_desc) el_detail_proj_desc.innerText = desc || 'No description';
                 }
             } else {
-                alert(res.message || "Failed to update project.");
+                alert(res.detail || res.message || "Cluster güncellenemedi.");
             }
         } catch (err) {
-            alert('Server error while updating project.');
+            alert('Sunucu hatası: ' + err.message);
         }
     });
-
-    
-              
-
 
     // Form: Add Project
     formAddProj.addEventListener('submit', async (e) => {
         e.preventDefault();
-        const name = document.getElementById('proj-name').value;
-        const desc = document.getElementById('proj-desc').value;
+        const name = document.getElementById('proj-name').value.trim();
+        const desc = document.getElementById('proj-desc').value.trim();
+
+        if (!name) {
+            alert('Cluster adı boş bırakılamaz. Lütfen bir isim giriniz.');
+            return;
+        }
 
         try {
             const response = await apiFetch('/api/projects', {
@@ -1688,14 +1694,16 @@ window.exportAuditLogsCsv = function() {
                 body: JSON.stringify({ name, description: desc })
             });
             const res = await response.json();
-            if (res.success) {
+            if (response.ok && res.success) {
                 modalAddProj.style.display = 'none';
                 formAddProj.reset();
                 fetchProjects();
-        fetchRecentAlarms();
+                fetchRecentAlarms();
+            } else {
+                alert(res.detail || res.message || 'Cluster oluşturulamadı.');
             }
         } catch (err) {
-            alert('Failed to create project');
+            alert('Bağlantı hatası: ' + err.message);
         }
     });
 
@@ -1704,9 +1712,18 @@ window.exportAuditLogsCsv = function() {
         e.preventDefault();
         if (!currentProjectId) return;
 
-        const name = document.getElementById('node-name').value;
+        const name = document.getElementById('node-name').value.trim();
         const role = document.getElementById('node-role').value;
-        const url = document.getElementById('node-url').value;
+        const url = document.getElementById('node-url').value.trim();
+
+        if (!name) {
+            alert('Sunucu adı boş bırakılamaz.');
+            return;
+        }
+        if (!url) {
+            alert('Sunucu bağlantı URL adresi boş bırakılamaz.');
+            return;
+        }
 
         btnSubmitNode.innerText = "Pinging Server (Please Wait)...";
         btnSubmitNode.disabled = true;
@@ -1724,10 +1741,10 @@ window.exportAuditLogsCsv = function() {
                 formAddNode.reset();
                 refreshCurrentProject();
             } else {
-                alert(res.message || "Failed to add node. Check the URL.");
+                alert(res.detail || res.message || "Sunucu eklenemedi. Bilgileri kontrol ediniz.");
             }
         } catch (err) {
-            alert('Server error while adding node.');
+            alert('Sunucu bağlantı hatası: ' + err.message);
         } finally {
             btnSubmitNode.innerText = "Verify & Save Node";
             btnSubmitNode.disabled = false;
@@ -3414,3 +3431,25 @@ async function fetchActivityJobs() {
             }
         }
     }, true);
+
+window.switchSettingsTab = function(tabName) {
+    const tabs = ['profile', 'cloud', 'notifications', 'certificates', 'license', 'addons', 'diagnostics'];
+    tabs.forEach(t => {
+        const tabEl = document.getElementById(`tab-settings-${t}`);
+        const contentEl = document.getElementById(`settings-content-${t}`);
+        if (tabEl) {
+            if (t === tabName) {
+                tabEl.style.color = '#3a1c94';
+                tabEl.style.borderBottom = '2px solid #3a1c94';
+                tabEl.style.fontWeight = '600';
+            } else {
+                tabEl.style.color = '#6b7280';
+                tabEl.style.borderBottom = '2px solid transparent';
+                tabEl.style.fontWeight = '500';
+            }
+        }
+        if (contentEl) {
+            contentEl.style.display = (t === tabName) ? (t === 'profile' || t === 'diagnostics' ? 'flex' : 'block') : 'none';
+        }
+    });
+};
