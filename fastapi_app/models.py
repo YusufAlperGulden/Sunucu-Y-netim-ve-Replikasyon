@@ -211,3 +211,41 @@ class AddonSetting(Base):
     extra_json = Column(String(1000), nullable=True)
     updated_at = Column(DateTime, default=datetime.datetime.utcnow, onupdate=datetime.datetime.utcnow)
 
+
+class DeployJob(Base):
+    """Tracks a cluster deployment wizard session and its execution state."""
+    __tablename__ = 'deploy_jobs'
+    id                  = Column(Integer, primary_key=True, index=True)
+    project_id          = Column(Integer, ForeignKey('projects.id', ondelete='SET NULL'), nullable=True)
+    db_type             = Column(String(50), nullable=False)   # 'postgresql', 'mssql'
+    cluster_name        = Column(String(255), nullable=False)
+    # Status: PENDING → SSH_OK → DEPLOYING → SUCCESS | FAILED
+    status              = Column(String(50), default='PENDING', nullable=False)
+    step                = Column(String(100), nullable=True)
+    error_msg           = Column(String(1000), nullable=True)
+
+    # SSH configuration
+    ssh_host            = Column(String(255), nullable=True)
+    ssh_port            = Column(Integer, default=22)
+    ssh_user            = Column(String(255), nullable=True)
+    encrypted_ssh_cred  = Column(String(2000), nullable=True)  # PEM key or password (encrypted)
+    sudo_method         = Column(String(20), default='sudo')   # sudo | doas | pbrun
+    disable_fw          = Column(Boolean, default=True)
+    disable_selinux     = Column(Boolean, default=True)
+    install_software    = Column(Boolean, default=True)
+
+    # Database configuration
+    db_version          = Column(String(20), nullable=True)
+    db_port             = Column(Integer, nullable=True)
+    db_admin_user       = Column(String(100), nullable=True)
+    encrypted_db_pass   = Column(String(500), nullable=True)
+    db_data_dir         = Column(String(500), nullable=True)
+
+    # Nodes: '[{"role":"primary","ip":"10.0.0.1"},{"role":"replica","ip":"10.0.0.2"}]'
+    nodes_json          = Column(String(2000), nullable=True)
+
+    created_at          = Column(DateTime, default=datetime.datetime.utcnow)
+    updated_at          = Column(DateTime, default=datetime.datetime.utcnow,
+                                  onupdate=datetime.datetime.utcnow)
+
+    project = relationship('Project')

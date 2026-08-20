@@ -1871,3 +1871,171 @@ def delete_schedule(sched_id: int, db: Session = Depends(get_db)):
     db.delete(s)
     db.commit()
     return {"success": True}
+
+
+# ── Deploy a Cluster ──────────────────────────────────────────────────────────
+
+@app.post("/api/deploy/validate-ssh", dependencies=[Depends(verify_credentials)])
+def deploy_validate_ssh(body: dict = Body(...)):
+    """
+    Test SSH connectivity to a host before committing to deployment.
+    Accepts password auth or PEM private key (detected automatically).
+    Returns {ok, hostname, os} on success or {ok: false, error} on failure.
+    """
+    import paramiko, io, socket
+    host     = body.get("host", "").strip()
+    port     = int(body.get("port", 22))
+    username = body.get("username", "root").strip()
+    cred     = body.get("credential", "").strip()   # PEM key text or password
+
+    if not host or not username:
+        return JSONResponse(status_code=400, content={"ok": False, "error": "Host ve kullanıcı adı zorunludur"})
+
+    client = paramiko.SSHClient()
+    client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+    try:
+        if cred and "-----BEGIN" in cred:
+            # PEM key — try RSA, Ed25519, ECDSA in order
+            pkey = None
+            for KeyClass in [paramiko.RSAKey, paramiko.Ed25519Key, paramiko.ECDSAKey]:
+                try:
+                    pkey = KeyClass.from_private_key(io.StringIO(cred))
+                    break
+                except Exception:
+                    continue
+            if pkey is None:
+                return JSONResponse(content={"ok": False, "error": "Geçersiz PEM anahtarı"})
+            client.connect(hostname=host, port=port, username=username, pkey=pkey, timeout=10)
+        elif cred:
+            client.connect(hostname=host, port=port, username=username, password=cred, timeout=10)
+        else:
+            # Try passwordless key-based auth
+            client.connect(hostname=host, port=port, username=username, timeout=10)
+
+        # Gather basic host info
+        _, stdout, _ = client.exec_command("hostname && cat /etc/os-release 2>/dev/null | grep PRETTY_NAME | cut -d= -f2 | tr -d '\"' || echo 'Unknown OS'")
+        lines = stdout.read().decode("utf-8", errors="ignore").strip().splitlines()
+        hostname_str = lines[0] if lines else host
+        os_str       = lines[1] if len(lines) > 1 else "Unknown OS"
+        client.close()
+        return {"ok": True, "hostname": hostname_str, "os": os_str}
+
+    except socket.timeout:
+        return JSONResponse(content={"ok": False, "error": f"Bağlantı zaman aşımı: {host}:{port}"})
+    except paramiko.AuthenticationException:
+        return JSONResponse(content={"ok": False, "error": "Kimlik doğrulama başarısız — kullanıcı adı/şifre/anahtar hatalı"})
+    except paramiko.SSHException as e:
+        return JSONResponse(content={"ok": False, "error": f"SSH hatası: {str(e)}"})
+    except Exception as e:
+        return JSONResponse(content={"ok": False, "error": str(e)})
+
+
+@app.post("/api/deploy/start", dependencies=[Depends(verify_credentials)])
+def deploy_start(body: dict = Body(...), db: Session = Depends(get_db)):
+    """
+    Save wizard data and create the cluster record.
+    Creates: Project + DatabaseNode rows + DeployJob.
+    The actual remote installation is deferred (status = PENDING).
+    """
+    from models import DeployJob
+    from vault import encrypt
+
+    db_type      = body.get("db_type", "postgresql")
+    cluster_name = body.get("cluster_name", "").strip()
+    if not cluster_name:
+        import random, string
+        cluster_name = db_type.upper() + "-" + "".join(random.choices(string.ascii_uppercase + string.digits, k=6))
+
+    ssh_cred_raw = body.get("ssh_credential", "")
+    db_pass_raw  = body.get("db_admin_pass", "")
+    nodes_list   = body.get("nodes", [])   # [{"role": "primary"|"replica", "ip": "..."}]
+
+    # Create Project
+    proj = Project(
+        name=cluster_name,
+        description=f"{db_type.upper()} cluster deployed via wizard"
+    )
+    db.add(proj)
+    db.flush()  # get proj.id
+
+    # Create DatabaseNode rows for each node
+    db_port_default = 5432 if db_type == "postgresql" else 1433
+    db_port = int(body.get("db_port", db_port_default))
+
+    for node_entry in nodes_list:
+        ip   = node_entry.get("ip", "").strip()
+        role = node_entry.get("role", "replica")
+        if not ip:
+            continue
+        conn_url = f"postgresql://{body.get('db_admin_user','postgres')}@{ip}:{db_port}/{cluster_name}" \
+                   if db_type == "postgresql" \
+                   else f"mssql+pyodbc://sa@{ip}:{db_port}/{cluster_name}"
+        node = DatabaseNode(
+            project_id=proj.id,
+            role=role,
+            name=f"{ip}",
+            ssh_host=ip,
+            ssh_port=int(body.get("ssh_port", 22)),
+            ssh_username=body.get("ssh_user", "root"),
+            encrypted_ssh_credential=encrypt(ssh_cred_raw) if ssh_cred_raw else None,
+        )
+        node.set_url(conn_url)
+        db.add(node)
+
+    # Create DeployJob record
+    job = DeployJob(
+        project_id      = proj.id,
+        db_type         = db_type,
+        cluster_name    = cluster_name,
+        status          = "PENDING",
+        step            = "wizard_complete",
+        ssh_host        = (nodes_list[0].get("ip") if nodes_list else None),
+        ssh_port        = int(body.get("ssh_port", 22)),
+        ssh_user        = body.get("ssh_user", "root"),
+        encrypted_ssh_cred = encrypt(ssh_cred_raw) if ssh_cred_raw else None,
+        sudo_method     = body.get("sudo_method", "sudo"),
+        disable_fw      = bool(body.get("disable_fw", True)),
+        disable_selinux = bool(body.get("disable_selinux", True)),
+        install_software= bool(body.get("install_software", True)),
+        db_version      = body.get("db_version", ""),
+        db_port         = db_port,
+        db_admin_user   = body.get("db_admin_user", ""),
+        encrypted_db_pass = encrypt(db_pass_raw) if db_pass_raw else None,
+        db_data_dir     = body.get("db_data_dir", ""),
+        nodes_json      = str(nodes_list),
+    )
+    db.add(job)
+    db.commit()
+    db.refresh(job)
+    return {"success": True, "job_id": job.id, "project_id": proj.id, "cluster_name": cluster_name}
+
+
+@app.get("/api/deploy/{job_id}", dependencies=[Depends(verify_credentials)])
+def deploy_get_job(job_id: int, db: Session = Depends(get_db)):
+    """Return the current status of a deploy job."""
+    from models import DeployJob
+    job = db.query(DeployJob).filter(DeployJob.id == job_id).first()
+    if not job:
+        return JSONResponse(status_code=404, content={"message": "Job bulunamadı"})
+    return {
+        "id": job.id, "project_id": job.project_id,
+        "db_type": job.db_type, "cluster_name": job.cluster_name,
+        "status": job.status, "step": job.step, "error_msg": job.error_msg,
+        "created_at": str(job.created_at), "updated_at": str(job.updated_at),
+    }
+
+
+@app.get("/api/deploy", dependencies=[Depends(verify_credentials)])
+def deploy_list(db: Session = Depends(get_db)):
+    """List all deploy jobs (most recent first)."""
+    from models import DeployJob
+    jobs = db.query(DeployJob).order_by(DeployJob.created_at.desc()).limit(50).all()
+    return [
+        {
+            "id": j.id, "project_id": j.project_id,
+            "db_type": j.db_type, "cluster_name": j.cluster_name,
+            "status": j.status, "step": j.step,
+            "created_at": str(j.created_at),
+        }
+        for j in jobs
+    ]
