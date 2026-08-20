@@ -4223,11 +4223,48 @@ function deployRenderPreview() {
 }
 
 async function submitDeployWizard() {
-    const btn     = document.getElementById('btn-deploy-start');
+    const btn      = document.getElementById('btn-deploy-start');
     const resultEl = document.getElementById('deploy-result-msg');
+    resultEl.style.display = 'none';
+
+    // ── VALIDATION ────────────────────────────────────────────────────────────
+
+    // 1. SSH must be tested AND passed
+    if (!deployWizard.sshTested) {
+        resultEl.style.display  = 'block';
+        resultEl.style.background = '#fffbeb';
+        resultEl.style.border   = '1px solid #fcd34d';
+        resultEl.style.color    = '#92400e';
+        resultEl.innerHTML = '⚠️ <strong>SSH bağlantısı test edilmedi.</strong> Lütfen "SSH Yapılandırması" adımına geri dönün ve "Bağlantıyı Test Et" butonuna tıklayın.';
+        return;
+    }
+
+    // 2. At least one node with an IP must exist
+    const validNodes = (deployWizard.nodes || []).filter(n => n.ip && n.ip.trim());
+    if (validNodes.length === 0) {
+        resultEl.style.display  = 'block';
+        resultEl.style.background = '#fef2f2';
+        resultEl.style.border   = '1px solid #fecaca';
+        resultEl.style.color    = '#991b1b';
+        resultEl.innerHTML = '✗ <strong>En az bir node IP adresi gereklidir.</strong> "Node\'ları Ekle" adımına dönüp Primary node ekleyin.';
+        return;
+    }
+
+    // 3. DB admin password must not be empty
+    const dbPass = document.getElementById('deploy-db-pass')?.value || '';
+    if (!dbPass.trim()) {
+        resultEl.style.display  = 'block';
+        resultEl.style.background = '#fef2f2';
+        resultEl.style.border   = '1px solid #fecaca';
+        resultEl.style.color    = '#991b1b';
+        resultEl.innerHTML = '✗ <strong>DB Admin Şifresi boş olamaz.</strong> "DB Yapılandırması" adımına dönüp şifre girin.';
+        return;
+    }
+
+    // ── SUBMIT ───────────────────────────────────────────────────────────────
+
     btn.disabled  = true;
     btn.textContent = '⏳ Kaydediliyor...';
-    resultEl.style.display = 'none';
 
     const authType = document.getElementById('deploy-ssh-auth-type')?.value;
     const cred     = authType === 'key'
@@ -4249,9 +4286,9 @@ async function submitDeployWizard() {
         db_version:      document.getElementById('deploy-db-version')?.value,
         db_port:         parseInt(document.getElementById('deploy-db-port')?.value),
         db_admin_user:   document.getElementById('deploy-db-user')?.value.trim(),
-        db_admin_pass:   document.getElementById('deploy-db-pass')?.value,
+        db_admin_pass:   dbPass,
         db_data_dir:     document.getElementById('deploy-db-datadir')?.value.trim(),
-        nodes:           deployWizard.nodes,
+        nodes:           validNodes,
     };
 
     try {
@@ -4267,7 +4304,11 @@ async function submitDeployWizard() {
             resultEl.style.background = '#f0fdf4';
             resultEl.style.border = '1px solid #bbf7d0';
             resultEl.style.color = '#166534';
-            resultEl.innerHTML = `✓ Cluster kaydedildi! <strong>${escapeHTML(data.cluster_name)}</strong> oluşturuldu. (Job #${data.job_id})`;
+            resultEl.innerHTML = `
+                ✓ <strong>${escapeHTML(data.cluster_name)}</strong> cluster kaydı oluşturuldu. (Job #${data.job_id})<br>
+                <span style="font-size:0.82rem;color:#4b7c5e;margin-top:6px;display:block;">
+                    ℹ️ <em>Şu an deployment kuyruğa alındı (PENDING). Gerçek sunucu kurulumu için SSH erişimine sahip bir arka plan işçisi gerekmektedir.</em>
+                </span>`;
             btn.style.display = 'none';
             // Refresh project list
             setTimeout(() => { if (typeof fetchProjects === 'function') fetchProjects(); }, 800);
