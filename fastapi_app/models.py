@@ -1,6 +1,6 @@
 import os
 import datetime
-from sqlalchemy import create_engine, Column, Integer, String, ForeignKey, DateTime, text, Index, Float, Boolean
+from sqlalchemy import create_engine, Column, Integer, String, ForeignKey, DateTime, text, Index, Float, Boolean, Text
 from sqlalchemy.orm import declarative_base, relationship, sessionmaker
 from vault import encrypt
 

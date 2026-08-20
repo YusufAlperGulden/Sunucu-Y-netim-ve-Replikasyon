@@ -1,4 +1,4 @@
-﻿# Test: does asyncpg.connect WITHOUT ssl work on a Neon URL that has sslmode=require in the querystring?
+# Test: does asyncpg.connect WITHOUT ssl work on a Neon URL that has sslmode=require in the querystring?
 import asyncio
 import asyncpg
 

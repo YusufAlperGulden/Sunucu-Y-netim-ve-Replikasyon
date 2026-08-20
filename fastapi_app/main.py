@@ -81,71 +81,72 @@ async def lifespan(app: FastAPI):
     # (safe to call repeatedly — uses CREATE TABLE IF NOT EXISTS internally)
     Base.metadata.create_all(bind=engine)
 
-    with engine.begin() as conn:
-        for stmt in [
-            "ALTER TABLE nodes ADD COLUMN ssh_host VARCHAR(255)",
-            "ALTER TABLE nodes ADD COLUMN ssh_port INTEGER DEFAULT 22",
-            "ALTER TABLE nodes ADD COLUMN ssh_username VARCHAR(255) DEFAULT 'root'",
-            "ALTER TABLE nodes ADD COLUMN encrypted_ssh_credential VARCHAR",
-            "ALTER TABLE audit_logs ADD COLUMN username VARCHAR(50) DEFAULT 'system'",
-            "ALTER TABLE users ADD COLUMN email VARCHAR(255)",
-            "ALTER TABLE users ADD COLUMN first_name VARCHAR(100)",
-            "ALTER TABLE users ADD COLUMN last_name VARCHAR(100)",
-            "ALTER TABLE users ADD COLUMN timezone VARCHAR(50) DEFAULT 'UTC'",
-            # New tables — CREATE IF NOT EXISTS is safe to re-run
-            """CREATE TABLE IF NOT EXISTS cloud_credentials (
-                id SERIAL PRIMARY KEY,
-                provider VARCHAR(50) NOT NULL,
-                label VARCHAR(100) NOT NULL,
-                encrypted_key_id VARCHAR(500),
-                encrypted_secret VARCHAR(500),
-                bucket VARCHAR(255),
-                region VARCHAR(100),
-                created_at TIMESTAMP DEFAULT NOW()
-            )""",
-            """CREATE TABLE IF NOT EXISTS notification_services (
-                id SERIAL PRIMARY KEY,
-                service_type VARCHAR(50) NOT NULL,
-                label VARCHAR(100) NOT NULL,
-                encrypted_settings VARCHAR(2000),
-                active BOOLEAN DEFAULT TRUE,
-                created_at TIMESTAMP DEFAULT NOW()
-            )""",
-            """CREATE TABLE IF NOT EXISTS certificates (
-                id SERIAL PRIMARY KEY,
-                node_id INTEGER REFERENCES nodes(id) ON DELETE CASCADE,
-                cert_type VARCHAR(50) DEFAULT 'TLS',
-                common_name VARCHAR(255),
-                subject_alt_names VARCHAR(500),
-                expires_at TIMESTAMP,
-                issuer VARCHAR(255),
-                file_path VARCHAR(500),
-                created_at TIMESTAMP DEFAULT NOW()
-            )""",
-            """CREATE TABLE IF NOT EXISTS ldap_configs (
-                id SERIAL PRIMARY KEY,
-                label VARCHAR(100) NOT NULL,
-                server_url VARCHAR(255) NOT NULL,
-                base_dn VARCHAR(255) NOT NULL,
-                bind_user VARCHAR(255),
-                encrypted_bind_pass VARCHAR(500),
-                user_filter VARCHAR(255) DEFAULT '(objectClass=person)',
-                active BOOLEAN DEFAULT TRUE,
-                created_at TIMESTAMP DEFAULT NOW()
-            )""",
-            """CREATE TABLE IF NOT EXISTS addon_settings (
-                id SERIAL PRIMARY KEY,
-                addon_key VARCHAR(100) UNIQUE NOT NULL,
-                enabled BOOLEAN DEFAULT FALSE,
-                api_url VARCHAR(500),
-                extra_json VARCHAR(1000),
-                updated_at TIMESTAMP DEFAULT NOW()
-            )""",
-        ]:
-            try:
+    for stmt in [
+        "ALTER TABLE nodes ADD COLUMN IF NOT EXISTS ssh_host VARCHAR(255)",
+        "ALTER TABLE nodes ADD COLUMN IF NOT EXISTS ssh_port INTEGER DEFAULT 22",
+        "ALTER TABLE nodes ADD COLUMN IF NOT EXISTS ssh_username VARCHAR(255) DEFAULT 'root'",
+        "ALTER TABLE nodes ADD COLUMN IF NOT EXISTS encrypted_ssh_credential VARCHAR",
+        "ALTER TABLE audit_logs ADD COLUMN IF NOT EXISTS username VARCHAR(50) DEFAULT 'system'",
+        "ALTER TABLE users ADD COLUMN IF NOT EXISTS email VARCHAR(255)",
+        "ALTER TABLE users ADD COLUMN IF NOT EXISTS first_name VARCHAR(100)",
+        "ALTER TABLE users ADD COLUMN IF NOT EXISTS last_name VARCHAR(100)",
+        "ALTER TABLE users ADD COLUMN IF NOT EXISTS timezone VARCHAR(50) DEFAULT 'UTC'",
+        "ALTER TABLE deploy_jobs ADD COLUMN IF NOT EXISTS log_output TEXT",
+        # New tables — CREATE IF NOT EXISTS is safe to re-run
+        """CREATE TABLE IF NOT EXISTS cloud_credentials (
+            id SERIAL PRIMARY KEY,
+            provider VARCHAR(50) NOT NULL,
+            label VARCHAR(100) NOT NULL,
+            encrypted_key_id VARCHAR(500),
+            encrypted_secret VARCHAR(500),
+            bucket VARCHAR(255),
+            region VARCHAR(100),
+            created_at TIMESTAMP DEFAULT NOW()
+        )""",
+        """CREATE TABLE IF NOT EXISTS notification_services (
+            id SERIAL PRIMARY KEY,
+            service_type VARCHAR(50) NOT NULL,
+            label VARCHAR(100) NOT NULL,
+            encrypted_settings VARCHAR(2000),
+            active BOOLEAN DEFAULT TRUE,
+            created_at TIMESTAMP DEFAULT NOW()
+        )""",
+        """CREATE TABLE IF NOT EXISTS certificates (
+            id SERIAL PRIMARY KEY,
+            node_id INTEGER REFERENCES nodes(id) ON DELETE CASCADE,
+            cert_type VARCHAR(50) DEFAULT 'TLS',
+            common_name VARCHAR(255),
+            subject_alt_names VARCHAR(500),
+            expires_at TIMESTAMP,
+            issuer VARCHAR(255),
+            file_path VARCHAR(500),
+            created_at TIMESTAMP DEFAULT NOW()
+        )""",
+        """CREATE TABLE IF NOT EXISTS ldap_configs (
+            id SERIAL PRIMARY KEY,
+            label VARCHAR(100) NOT NULL,
+            server_url VARCHAR(255) NOT NULL,
+            base_dn VARCHAR(255) NOT NULL,
+            bind_user VARCHAR(255),
+            encrypted_bind_pass VARCHAR(500),
+            user_filter VARCHAR(255) DEFAULT '(objectClass=person)',
+            active BOOLEAN DEFAULT TRUE,
+            created_at TIMESTAMP DEFAULT NOW()
+        )""",
+        """CREATE TABLE IF NOT EXISTS addon_settings (
+            id SERIAL PRIMARY KEY,
+            addon_key VARCHAR(100) UNIQUE NOT NULL,
+            enabled BOOLEAN DEFAULT FALSE,
+            api_url VARCHAR(500),
+            extra_json VARCHAR(1000),
+            updated_at TIMESTAMP DEFAULT NOW()
+        )""",
+    ]:
+        try:
+            with engine.begin() as conn:
                 conn.execute(text(stmt))
-            except Exception:
-                pass
+        except Exception:
+            pass
     # Auto-sync Neon URLs if nodes exist but have wrong/old URLs
     try:
         from vault import encrypt, decrypt

@@ -1,4 +1,4 @@
-﻿# Quick test: can we connect to Neon with SSL?
+# Quick test: can we connect to Neon with SSL?
 import asyncio
 import asyncpg
 import ssl

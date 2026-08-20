@@ -1,4 +1,4 @@
-﻿import paramiko
+import paramiko
 import io
 
 class SSHManager:

@@ -204,6 +204,7 @@ async def main_loop():
             print(f"Worker error: {e}")
             await asyncio.sleep(POLL_INTERVAL)
         finally:
+            pass
             
         # --- Handle Backup Jobs ---
         from models import BackupJob
