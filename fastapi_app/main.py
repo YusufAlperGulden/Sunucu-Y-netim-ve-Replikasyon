@@ -2123,6 +2123,37 @@ def test_notification(svc_id: int, db: Session = Depends(get_db)):
         return {"success": False, "message": f"Connection test failed: {str(e)}"}
 
 
+def send_email_via_smtp(host: str, port: int, user: str, password: str, from_addr: str, to_addr: str, subject: str, body_html: str, tls_ssl: bool = True):
+    import smtplib
+    from email.mime.multipart import MIMEMultipart
+    from email.mime.text import MIMEText
+    from email.utils import formatdate
+
+    msg = MIMEMultipart("alternative")
+    msg["From"] = from_addr or user or "ClusterControl <noreply@localhost>"
+    msg["To"] = to_addr
+    msg["Subject"] = subject
+    msg["Date"] = formatdate(localtime=True)
+
+    text_part = MIMEText("This is an automated notification from ClusterControl.", "plain", "utf-8")
+    html_part = MIMEText(body_html, "html", "utf-8")
+    msg.attach(text_part)
+    msg.attach(html_part)
+
+    with smtplib.SMTP(host, port, timeout=15) as server:
+        server.ehlo()
+        if tls_ssl or port in (587, 465):
+            try:
+                server.starttls()
+                server.ehlo()
+            except Exception:
+                pass
+        if user and password:
+            server.login(user, password)
+        server.sendmail(msg["From"], [to_addr], msg.as_string())
+    return True
+
+
 class MailServerConfig(BaseModel):
     mail_type: str = "SMTP"
     server: str = ""
@@ -2184,7 +2215,44 @@ def save_mail_server(payload: MailServerConfig, db: Session = Depends(get_db)):
     s.encrypted_settings = _enc(_json.dumps(settings_data))
     s.active = True
     db.commit()
-    return {"success": True, "message": "Mail server configuration saved successfully."}
+
+    test_msg = ""
+    if payload.send_test and payload.mail_type.upper() == "SMTP":
+        try:
+            target_to = payload.reply_to
+            test_html = f"""
+            <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; border: 1px solid #e5e7eb; border-radius: 8px; overflow: hidden;">
+                <div style="background: #3a1c94; color: white; padding: 18px 24px; font-size: 18px; font-weight: bold;">
+                    ClusterControl — Mail Server Test
+                </div>
+                <div style="padding: 24px; color: #374151; font-size: 14px; line-height: 1.6;">
+                    <p>Hello,</p>
+                    <p>This is a confirmation that your mail server configuration on <strong>ClusterControl</strong> is active and working properly.</p>
+                    <p style="background: #f3f4f6; padding: 12px; border-radius: 6px; font-family: monospace; font-size: 13px;">
+                        <strong>SMTP Host:</strong> {payload.server}:{payload.port}<br>
+                        <strong>Sender / Reply-To:</strong> {payload.reply_to}<br>
+                        <strong>TLS/SSL:</strong> {'Enabled' if payload.tls_ssl else 'Disabled'}
+                    </p>
+                    <p style="color: #6b7280; font-size: 12px; margin-top: 24px;">Sent by ClusterControl Notification System</p>
+                </div>
+            </div>
+            """
+            send_email_via_smtp(
+                host=payload.server,
+                port=payload.port,
+                user=payload.username,
+                password=payload.password,
+                from_addr=payload.reply_to,
+                to_addr=target_to,
+                subject="ClusterControl Mail Server Test",
+                body_html=test_html,
+                tls_ssl=payload.tls_ssl
+            )
+            test_msg = f" Test email successfully delivered to {target_to}."
+        except Exception as e:
+            test_msg = f" Note: Test email delivery attempted but failed: {str(e)}"
+
+    return {"success": True, "message": f"Mail server configuration saved.{test_msg}"}
 
 
 # ─────────────────────────────────────────────────────────────────────────────
