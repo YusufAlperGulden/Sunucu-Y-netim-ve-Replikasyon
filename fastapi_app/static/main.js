@@ -4308,3 +4308,112 @@ async function submitDeployWizard() {
     const vsel = document.getElementById('deploy-db-version');
     if (vsel) vsel.addEventListener('change', updateDataDirHint);
 })();
+
+
+// ── Profile Dropdown ─────────────────────────────────────────────────────────
+
+function toggleProfileMenu(e) {
+    e.stopPropagation();
+    const dd = document.getElementById('profile-dropdown');
+    if (!dd) return;
+    const isOpen = dd.style.display !== 'none';
+    if (isOpen) {
+        closeProfileMenu();
+    } else {
+        dd.style.display = 'block';
+        // Populate with latest profile data
+        populateProfileMenu();
+    }
+}
+
+function closeProfileMenu() {
+    const dd = document.getElementById('profile-dropdown');
+    if (dd) dd.style.display = 'none';
+}
+
+// Close when clicking outside
+document.addEventListener('click', function(e) {
+    const wrapper = document.getElementById('profile-menu-wrapper');
+    if (wrapper && !wrapper.contains(e.target)) {
+        closeProfileMenu();
+    }
+});
+
+function populateProfileMenu() {
+    // Try to read from already-loaded profile data (window.cachedProfileData set by fetchProfile)
+    const data = window.cachedProfileData || {};
+    const username = data.username || document.getElementById('header-username-display')?.textContent || 'admin';
+    const email    = data.email    || (username + '@localhost');
+    const name     = data.name     || (username.charAt(0).toUpperCase() + username.slice(1));
+    const tz       = data.timezone || 'UTC';
+
+    // Build initials (up to 2 letters)
+    const words    = name.trim().split(/\s+/);
+    const initials = words.length >= 2
+        ? (words[0][0] + words[1][0]).toUpperCase()
+        : name.slice(0, 2).toUpperCase();
+
+    const avatarEl  = document.getElementById('profile-avatar');
+    const nameEl    = document.getElementById('profile-display-name');
+    const emailEl   = document.getElementById('profile-email');
+    const tzEl      = document.getElementById('profile-timezone');
+
+    if (avatarEl)  avatarEl.textContent  = initials;
+    if (nameEl)    nameEl.textContent    = name;
+    if (emailEl)   emailEl.textContent   = email;
+    if (tzEl)      tzEl.textContent      = tz;
+}
+
+function profileGoTo(tab) {
+    // Navigate to settings-view and activate the requested tab
+    closeProfileMenu();
+    if (window.location.hash !== '#settings-view') {
+        window.location.hash = 'settings-view';
+    } else {
+        // already on settings, trigger re-render
+        if (typeof handleRouting === 'function') handleRouting();
+    }
+    // Small delay to let the view render before clicking the tab button
+    setTimeout(() => {
+        const tabMap = {
+            'profile':  'tab-settings-profile',
+            'license':  'tab-settings-license',
+        };
+        const btnId = tabMap[tab];
+        if (btnId) {
+            const btn = document.getElementById(btnId);
+            if (btn && typeof switchSettingsTab === 'function') {
+                switchSettingsTab(tab, btn);
+            } else if (btn) {
+                btn.click();
+            }
+        }
+    }, 80);
+}
+
+function profileLogout() {
+    closeProfileMenu();
+    // Clear stored credentials
+    localStorage.removeItem('authToken');
+    localStorage.removeItem('globalAuthToken');
+    sessionStorage.clear();
+    // Force browser to forget HTTP Basic credentials by navigating to a fake URL with wrong creds
+    // then redirect to login page
+    window.location.href = '/';
+}
+
+// Hook into fetchProfile to cache profile data for the dropdown
+(function patchFetchProfile() {
+    const origFetch = window.fetchProfile;
+    if (typeof origFetch !== 'function') return;
+    window.fetchProfile = async function(...args) {
+        const result = await origFetch.apply(this, args);
+        // After fetchProfile runs, cache any profile data the DOM exposes
+        const usernameEl = document.getElementById('header-username-display');
+        window.cachedProfileData = window.cachedProfileData || {};
+        if (usernameEl) {
+            window.cachedProfileData.username = usernameEl.textContent.trim();
+        }
+        return result;
+    };
+})();
