@@ -1985,7 +1985,7 @@ window.exportAuditLogsCsv = function() {
     }
 
     // Button: Save Settings
-    const btnSaveSettings = document.getElementById('btn-save-settings');
+    const btnSaveSettings = document.getElementById('btn-save-project-settings') || document.getElementById('btn-save-settings');
     const updateIntervalInput = document.getElementById('setting-update-interval');
     if (updateIntervalInput) {
         updateIntervalInput.value = localStorage.getItem('dashboard_update_interval_sec') || 1;
@@ -1997,46 +1997,57 @@ window.exportAuditLogsCsv = function() {
     const settingMetricTable = document.getElementById('setting-metric-table');
     const settingReplicationTables = document.getElementById('setting-replication-tables');
 
+    window.loadProjectSettingsDropdown = async function() {
+        const select = document.getElementById('setting-project-select');
+        const container = document.getElementById('project-settings-container');
+        if (!select) return;
+        try {
+            const response = await apiFetch('/api/projects');
+            if (response.ok) {
+                const projs = await response.json();
+                const currentVal = select.value;
+                select.innerHTML = '<option value="">Proje seçin...</option>';
+                projs.forEach(p => {
+                    const opt = document.createElement('option');
+                    opt.value = p.id;
+                    opt.textContent = p.name;
+                    if (String(p.id) === String(currentVal)) opt.selected = true;
+                    select.appendChild(opt);
+                });
+                if (!select.value && container) {
+                    container.style.display = 'none';
+                }
+            }
+        } catch(err) {
+            console.error("Failed to fetch projects for settings", err);
+        }
+    };
+
     // Populate projects select when settings view is opened
     document.querySelectorAll('.sidebar-nav a').forEach(link => {
         link.addEventListener('click', async (e) => {
             const targetId = e.target.getAttribute('data-view');
             if (targetId === 'settings-view') {
-                try {
-                    const response = await apiFetch('/api/projects');
-                    if (response.ok) {
-                        const projs = await response.json();
-                        settingsProjectSelect.innerHTML = '<option value="">Proje seçin...</option>';
-                        projs.forEach(p => {
-                            const opt = document.createElement('option');
-                            opt.value = p.id;
-                            opt.textContent = p.name;
-                            settingsProjectSelect.appendChild(opt);
-                        });
-                        projectSettingsContainer.style.display = 'none';
-                    }
-                } catch(err) {
-                    console.error("Failed to fetch projects for settings", err);
-                }
+                window.loadProjectSettingsDropdown();
             }
         });
     });
 
     if (settingsProjectSelect) {
-        settingsProjectSelect?.addEventListener('change', async (e) => {
+        settingsProjectSelect.addEventListener('change', async (e) => {
             const pid = e.target.value;
             if (!pid) {
-                projectSettingsContainer.style.display = 'none';
+                if (projectSettingsContainer) projectSettingsContainer.style.display = 'none';
                 return;
             }
             try {
                 const res = await apiFetch(`/api/settings/${pid}`);
                 if (res.ok) {
                     const data = await res.json();
-                    settingWalLag.value = data.max_wal_lag_mb || 500;
+                    if (settingWalLag) settingWalLag.value = data.max_wal_lag_mb || 500;
                     if (settingMetricTable) settingMetricTable.value = data.metric_table || '';
                     if (settingReplicationTables) settingReplicationTables.value = data.replication_tables || '';
-                    projectSettingsContainer.style.display = 'block';
+                    if (projectSettingsContainer) projectSettingsContainer.style.display = 'block';
                 }
             } catch (err) {
                 console.error("Error loading settings for project", err);
@@ -2044,8 +2055,8 @@ window.exportAuditLogsCsv = function() {
         });
     }
 
-    if(btnSaveSettings) {
-        btnSaveSettings?.addEventListener('click', async () => {
+    if (btnSaveSettings) {
+        btnSaveSettings.addEventListener('click', async () => {
             const pid = settingsProjectSelect ? settingsProjectSelect.value : null;
             if (!pid) {
                 alert("Lütfen önce bir proje seçin.");
@@ -2059,7 +2070,7 @@ window.exportAuditLogsCsv = function() {
             
             localStorage.setItem('dashboard_update_interval_sec', updateIntervalVal);
             
-            btnSaveSettings.innerText = "Saving...";
+            btnSaveSettings.innerText = "Kaydediliyor...";
             try {
                 const payload = { max_wal_lag_mb: parseInt(lagVal) };
                 if (metricTableVal.trim() !== '') {
@@ -2075,12 +2086,14 @@ window.exportAuditLogsCsv = function() {
                     body: JSON.stringify(payload)
                 });
                 if(res.ok) {
-                    alert("Settings saved successfully!");
+                    alert("Ayarlar başarıyla kaydedildi!");
+                } else {
+                    alert("Ayarlar kaydedilemedi.");
                 }
             } catch (e) {
-                alert("Error saving settings");
+                alert("Ayarları kaydederken hata oluştu.");
             }
-            btnSaveSettings.innerText = "Save Settings";
+            btnSaveSettings.innerText = "Ayarları Kaydet";
         });
     }
 
@@ -3604,7 +3617,7 @@ async function fetchActivityJobs() {
     }, true);
 
 window.switchSettingsTab = function(tabName) {
-    const tabs = ['profile', 'cloud', 'notifications', 'certificates', 'license', 'addons', 'diagnostics'];
+    const tabs = ['profile', 'cloud', 'notifications', 'certificates', 'license', 'addons', 'diagnostics', 'project'];
     tabs.forEach(t => {
         const tabEl = document.getElementById(`tab-settings-${t}`);
         const contentEl = document.getElementById(`settings-content-${t}`);
@@ -3629,7 +3642,8 @@ window.switchSettingsTab = function(tabName) {
     if (tabName === 'certificates')  window.loadCertificates && window.loadCertificates();
     if (tabName === 'license')       window.loadLicense && window.loadLicense();
     if (tabName === 'addons')        window.loadAddons && window.loadAddons();
-    if (tabName === 'profile')       window.loadLdapConfigs && window.loadLdapConfigs(); // LDAP is in Users, not here
+    if (tabName === 'profile')       window.loadLdapConfigs && window.loadLdapConfigs();
+    if (tabName === 'project')       loadProjectSettingsDropdown && loadProjectSettingsDropdown();
 };
 
 // ─────────────────────────────────────────────────────────────────────────────

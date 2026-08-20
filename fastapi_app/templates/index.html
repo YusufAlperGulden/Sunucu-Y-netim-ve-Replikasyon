@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Sunucu Yönetim ve Replikasyon</title>
-    <link rel="stylesheet" href="/static/style.css?v=84">
+    <link rel="stylesheet" href="/static/style.css?v=85">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 </head>
 <body>
@@ -1502,7 +1502,7 @@ Real OS metrics (CPU, RAM, Disk I/O) cannot be fetched directly from PostgreSQL 
         </div>
     </div>
 
-    <script src="/static/main.js?v=84"></script>
+    <script src="/static/main.js?v=85"></script>
 
 
 
@@ -2135,6 +2135,7 @@ Real OS metrics (CPU, RAM, Disk I/O) cannot be fetched directly from PostgreSQL 
                         <div class="settings-tab" onclick="switchSettingsTab('license')" id="tab-settings-license" style="padding: 16px 0; color: #6b7280; font-weight: 500; border-bottom: 2px solid transparent; cursor: pointer;">License</div>
                         <div class="settings-tab" onclick="switchSettingsTab('addons')" id="tab-settings-addons" style="padding: 16px 0; color: #6b7280; font-weight: 500; border-bottom: 2px solid transparent; cursor: pointer;">Addons</div>
                         <div class="settings-tab" onclick="switchSettingsTab('diagnostics')" id="tab-settings-diagnostics" style="padding: 16px 0; color: #6b7280; font-weight: 500; border-bottom: 2px solid transparent; cursor: pointer;">Diagnostics</div>
+                        <div class="settings-tab" onclick="switchSettingsTab('project')" id="tab-settings-project" style="padding: 16px 0; color: #6b7280; font-weight: 500; border-bottom: 2px solid transparent; cursor: pointer; white-space:nowrap;">Project Configuration</div>
                     </div>
 
                     <!-- Profile Content -->
@@ -2152,13 +2153,15 @@ Real OS metrics (CPU, RAM, Disk I/O) cannot be fetched directly from PostgreSQL 
                             <button style="background: #3a1c94; color: white; border: none; border-radius: 6px; padding: 10px 24px; font-size: 0.95rem; cursor: pointer;">Settings</button>
                             <a href="#" style="color: #3a1c94; text-decoration: none; font-size: 0.95rem;">Change password</a>
                         </div>
+                    </div>
 
-                        <!-- Embedded Project Configuration in Profile Tab -->
-                        <div style="border-top: 1px solid var(--border); padding-top: 32px; width: 100%; max-width: 600px; text-align: left;">
-                            <h3 style="font-size: 1.2rem; margin-bottom: 8px; color: var(--text-main);">Project Configuration</h3>
-                            <p style="color: var(--text-muted); font-size: 0.85rem; margin-bottom: 20px;">Buradan projelere özel senkronizasyon ve metrik ayarlarını değiştirebilirsiniz.</p>
-                            
-                            <div style="margin-bottom: 16px;">
+                    <!-- Project Configuration Content -->
+                    <div id="settings-content-project" class="settings-content-pane" style="display: none; padding: 40px;">
+                        <h2 style="font-size: 1.4rem; font-weight: 700; margin-bottom: 8px; color: var(--text-main);">Project Configuration</h2>
+                        <p style="color: var(--text-muted); font-size: 0.88rem; margin-bottom: 28px;">Buradan projelere özel senkronizasyon ve metrik ayarlarını değiştirebilirsiniz.</p>
+
+                        <div style="max-width: 560px;">
+                            <div style="margin-bottom: 20px;">
                                 <label style="display: block; font-size: 0.85rem; font-weight: 500; margin-bottom: 6px; color: var(--text-main);">Select Project</label>
                                 <select id="setting-project-select" style="background: var(--bg-card); border: 1px solid var(--border); color: var(--text-main); padding: 10px; border-radius: 4px; width: 100%; font-size: 0.9rem;">
                                     <option value="">Proje seçin...</option>
@@ -2171,27 +2174,21 @@ Real OS metrics (CPU, RAM, Disk I/O) cannot be fetched directly from PostgreSQL 
                                     <input type="number" id="setting-wal-lag" value="500" min="50" max="10000" style="background: var(--bg-card); border: 1px solid var(--border); color: var(--text-main); padding: 10px; border-radius: 4px; width: 100%; font-size: 0.9rem;">
                                     <small style="color: var(--text-muted); display: block; margin-top: 6px; font-size: 0.75rem;">Eğer ana sunucu bu MB değerinden fazla WAL dosyası biriktirirse, yedek ile arasındaki bağ acil olarak koparılır.</small>
                                 </div>
-                                
+
                                 <div style="margin-bottom: 16px;">
                                     <label style="display: block; font-size: 0.85rem; font-weight: 500; margin-bottom: 6px; color: var(--text-main);">Target Metric Table (Optional)</label>
                                     <input type="text" id="setting-metric-table" placeholder="e.g. vehicles, email_records" style="background: var(--bg-card); border: 1px solid var(--border); color: var(--text-main); padding: 10px; border-radius: 4px; width: 100%; font-size: 0.9rem;">
                                     <small style="color: var(--text-muted); display: block; margin-top: 6px; font-size: 0.75rem;">Eğer belirtilirse Dashboard sadece bu tablodaki net (exact) veri sayısını okur. Boş bırakırsanız metrik sayılmaz.</small>
                                 </div>
-                                
+
                                 <div style="margin-bottom: 16px;">
                                     <label style="display: block; font-size: 0.85rem; font-weight: 500; margin-bottom: 6px; color: var(--text-main);">Replication Tables (Optional)</label>
                                     <input type="text" id="setting-replication-tables" placeholder="e.g. vehicles, users" style="background: var(--bg-card); border: 1px solid var(--border); color: var(--text-main); padding: 10px; border-radius: 4px; width: 100%; font-size: 0.9rem;">
                                     <small style="color: var(--text-muted); display: block; margin-top: 6px; font-size: 0.75rem;">Virgülle ayrılmış tablo listesi. Belirtilmezse tüm tablolar replike edilir.</small>
                                 </div>
-                                
+
                                 <button id="btn-save-project-settings" style="background: #3a1c94; color: white; border: none; border-radius: 4px; padding: 8px 16px; font-size: 0.9rem; cursor: pointer; margin-top: 8px;">Ayarları Kaydet</button>
                             </div>
-                                            <div style="font-size: 0.75rem; font-weight: 600; color: #9ca3af; margin-bottom: 12px; letter-spacing: 0.5px;">WHEN TO ENABLE IT</div>
-                                <ul style="font-size: 0.85rem; color: #4b5563; padding-left: 20px; margin-bottom: 24px; line-height: 1.5;">
-                                    <li style="margin-bottom: 8px;">Your infrastructure runs on Kubernetes and you want to operate databases as native cluster resources.</li>
-                                    <li style="margin-bottom: 8px;">You want database operators to automate deployment, scaling and recovery on K8s.</li>
-                                    <li>You need to manage Kubernetes-based database clusters from the same console as the rest of your fleet.</li>
-                                </ul>
                         </div>
                     </div>
 
@@ -2855,6 +2852,6 @@ Real OS metrics (CPU, RAM, Disk I/O) cannot be fetched directly from PostgreSQL 
   </div><!-- end modal card -->
 </div><!-- end modal overlay -->
 
-<script src="/static/main.js?v=84"></script>
+<script src="/static/main.js?v=85"></script>
 </body>
 </html>
