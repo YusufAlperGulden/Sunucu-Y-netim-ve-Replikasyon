@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Sunucu Yönetim ve Replikasyon</title>
-    <link rel="stylesheet" href="/static/style.css?v=77">
+    <link rel="stylesheet" href="/static/style.css?v=78">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 </head>
 <body>
@@ -178,10 +178,10 @@
                         </div>
                         
                         <div style="flex: 1; display: flex; align-items: center; justify-content: center; position: relative; cursor: pointer;" onclick="document.querySelector('a[data-view=\'clusters-view\']').click()">
-                            <svg width="200" height="200" viewBox="0 0 200 200">
-                                <circle id="cc-donut-bg" cx="100" cy="100" r="80" fill="none" stroke="#e5e7eb" stroke-width="25"></circle>
-                                <circle cx="100" cy="100" r="80" fill="none" stroke="var(--success)" stroke-width="25" stroke-dasharray="502.6 502.6" stroke-dashoffset="502.6" id="cc-donut-progress" style="transition: stroke-dashoffset 1s ease-out; transform: rotate(-90deg); transform-origin: 50% 50%;"></circle>
-                            </svg>
+                                <svg id="cc-donut-svg" width="200" height="200" viewBox="0 0 200 200">
+                                    <circle cx="100" cy="100" r="80" fill="none" stroke="#e5e7eb" stroke-width="25"></circle>
+                                    <!-- colored segments added by JS -->
+                                </svg>
                             <div style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); text-align: center;">
                                 <div id="cc-donut-center-text" style="font-size: 1.5rem; font-weight: bold; color: var(--success);">0</div>
                                 <div style="font-size: 0.8rem; color: var(--text-muted);">Operational</div>
@@ -1390,7 +1390,7 @@ Real OS metrics (CPU, RAM, Disk I/O) cannot be fetched directly from PostgreSQL 
         </div>
     </div>
 
-    <script src="/static/main.js?v=67"></script>
+    <script src="/static/main.js?v=78"></script>
 
 
 
@@ -2529,6 +2529,6 @@ Real OS metrics (CPU, RAM, Disk I/O) cannot be fetched directly from PostgreSQL 
   </div>
 </div>
 
-<script src="/static/main.js?v=77"></script>
+<script src="/static/main.js?v=78"></script>
 </body>
 </html>

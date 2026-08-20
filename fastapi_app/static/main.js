@@ -522,6 +522,9 @@ document.addEventListener('DOMContentLoaded', () => {
             if (clustersList) clustersList.innerHTML = '';
             
             let operationalCount = 0;
+            let warningCount = 0;
+            let failedCount = 0;
+            let shutdownCount = 0;
             let allNodes = [];
               const submenu = document.getElementById('clusters-submenu');
               if (submenu) {
@@ -552,8 +555,16 @@ document.addEventListener('DOMContentLoaded', () => {
 
 
             data.forEach(proj => {
-                let isOperational = proj.nodesCount > 0 && proj.sync_status !== 'FAILED';
-                if (isOperational) operationalCount++;
+                // 4-category classification for donut chart
+                if (proj.sync_status === 'FAILED') {
+                    failedCount++;
+                } else if (proj.nodesCount === 0) {
+                    shutdownCount++;
+                } else {
+                    let isOperational = proj.nodesCount > 0 && proj.sync_status !== 'FAILED';
+                    if (isOperational) operationalCount++;
+                    else warningCount++;
+                }
                 
                 if (proj.nodes) {
                     proj.nodes.forEach(n => {
@@ -583,11 +594,23 @@ document.addEventListener('DOMContentLoaded', () => {
                     });
                 }
                 
-                const statusColor = isOperational ? 'var(--success)' : 'var(--warning)';
-                const statusText = isOperational ? '● Operational' : '● Warning';
+                // Determine status for table display (4-color system)
+                let clusterStatusColor, clusterStatusText, clusterStatusKey;
+                const isOperational = proj.nodesCount > 0 && proj.sync_status !== 'FAILED';
+                if (proj.sync_status === 'FAILED') {
+                    clusterStatusColor = '#ef4444'; clusterStatusText = '● Failed'; clusterStatusKey = 'Failed';
+                } else if (proj.nodesCount === 0) {
+                    clusterStatusColor = '#3b82f6'; clusterStatusText = '● Shut Down'; clusterStatusKey = 'Shut Down';
+                } else if (isOperational) {
+                    clusterStatusColor = 'var(--success)'; clusterStatusText = '● Operational'; clusterStatusKey = 'Operational';
+                } else {
+                    clusterStatusColor = 'var(--warning)'; clusterStatusText = '● Warning'; clusterStatusKey = 'Warning';
+                }
+                const statusColor = clusterStatusColor;
+                const statusText = clusterStatusText;
 
                 const tr = document.createElement('tr');
-                tr.setAttribute('data-status', isOperational ? 'Operational' : 'Warning');
+                tr.setAttribute('data-status', clusterStatusKey);
                 tr.style.borderBottom = '1px solid var(--glass-border)';
                 tr.style.cursor = 'pointer';
                 
@@ -889,60 +912,90 @@ document.addEventListener('DOMContentLoaded', () => {
                 if (tbody) { tbody.appendChild(tr); }
             });
             
-            // Update Donut Chart
-            const el_cc_total_clusters = document.getElementById('cc-total-clusters'); if(el_cc_total_clusters) el_cc_total_clusters.innerText = `${data.length} Clusters`;
-{ const TMP_EL = document.getElementById('cc-donut-center-text'); if(TMP_EL) {             const el1 = TMP_EL; if(el1) el1.innerText = operationalCount; } }
-            
-            const radius = 80;
-            const circumference = 2 * Math.PI * radius; // ~502.6
-            const ratio = data.length > 0 ? (operationalCount / data.length) : 0;
-            const offset = circumference - (ratio * circumference);
-            
-            const donutCircle = document.getElementById('cc-donut-progress');
-if (donutCircle) {
-                donutCircle.style.strokeDashoffset = offset;
-                // Operational arc is ALWAYS green — never changes color based on ratio
-                donutCircle.style.stroke = 'var(--success)';
+            // ── Multi-Segment Donut Chart ──────────────────────────────────
+            const el_cc_total_clusters = document.getElementById('cc-total-clusters');
+            if (el_cc_total_clusters) el_cc_total_clusters.innerText = `${data.length} Clusters`;
 
-                // Background circle = warning color (orange) when there are warnings, gray otherwise
-                const donutBg = document.getElementById('cc-donut-bg');
-                const warningCountForBg = data.length - operationalCount;
-                if (donutBg) {
-                    donutBg.style.stroke = warningCountForBg > 0 ? 'var(--warning)' : '#e5e7eb';
-                }
-
-                // Center text always green (operational count)
-                const centerText = document.getElementById('cc-donut-center-text');
-                if (centerText) centerText.style.color = 'var(--success)';
-
-                // Add hover logic
-                const donutTooltip = document.getElementById('donut-hover-tooltip');
-                const donutText = document.getElementById('donut-hover-text');
-                if (donutTooltip && donutText) {
-                    donutCircle?.addEventListener('mouseenter', (e) => {
-                        if(donutText) donutText.innerText = `${operationalCount} Operational`;
-                        donutTooltip.style.display = 'block';
-                    });
-                    donutCircle?.addEventListener('mousemove', (e) => {
-                        donutTooltip.style.left = (e.clientX + 10) + 'px';
-                        donutTooltip.style.top = (e.clientY + 10) + 'px';
-                    });
-                    donutCircle?.addEventListener('mouseleave', () => {
-                        donutTooltip.style.display = 'none';
-                    });
-                }
+            const centerText = document.getElementById('cc-donut-center-text');
+            if (centerText) {
+                centerText.innerText = operationalCount;
+                centerText.style.color = 'var(--success)';
             }
-            
-            // Update Legend
-            const warningCount = data.length - operationalCount;
-            const ccd = document.getElementById('cc-donut-legend'); if(ccd) ccd.innerHTML = `
-                <div style="display: flex; justify-content: space-between; font-size: 0.9rem;">
-                    <span style="color: var(--success);">&#8226; ${operationalCount} Operational</span>
-                </div>
-                ${warningCount > 0 ? `<div style="display: flex; justify-content: space-between; font-size: 0.9rem;">
-                    <span style="color: var(--warning);">&#8226; ${warningCount} Warning</span>
-                </div>` : ''}
-            `;
+
+            const donutSvg = document.getElementById('cc-donut-svg');
+            const donutTooltip = document.getElementById('donut-hover-tooltip');
+            const donutText = document.getElementById('donut-hover-text');
+
+            if (donutSvg && data.length > 0) {
+                const radius = 80;
+                const circumference = 2 * Math.PI * radius; // ~502.65
+                const total = data.length;
+
+                // Segment definitions — order matters (drawn bottom to top)
+                const segments = [
+                    { count: shutdownCount, color: '#3b82f6', label: 'Shut Down' },
+                    { count: failedCount,   color: '#ef4444', label: 'Failed'    },
+                    { count: warningCount,  color: 'var(--warning)', label: 'Warning' },
+                    { count: operationalCount, color: 'var(--success)', label: 'Operational' },
+                ];
+
+                // Remove previously drawn segment circles (keep the gray background circle)
+                donutSvg.querySelectorAll('.donut-segment').forEach(el => el.remove());
+
+                // Build segments starting at top (−90°), clockwise
+                // stroke-dashoffset formula: circumference/4 − cumulativeArc
+                let cumulativeArc = 0;
+                segments.forEach(seg => {
+                    if (seg.count === 0) return;
+                    const arc = (seg.count / total) * circumference;
+                    const dashOffset = circumference / 4 - cumulativeArc;
+
+                    const circle = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+                    circle.setAttribute('cx', '100');
+                    circle.setAttribute('cy', '100');
+                    circle.setAttribute('r', String(radius));
+                    circle.setAttribute('fill', 'none');
+                    circle.setAttribute('stroke', seg.color);
+                    circle.setAttribute('stroke-width', '25');
+                    circle.setAttribute('stroke-dasharray', `${arc} ${circumference - arc}`);
+                    circle.setAttribute('stroke-dashoffset', String(dashOffset));
+                    circle.style.transition = 'stroke-dashoffset 0.8s ease-out';
+                    circle.classList.add('donut-segment');
+
+                    // Hover tooltip for this segment
+                    if (donutTooltip && donutText) {
+                        circle.style.cursor = 'pointer';
+                        circle.addEventListener('mouseenter', () => {
+                            donutText.innerText = `${seg.count} ${seg.label}`;
+                            donutTooltip.style.display = 'block';
+                        });
+                        circle.addEventListener('mousemove', (e) => {
+                            donutTooltip.style.left = (e.clientX + 12) + 'px';
+                            donutTooltip.style.top  = (e.clientY + 12) + 'px';
+                        });
+                        circle.addEventListener('mouseleave', () => {
+                            donutTooltip.style.display = 'none';
+                        });
+                    }
+
+                    donutSvg.appendChild(circle);
+                    cumulativeArc += arc;
+                });
+            }
+
+            // Update Legend — show only non-zero categories
+            const legendItems = [
+                { count: operationalCount, color: 'var(--success)', label: 'Operational' },
+                { count: warningCount,     color: 'var(--warning)', label: 'Warning'     },
+                { count: failedCount,      color: '#ef4444',        label: 'Failed'      },
+                { count: shutdownCount,    color: '#3b82f6',        label: 'Shut Down'   },
+            ];
+            const ccd = document.getElementById('cc-donut-legend');
+            if (ccd) ccd.innerHTML = legendItems
+                .filter(l => l.count > 0)
+                .map(l => `<div style="display:flex;justify-content:space-between;font-size:0.9rem;">
+                    <span style="color:${l.color};">&#8226; ${l.count} ${l.label}</span></div>`)
+                .join('');
             
             // Apply current filter
             const filterVal = document.getElementById('cc-status-filter')?.value || 'All';
