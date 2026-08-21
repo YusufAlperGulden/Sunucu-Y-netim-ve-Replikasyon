@@ -3438,19 +3438,21 @@ function renderBackups() {
             // Use the already-fetched profile data (same source as Settings page)
             let profile = window.cachedProfileData;
             if (!profile) {
-                // Profile not loaded yet — fetch it now
-                const res = await apiFetch('/api/users/me');
-                if (!res.ok) return;
-                profile = await res.json();
-                // Cache it so Settings page also stays in sync
-                if (typeof applyProfileData === 'function') applyProfileData(profile);
+                try {
+                    const res = await apiFetch('/api/users/me');
+                    if (res.ok) {
+                        profile = await res.json();
+                        if (typeof applyProfileData === 'function') applyProfileData(profile);
+                    }
+                } catch(e) {}
             }
-            const username = profile.username || 'admin';
-            const email    = profile.email    || `${username}@localhost`;
-            const firstName = profile.first_name || username.charAt(0).toUpperCase() + username.slice(1);
-            const lastName  = profile.last_name  || '';
-            const team      = profile.team     || 'admins';
-            const timezone  = profile.timezone || 'UTC';
+            const localUser = localStorage.getItem('currentUser') || 'admin';
+            const username = (profile && profile.username) || localUser;
+            const email    = (profile && profile.email)    || `${username}@localhost`;
+            const firstName = (profile && profile.first_name) || (username.charAt(0).toUpperCase() + username.slice(1));
+            const lastName  = (profile && profile.last_name)  || '';
+            const team      = (profile && profile.team)     || 'admins';
+            const timezone  = (profile && profile.timezone) || 'UTC';
 
             usersData = [{
                 id: 0,
@@ -3458,7 +3460,7 @@ function renderBackups() {
                 email,
                 first_name: firstName,
                 last_name:  lastName,
-                role: profile.role || 'admin',
+                role: (profile && profile.role) || 'admin',
                 team,
                 timezone,
                 origin: 'cmon',
@@ -3471,6 +3473,7 @@ function renderBackups() {
             console.error('Fallback user load failed:', e);
         }
     }
+
 
     // Expose so the router can call it when navigating to users-view
     window.reloadUsers = loadUsersFromAPI;
@@ -6287,19 +6290,23 @@ window.loadNotifications = async function() {
         const res = await apiFetch('/api/notifications');
         if (!res.ok) { tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;padding:20px;color:#ef4444;">Failed to load.</td></tr>'; return; }
         const svcs = await res.json();
-        if (!svcs.length) { tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;padding:20px;color:#9ca3af;">No notification services added yet.</td></tr>'; return; }
+        if (!svcs.length) {
+            tbody.innerHTML = `<tr><td colspan="5" style="padding:60px 24px;text-align:center;color:#9ca3af;">
+                <svg width="56" height="56" viewBox="0 0 24 24" fill="#f3f4f6" stroke="#d1d5db" stroke-width="1.2" style="margin:0 auto 16px auto;display:block;"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path></svg>
+                <div style="font-size:0.95rem;font-weight:500;color:#4b5563;">You haven't created integration</div>
+            </td></tr>`;
+            return;
+        }
         tbody.innerHTML = svcs.map(s => `<tr style="border-bottom:1px solid #f3f4f6;">
-            <td style="padding:10px 16px;font-size:0.85rem;font-weight:600;">${escapeHTML(s.label)}</td>
-            <td style="padding:10px 16px;font-size:0.85rem;color:#6b7280;">${escapeHTML(s.service_type)}</td>
-            <td style="padding:10px 16px;font-size:0.85rem;color:#6b7280;">${escapeHTML(s.host || s.webhook_url || '-')}</td>
-            <td style="padding:10px 16px;"><span style="color:${s.active?'#10b981':'#9ca3af'};font-size:0.8rem;">${s.active?'Active':'Inactive'}</span></td>
-            <td style="padding:10px 16px;">
-              <button onclick="testNotifService(${s.id})" style="padding:4px 10px;font-size:0.75rem;border:1px solid #e5e7eb;border-radius:4px;cursor:pointer;background:white;margin-right:6px;">Test</button>
-              <button onclick="deleteNotifService(${s.id})" style="padding:4px 10px;font-size:0.75rem;border:1px solid #fee2e2;border-radius:4px;cursor:pointer;background:white;color:#ef4444;">Delete</button>
-            </td>
+            <td style="padding:14px 16px;font-size:0.88rem;font-weight:600;color:#111827;">${escapeHTML(s.label)}</td>
+            <td style="padding:14px 16px;font-size:0.88rem;color:#4b5563;">${escapeHTML(s.service_type)}</td>
+            <td style="padding:14px 16px;"><span style="display:inline-flex;align-items:center;gap:6px;color:${s.active?'#16a34a':'#9ca3af'};font-size:0.85rem;font-weight:500;"><span style="width:7px;height:7px;border-radius:50%;background:${s.active?'#16a34a':'#9ca3af'};"></span>${s.active?'Active':'Inactive'}</span></td>
+            <td style="padding:14px 16px;font-size:0.88rem;color:#4b5563;">${escapeHTML(s.host || s.webhook_url || 'All Clusters')}</td>
+            <td style="padding:14px 16px;font-size:0.88rem;color:#6b7280;">Critical, Warning</td>
         </tr>`).join('');
     } catch(e) { tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;padding:20px;color:#9ca3af;">Error loading services.</td></tr>'; }
 };
+
 
 window.testNotifService = async function(id) {
     const res = await apiFetch(`/api/notifications/${id}/test`, { method: 'POST' });

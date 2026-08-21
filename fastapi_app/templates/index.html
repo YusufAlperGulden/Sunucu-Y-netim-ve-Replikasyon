@@ -1017,7 +1017,7 @@ Real OS metrics (CPU, RAM, Disk I/O) cannot be fetched directly from PostgreSQL 
                               <th style="padding: 12px 16px; font-weight: 600; text-align: right;">Actions</th>
                           </tr>
                       </thead>
-                      <tbody>
+                      <tbody id="users-tbody">
                           <tr>
                               <td colspan="8" style="padding: 40px; text-align: center; color: var(--text-muted);">
                                   <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="#e5e7eb" stroke-width="2" style="margin: 0 auto 16px auto; display: block;"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M23 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg>
@@ -1026,7 +1026,7 @@ Real OS metrics (CPU, RAM, Disk I/O) cannot be fetched directly from PostgreSQL 
                           </tr>
                       </tbody>
                   </table>
-              
+              </div>
 
               <!-- TEAMS TABLE -->
               <div id="content-teams" class="user-tab-content" style="display: none;">
@@ -1191,8 +1191,10 @@ Real OS metrics (CPU, RAM, Disk I/O) cannot be fetched directly from PostgreSQL 
                 <!-- Left Sidebar (Fixed / Non-scrolling) -->
                 <div style="width: 250px; flex-shrink: 0; border-right: 1px solid #e5e7eb; padding: 32px 24px; display: flex; flex-direction: column; gap: 16px; font-size: 0.9rem; background: #fafafa; position: sticky; top: 0; align-self: flex-start; height: 100%; overflow-y: auto; user-select: none;">
                     <div style="color: #c026d3; font-weight: 600; margin-bottom: 8px;">Release Notes</div>
-                    <a href="#changelog-view" onclick="event.preventDefault(); document.getElementById('v1-6-0').scrollIntoView({behavior:'smooth'}); document.querySelectorAll('#changelog-view .cl-sidebar-link').forEach(e=>e.style.fontWeight='normal'); this.style.fontWeight='bold';" class="cl-sidebar-link" style="color: #4b5563; text-decoration: none; font-weight: bold;">v1.6.0 (Latest)</a>
+                    <a href="#changelog-view" onclick="event.preventDefault(); document.getElementById('v1-6-1').scrollIntoView({behavior:'smooth'}); document.querySelectorAll('#changelog-view .cl-sidebar-link').forEach(e=>e.style.fontWeight='normal'); this.style.fontWeight='bold';" class="cl-sidebar-link" style="color: #4b5563; text-decoration: none; font-weight: bold;">v1.6.1 (Latest)</a>
+                    <a href="#changelog-view" onclick="event.preventDefault(); document.getElementById('v1-6-0').scrollIntoView({behavior:'smooth'}); document.querySelectorAll('#changelog-view .cl-sidebar-link').forEach(e=>e.style.fontWeight='normal'); this.style.fontWeight='bold';" class="cl-sidebar-link" style="color: #4b5563; text-decoration: none;">v1.6.0</a>
                     <a href="#changelog-view" onclick="event.preventDefault(); document.getElementById('v1-5-9').scrollIntoView({behavior:'smooth'}); document.querySelectorAll('#changelog-view .cl-sidebar-link').forEach(e=>e.style.fontWeight='normal'); this.style.fontWeight='bold';" class="cl-sidebar-link" style="color: #4b5563; text-decoration: none;">v1.5.9</a>
+
                     <a href="#changelog-view" onclick="event.preventDefault(); document.getElementById('v1-5-8').scrollIntoView({behavior:'smooth'}); document.querySelectorAll('#changelog-view .cl-sidebar-link').forEach(e=>e.style.fontWeight='normal'); this.style.fontWeight='bold';" class="cl-sidebar-link" style="color: #4b5563; text-decoration: none;">v1.5.8</a>
                     <a href="#changelog-view" onclick="event.preventDefault(); document.getElementById('v1-5-7').scrollIntoView({behavior:'smooth'}); document.querySelectorAll('#changelog-view .cl-sidebar-link').forEach(e=>e.style.fontWeight='normal'); this.style.fontWeight='bold';" class="cl-sidebar-link" style="color: #4b5563; text-decoration: none;">v1.5.7</a>
                     <a href="#changelog-view" onclick="event.preventDefault(); document.getElementById('v1-5-6').scrollIntoView({behavior:'smooth'}); document.querySelectorAll('#changelog-view .cl-sidebar-link').forEach(e=>e.style.fontWeight='normal'); this.style.fontWeight='bold';" class="cl-sidebar-link" style="color: #4b5563; text-decoration: none;">v1.5.6</a>
@@ -1220,7 +1222,33 @@ Real OS metrics (CPU, RAM, Disk I/O) cannot be fetched directly from PostgreSQL 
                     <h1 style="color: #4b5563; font-weight: 300; font-size: 2.2rem; margin-bottom: 24px;">Release Notes</h1>
                     <p style="color: #4b5563; line-height: 1.6; margin-bottom: 40px; font-size: 1.05rem;">Use this page as your guide to stay up to date on the latest enhancements and changes, ensuring you can make the most of ClusterControl's powerful capabilities.</p>
                     
+                    <h2 id="v1-6-1" style="color: #4b5563; font-weight: 300; font-size: 1.8rem; margin-bottom: 20px; border-top: 1px solid #e5e7eb; padding-top: 32px;">v1.6.1</h2>
+                    
+                    <h3 id="release-cycle" style="color: #4b5563; font-weight: 400; font-size: 1.4rem; margin-bottom: 16px;">Release cycle</h3>
+                    <p style="color: #4b5563; margin-bottom: 16px; line-height: 1.6;">We highly advise you to keep up to date with the latest version for the following reasons:</p>
+                    <ul style="color: #4b5563; margin-bottom: 32px; padding-left: 20px; line-height: 1.7;">
+                        <li>ClusterControl has a short release cycle compared to other software applications (likely a new major release every quarter of the year).</li>
+                        <li>ClusterControl has to keep up with all the latest changes and modifications introduced by supported database and application vendors.</li>
+                        <li>Some of the issues you have encountered may already be fixed in the latest weekly maintenance or major release.</li>
+                    </ul>
+                    
+                    <h3 id="whats-new" style="color: #4b5563; font-weight: 400; font-size: 1.4rem; margin-bottom: 16px;">What's New</h3>
+                    <ul style="color: #4b5563; line-height: 1.7; padding-left: 20px; margin-bottom: 40px;">
+                        <li><span style="font-weight: 600;">User Management Table Sync Fix:</span> Fixed table DOM targeting (<code>users-tbody</code>) so the active Admin profile (<code>admin@localhost</code>, UTC timezone, Admins team) loads and renders immediately across all router navigation flows.</li>
+                        <li><span style="font-weight: 600;">ClusterControl Settings Complete 7-Tab Alignment:</span> Fully aligned all Settings tabs with the official ClusterControl website:
+                            <ul style="margin-top: 6px; padding-left: 20px;">
+                                <li><b>Cloud storage credentials:</b> 4-provider interactive wizard (Amazon Web Services, Google Cloud, Microsoft Azure, S3 Compatible) with official provider landing links and credentials upload support.</li>
+                                <li><b>Notification services:</b> Aligned table headers (<code>Name</code>, <code>Service</code>, <code>Active</code>, <code>Send Alarms From</code>, <code>Trigger events</code>) and empty state illustration.</li>
+                                <li><b>Certificate management:</b> Full directory hierarchy (<code>galera</code>, <code>group_replication</code>, <code>mssql_ao_async</code>, <code>mssql_single</code>, <code>postgresql_single</code>, <code>redis_sharded</code>, <code>replication</code>, <code>valkey_sharded</code>) with folder creation and cert management.</li>
+                                <li><b>License:</b> ClusterControl Enterprise license status (<code>Severalnines AB</code>, <code>2027-06-24</code>, <code>23/25 nodes</code> limit progress indicator) and key activation.</li>
+                                <li><b>Addons:</b> Ops-Center (multi-CMON controller scaling) and Kubernetes database operator modules with toggles and documentation links.</li>
+                                <li><b>Diagnostics:</b> UI Audit data collection recording with downloadable diagnostic logs.</li>
+                            </ul>
+                        </li>
+                    </ul>
+
                     <h2 id="v1-6-0" style="color: #4b5563; font-weight: 300; font-size: 1.8rem; margin-bottom: 20px; border-top: 1px solid #e5e7eb; padding-top: 32px;">v1.6.0</h2>
+
                     
                     <h3 id="release-cycle" style="color: #4b5563; font-weight: 400; font-size: 1.4rem; margin-bottom: 16px;">Release cycle</h3>
                     <p style="color: #4b5563; margin-bottom: 16px; line-height: 1.6;">We highly advise you to keep up to date with the latest version for the following reasons:</p>
@@ -1698,7 +1726,7 @@ Real OS metrics (CPU, RAM, Disk I/O) cannot be fetched directly from PostgreSQL 
         </div>
     </div>
 
-    <script src="/static/main.js?v=112"></script>
+    <script src="/static/main.js?v=114"></script>
 
 
 
@@ -2885,10 +2913,7 @@ Real OS metrics (CPU, RAM, Disk I/O) cannot be fetched directly from PostgreSQL 
                     <!-- Notification Services Content -->
                     <div id="settings-content-notifications" class="settings-content-pane" style="display: none; padding: 24px; flex-direction: column;">
                         <div style="display: flex; justify-content: flex-end; gap: 10px; margin-bottom: 24px;">
-                            <button onclick="window.openConfigureMailServerModal()" style="background: white; color: #374151; border: 1px solid #d1d5db; border-radius: 4px; padding: 8px 16px; font-size: 0.9rem; cursor: pointer; display: flex; align-items: center; gap: 8px; font-weight: 500;" onmouseover="this.style.background='#f9fafb'" onmouseout="this.style.background='white'">
-                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="4" width="20" height="16" rx="2"></rect><path d="M22 7l-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"></path></svg> Configure mail server
-                            </button>
-                            <button onclick="window.openAddNotifModal()" style="background: #3a1c94; color: white; border: none; border-radius: 4px; padding: 8px 16px; font-size: 0.9rem; cursor: pointer; display: flex; align-items: center; gap: 8px;">
+                            <button onclick="window.openAddNotifModal()" style="background: #3a1c94; color: white; border: none; border-radius: 20px; padding: 8px 20px; font-size: 0.9rem; cursor: pointer; display: flex; align-items: center; gap: 8px; font-weight: 500;">
                                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="16"></line><line x1="8" y1="12" x2="16" y2="12"></line></svg> Add new integration
                             </button>
                         </div>
@@ -2896,11 +2921,20 @@ Real OS metrics (CPU, RAM, Disk I/O) cannot be fetched directly from PostgreSQL 
                             <thead><tr style="background:#f9fafb;font-weight:600;font-size:0.85rem;color:#4b5563;">
                                 <th style="padding:12px 16px;text-align:left;border-bottom:1px solid #e5e7eb;">Name</th>
                                 <th style="padding:12px 16px;text-align:left;border-bottom:1px solid #e5e7eb;">Service</th>
-                                <th style="padding:12px 16px;text-align:left;border-bottom:1px solid #e5e7eb;">Host / Webhook</th>
-                                <th style="padding:12px 16px;text-align:left;border-bottom:1px solid #e5e7eb;">Status</th>
-                                <th style="padding:12px 16px;text-align:left;border-bottom:1px solid #e5e7eb;">Actions</th>
+                                <th style="padding:12px 16px;text-align:left;border-bottom:1px solid #e5e7eb;">Active</th>
+                                <th style="padding:12px 16px;text-align:left;border-bottom:1px solid #e5e7eb;">Send Alarms From</th>
+                                <th style="padding:12px 16px;text-align:left;border-bottom:1px solid #e5e7eb;">Trigger events</th>
                             </tr></thead>
-                            <tbody id="notif-services-tbody"><tr><td colspan="5" style="text-align:center;padding:40px;color:#9ca3af;">No notification services added yet.</td></tr></tbody>
+                            <tbody id="notif-services-tbody">
+                                <tr>
+                                    <td colspan="5" style="padding: 60px 24px; text-align: center; color: #9ca3af;">
+                                        <svg width="56" height="56" viewBox="0 0 24 24" fill="#f3f4f6" stroke="#d1d5db" stroke-width="1.2" style="margin: 0 auto 16px auto; display: block;">
+                                            <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path>
+                                        </svg>
+                                        <div style="font-size: 0.95rem; font-weight: 500; color: #4b5563;">You haven't created integration</div>
+                                    </td>
+                                </tr>
+                            </tbody>
                         </table>
                     </div>
 
@@ -2951,7 +2985,7 @@ Real OS metrics (CPU, RAM, Disk I/O) cannot be fetched directly from PostgreSQL 
                             <div style="background: #eab308; color: white; width: 20px; height: 20px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 0.8rem; font-weight: bold; flex-shrink: 0;">!</div>
                             <div>
                                 <div style="font-weight: 600; font-size: 0.9rem; color: #854d0e; margin-bottom: 2px;">Nodes limit will be reached soon</div>
-                                <div style="font-size: 0.85rem; color: #a16207; line-height: 1.4;">You have used 4/25 nodes and will reach your nodes limit soon. Once you reach the maximum amount of nodes, you will not be allowed to create new nodes. Contact the license owner for more information.</div>
+                                <div style="font-size: 0.85rem; color: #a16207; line-height: 1.4;">You have used 23/25 nodes and will reach your nodes limit soon. Once you reach the maximum amount of nodes, you will not be allowed to create new nodes. Contact the license owner for more information.</div>
                             </div>
                         </div>
                         
@@ -2995,10 +3029,10 @@ Real OS metrics (CPU, RAM, Disk I/O) cannot be fetched directly from PostgreSQL 
                                 <div style="margin-bottom: 24px;">
                                     <div style="display: flex; justify-content: space-between; font-size: 0.85rem; color: #6b7280; margin-bottom: 6px;">
                                         <span>Nodes limit</span>
-                                        <span style="font-weight: 600; color: #111827;">4/25 nodes</span>
+                                        <span style="font-weight: 600; color: #111827;">23/25 nodes</span>
                                     </div>
                                     <div style="background: #e5e7eb; height: 8px; border-radius: 4px; overflow: hidden; width: 100%;">
-                                        <div style="background: #3a1c94; height: 100%; width: 16%; border-radius: 4px;"></div>
+                                        <div style="background: #f59e0b; height: 100%; width: 92%; border-radius: 4px;"></div>
                                     </div>
                                 </div>
                                 
@@ -3008,6 +3042,7 @@ Real OS metrics (CPU, RAM, Disk I/O) cannot be fetched directly from PostgreSQL 
                             </div>
                         </div>
                     </div>
+
 
                     <!-- Addons Content -->
                     <div id="settings-content-addons" class="settings-content-pane" style="display: none; padding: 24px;">
@@ -4668,6 +4703,6 @@ Real OS metrics (CPU, RAM, Disk I/O) cannot be fetched directly from PostgreSQL 
   </div>
 </div>
 
-<script src="/static/main.js?v=112"></script>
+<script src="/static/main.js?v=114"></script>
 </body>
 </html>
