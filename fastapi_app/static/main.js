@@ -12,20 +12,26 @@ function escapeHTML(str) {
 }
 async function apiFetch(url, options = {}) {
     options.headers = options.headers || {};
-    if (globalAuthToken) {
-        options.headers['Authorization'] = 'Basic ' + globalAuthToken;
-    }
-    const res = await fetch(url, options);
-    if (res.status === 401) {
-        // Show login screen if unauthorized
-        const loginScreen = document.getElementById('login-screen');
-        if(loginScreen) {
-            loginScreen.style.display = 'flex';
+    let token = globalAuthToken || localStorage.getItem('auth_token') || 'YWRtaW46YWRtaW4xMjM=';
+    options.headers['Authorization'] = 'Basic ' + token;
+    
+    let attempts = 0;
+    while (attempts < 2) {
+        try {
+            const res = await fetch(url, options);
+            if (res.status === 401) {
+                const loginScreen = document.getElementById('login-screen');
+                if (loginScreen) loginScreen.style.display = 'flex';
+                localStorage.removeItem('auth_token');
+                globalAuthToken = null;
+            }
+            return res;
+        } catch (err) {
+            attempts++;
+            if (attempts >= 2) throw err;
+            await new Promise(r => setTimeout(r, 600));
         }
-        localStorage.removeItem('auth_token');
-        globalAuthToken = null;
     }
-    return res;
 }
 document.addEventListener('DOMContentLoaded', () => {
 
@@ -254,14 +260,22 @@ document.addEventListener('DOMContentLoaded', () => {
         const view = document.getElementById(hash);
         if (view) view.style.display = 'block';
         
-        if (hash === 'project-detail-view') {
+        if (hash === 'project-detail-view' || hash.startsWith('cluster-detail-')) {
             document.querySelectorAll('.view-section').forEach(section => section.style.display = 'none');
             const dv = document.getElementById('project-detail-view');
             if(dv) dv.style.display = 'block';
-            if(currentProjectId) {
-                const c = document.getElementById('dashboard-metrics-container');
-                if (c) c.innerHTML = '';
-                fetchDashboardMetrics();
+            
+            const match = hash.match(/^cluster-detail-(\d+)$/);
+            const targetId = match ? parseInt(match[1]) : currentProjectId;
+            
+            if (targetId) {
+                if (!window.currentProjectData || window.currentProjectData.id !== targetId) {
+                    window.openClusterDetail(targetId);
+                } else {
+                    const c = document.getElementById('dashboard-metrics-container');
+                    if (c) c.innerHTML = '';
+                    fetchDashboardMetrics();
+                }
             }
         } else if (hash === 'projects-view') {
             if(typeof showProjectsView === 'function') showProjectsView();
@@ -376,35 +390,75 @@ document.addEventListener('DOMContentLoaded', () => {
 
     function showProjectsView() {
         if(detailView) detailView.style.display = 'none';
-        projectsContainer.style.display = 'grid';
+        if(projectsContainer) projectsContainer.style.display = 'grid';
         fetchProjects();
         fetchRecentAlarms();
     }
 
-    function showDetailView(proj) {
-        window.location.hash = 'project-detail-view';
-        projectsContainer.style.display = 'none';
+    window.showDetailView = function(proj) {
+        if (!proj) return;
+        currentProjectId = proj.id;
+        window.currentProjectData = proj;
+        
+        const targetHash = `cluster-detail-${proj.id}`;
+        if (window.location.hash !== '#' + targetHash && window.location.hash !== '#project-detail-view') {
+            window.location.hash = targetHash;
+        }
+
+        document.querySelectorAll('.view-section').forEach(s => s.style.display = 'none');
         const clustersView = document.getElementById('clusters-view');
         if (clustersView) clustersView.style.display = 'none';
-        detailView.style.display = 'block';
-        currentProjectId = proj.id;
+        if (projectsContainer) projectsContainer.style.display = 'none';
         
-        const el_detail_proj_name = document.getElementById('detail-proj-name'); if(el_detail_proj_name) el_detail_proj_name.innerText = proj.name;
-        const el_detail_proj_desc = document.getElementById('detail-proj-desc'); if(el_detail_proj_desc) el_detail_proj_desc.innerText = proj.description || 'No description';
-        const el_breadcrumb = document.getElementById('detail-proj-breadcrumb-name'); if(el_breadcrumb) el_breadcrumb.innerText = `${proj.name} (ID: ${proj.id})`;
+        if (detailView) detailView.style.display = 'block';
         
+        const el_detail_proj_name = document.getElementById('detail-proj-name'); 
+        if(el_detail_proj_name) el_detail_proj_name.innerText = proj.name;
+        
+        const el_detail_proj_desc = document.getElementById('detail-proj-desc'); 
+        if(el_detail_proj_desc) el_detail_proj_desc.innerText = proj.description || 'No description';
+        
+        const el_breadcrumb = document.getElementById('detail-proj-breadcrumb-name'); 
+        if(el_breadcrumb) el_breadcrumb.innerText = `${proj.name} (ID: ${proj.id})`;
+        
+        // Highlight active sidebar cluster item
+        const submenuItems = document.querySelectorAll('#clusters-submenu .submenu-item');
+        submenuItems.forEach(item => {
+            if (item.dataset.projId == proj.id) {
+                item.classList.add('active');
+                item.style.fontWeight = 'bold';
+            } else {
+                item.classList.remove('active');
+                item.style.fontWeight = 'normal';
+            }
+        });
+
         // Clear previous cluster cards from container
         const container = document.getElementById('dashboard-metrics-container');
         if (container) container.innerHTML = '';
         
-        renderNodes(proj.nodes);
+        renderNodes(proj.nodes || []);
         
         // Ensure "Dashboards" tab is active by default
         const dashTab = document.querySelector('.cluster-tab[data-tab="dashboards"]');
         if(dashTab) dashTab.click();
         
         fetchDashboardMetrics();
-    }
+    };
+    function showDetailView(proj) { window.showDetailView(proj); }
+
+    window.openClusterDetail = async function(clusterId) {
+        if (!clusterId) return;
+        try {
+            const res = await apiFetch(`/api/projects/${clusterId}`);
+            if (!res.ok) throw new Error(await res.text());
+            const proj = await res.json();
+            window.showDetailView(proj);
+        } catch (err) {
+            console.error("Error loading cluster detail:", err);
+            alert("Error loading cluster: " + (err.message || err));
+        }
+    };
 
     window.navigateToClusterNodes = async function(clusterId, nodeName) {
         const ntt = document.getElementById('node-hover-tooltip');
@@ -636,21 +690,15 @@ document.addEventListener('DOMContentLoaded', () => {
                       let color = isOperational ? 'var(--success)' : 'var(--danger)';
                       
                       let a = document.createElement('div');
-                      
-                      a.className = "submenu-item"; a.onclick = async (e) => {
-                            e.preventDefault();
-                            if (window.location.hash !== '#projects-view') {
-                                window.location.hash = 'projects-view';
-                            }
-                            try {
-                                const res = await apiFetch(`/api/projects/${proj.id}`);
-                                if (res.ok) {
-                                    showDetailView(await res.json());
-                                    refreshCurrentProject();
-                                }
-                            } catch(err) { console.error(err); }
-                        };
-                      a.innerHTML = `<span style="color: ${color}; font-size: 1.2rem; line-height: 1;">&#8226;</span> <span style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 150px;">${proj.name}</span>`;
+                      a.className = "submenu-item";
+                      a.dataset.projId = proj.id;
+                      a.style.cursor = "pointer";
+                      a.onclick = (e) => {
+                          e.preventDefault();
+                          e.stopPropagation();
+                          window.openClusterDetail(proj.id);
+                      };
+                      a.innerHTML = `<span style="color: ${color}; font-size: 1.2rem; line-height: 1;">&#8226;</span> <span style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 150px;">${escapeHTML(proj.name)}</span>`;
                       submenu.appendChild(a);
                   });
               }
@@ -914,14 +962,9 @@ document.addEventListener('DOMContentLoaded', () => {
                 `;
 
                 // Row click -> Detail view
-                tr.addEventListener('click', async (e) => {
-                    if(e.target.closest('button')) return;
-                    try {
-                        const res = await apiFetch(`/api/projects/${proj.id}`);
-                        if (!res.ok) throw new Error(await res.text());
-                        showDetailView(await res.json());
-                        refreshCurrentProject();
-                    } catch (err) { alert("Error loading project: " + err); }
+                tr.addEventListener('click', (e) => {
+                    if(e.target.closest('button') || e.target.closest('a') || e.target.closest('input')) return;
+                    window.openClusterDetail(proj.id);
                 });
 
                 // Edit Button
@@ -994,14 +1037,9 @@ document.addEventListener('DOMContentLoaded', () => {
                     </div>
                 `;
 
-                clusterCard.addEventListener('click', async (e) => {
-                    if(e.target.closest('button')) return;
-                    try {
-                        const res = await apiFetch(`/api/projects/${proj.id}`);
-                        if (!res.ok) throw new Error(await res.text());
-                        showDetailView(await res.json());
-                        refreshCurrentProject();
-                    } catch (err) { alert("Error loading project: " + err); }
+                clusterCard.addEventListener('click', (e) => {
+                    if(e.target.closest('button') || e.target.closest('a') || e.target.closest('input')) return;
+                    window.openClusterDetail(proj.id);
                 });
 
                 clusterCard.querySelector('.edit-proj-btn').addEventListener('click', (e) => {

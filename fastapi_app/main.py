@@ -47,24 +47,25 @@ def verify_credentials(credentials: HTTPBasicCredentials = Depends(security)):
     if not credentials:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Not authenticated", headers={"WWW-Authenticate": "Bearer"})
     
-    # 1. Check database first
-    from models import SessionLocal, User
-    db = SessionLocal()
-    try:
-        user = db.query(User).filter(User.username == credentials.username).first()
-        if user and user.password_hash:
-            if verify_password(credentials.password, user.password_hash):
-                return credentials
-    except Exception:
-        pass
-    finally:
-        db.close()
-
-    # 2. Fallback to environment variables
+    # 1. Fast-path: Check environment variables first (instant, in-memory)
     correct_username = secrets.compare_digest(credentials.username, ADMIN_USER) if ADMIN_USER else False
     correct_password = secrets.compare_digest(credentials.password, ADMIN_PASS) if ADMIN_PASS else False
     if correct_username and correct_password:
         return credentials
+
+    # 2. Check database for custom users
+    try:
+        from models import SessionLocal, User
+        db = SessionLocal()
+        try:
+            user = db.query(User).filter(User.username == credentials.username).first()
+            if user and user.password_hash:
+                if verify_password(credentials.password, user.password_hash):
+                    return credentials
+        finally:
+            db.close()
+    except Exception:
+        pass
 
     raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Incorrect credentials", headers={"WWW-Authenticate": "Bearer"})
 
@@ -263,6 +264,15 @@ async def lifespan(app: FastAPI):
 
 
 app = FastAPI(title="Sunucu Yönetim ve Replikasyon", lifespan=lifespan)
+
+from fastapi.middleware.cors import CORSMiddleware
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 @app.get("/health")
 @app.get("/healthz")

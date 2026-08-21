@@ -473,7 +473,7 @@
             <div id="project-detail-view" class="view-section" style="display: none;">
     <div style="background: white; border-bottom: 1px solid var(--border); padding: 10px 24px;">
         <div style="font-size: 13px; color: #6b7280; display: flex; align-items: center; gap: 8px;">
-            <span>Home</span> / <span id="btn-back-projects" style="cursor: pointer; color: var(--primary);">Clusters</span> / <span id="detail-proj-breadcrumb-name" style="font-weight: 500; color: #374151;">Project Name (ID: 1)</span>
+            <span onclick="window.location.hash='projects-view'" style="cursor: pointer; color: var(--primary);">Home</span> / <span id="btn-back-projects" onclick="window.location.hash='clusters-view'" style="cursor: pointer; color: var(--primary);">Clusters</span> / <span id="detail-proj-breadcrumb-name" style="font-weight: 500; color: #374151;">Project Name (ID: 1)</span>
         </div>
         <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 15px;">
             <div style="display: flex; align-items: center; gap: 15px;">
@@ -5618,6 +5618,6 @@ Real OS metrics (CPU, RAM, Disk I/O) cannot be fetched directly from PostgreSQL 
 </div>
 </div>
 
-<script src="/static/main.js?v=126"></script>
+<script src="/static/main.js?v=127"></script>
 </body>
 </html>
