@@ -232,7 +232,7 @@ body {
 }
 
 .modal-content {
-    background: var(--surface);
+    background: white;
     width: 100%;
     max-width: 650px;
     border-radius: 12px;
