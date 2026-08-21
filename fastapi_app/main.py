@@ -819,6 +819,35 @@ async def get_project_metrics(project_id: int, db: Session = Depends(get_db)):
         
     return metrics_list
 
+@app.get('/api/projects/{project_id}/db-users', dependencies=[Depends(verify_credentials)])
+async def get_db_users(project_id: int, db: Session = Depends(get_db)):
+    """Return pg_roles from the primary node of a project."""
+    import asyncpg
+    from ha_manager import decrypt_url
+    proj = db.query(Project).filter(Project.id == project_id).first()
+    if not proj:
+        return JSONResponse(status_code=404, content={'message': 'Project not found'})
+    # Use first node (primary)
+    primary = next((n for n in proj.nodes if n.role.lower() in ('primary','master','standalone')), None)
+    if not primary:
+        primary = proj.nodes[0] if proj.nodes else None
+    if not primary:
+        return JSONResponse(status_code=404, content={'message': 'No nodes found'})
+    try:
+        url = decrypt_url(primary.encrypted_url)
+        conn = await asyncpg.connect(dsn=url, timeout=10, ssl='require')
+        rows = await conn.fetch("""
+            SELECT rolname, rolsuper, rolcreatedb, rolcreaterole, rolcanlogin, rolreplication
+            FROM pg_roles
+            WHERE rolname NOT LIKE 'pg_%'
+            ORDER BY rolcanlogin DESC, rolname
+        """)
+        await conn.close()
+        users = [dict(r) for r in rows]
+        return {'node': primary.name, 'users': users}
+    except Exception as e:
+        return JSONResponse(status_code=500, content={'message': str(e)})
+
 class NodeUpdate(BaseModel):
     url: str
     # SSH Credentials (opsiyonel)

@@ -2361,6 +2361,33 @@ function wlNoNodes() {
     return '<div style="color:#475569;font-size:0.82rem;text-align:center;padding:12px 0;">No nodes connected.</div>';
 }
 
+    // ── Helper: destroy all cluster chart instances ───────────────────────────
+    function destroyClusterCharts() {
+        Object.values(window._clusterCharts).forEach(function(c){ try{c.destroy();}catch(e){} });
+        window._clusterCharts = {};
+    }
+    // ── Helper: make or get a Chart.js instance ────────────────────────────────
+    function getOrCreateChart(id, config) {
+        if (window._clusterCharts[id]) return window._clusterCharts[id];
+        var canvas = document.getElementById('chart-' + id);
+        if (!canvas) return null;
+        var chart = new Chart(canvas.getContext('2d'), config);
+        window._clusterCharts[id] = chart;
+        return chart;
+    }
+    // ── Helper: push value into rolling window ────────────────────────────────
+    function pushRolling(arr, val, max) {
+        arr.push(val);
+        while (arr.length > max) arr.shift();
+    }
+    // ── Helper: format time label ────────────────────────────────────────────
+    function fmtTimeLabel(isoStr) {
+        var diff = Math.round((Date.now() - new Date(isoStr).getTime()) / 1000);
+        if (diff < 5) return 'now';
+        if (diff < 60) return diff + 's ago';
+        return Math.round(diff / 60) + 'm ago';
+    }
+
     async function fetchDashboardMetrics() {
         try {
             const container = document.getElementById('dashboard-metrics-container');
@@ -2369,159 +2396,242 @@ function wlNoNodes() {
             const projRes = await apiFetch('/api/projects');
             if (!projRes.ok) return;
             const allProjs = await projRes.json();
-            
+
             if (allProjs.length === 0) {
-                container.innerHTML = '<div class="loading-state">No projects found. Add a project to view metrics.</div>';
+                container.innerHTML = '<div class="loading-state">No projects found.</div>';
                 return;
             }
-            
-            // When inside a project's detail view, ONLY render metrics for currentProjectId!
+
             const currentHash = (window.location.hash || '').replace(/^#/, '');
             const isDetailView = (currentHash === 'project-detail-view' || (detailView && getComputedStyle(detailView).display !== 'none'));
-            const targetProjs = (isDetailView && currentProjectId) 
+            const targetProjs = (isDetailView && currentProjectId)
                 ? allProjs.filter(p => p.id === currentProjectId)
                 : allProjs;
-                
+
             if (targetProjs.length === 0) {
                 container.innerHTML = '<div class="loading-state">Cluster not found.</div>';
                 return;
             }
-            
-            // Fetch metrics for target projects concurrently
+
             const metricPromises = targetProjs.map(p => apiFetch(`/api/projects/${p.id}/metrics`).then(r => r.ok ? r.json() : []));
             const metricsResults = await Promise.all(metricPromises);
-            
-            // Flat list of all nodes returned for target projects
             const allTargetNodes = metricsResults.flat();
-            
-            if (container.querySelector('.loading-state')) {
+
+            if (container.querySelector('.loading-state') || container.querySelector('.cc-loading-container')) {
                 container.innerHTML = '';
             }
-            
-            // Remove columns for nodes that don't belong to current target cluster!
+
             const allTargetNodeIds = allTargetNodes.map(n => "dash-node-" + n.id);
             Array.from(container.children).forEach(child => {
-                if (!allTargetNodeIds.includes(child.id)) {
-                    child.remove();
-                }
+                if (!allTargetNodeIds.includes(child.id)) child.remove();
             });
-            
+
+            // ── Accumulators for charts ───────────────────────────────────────
+            const nowTs = new Date().toISOString();
+            const hist  = window._clusterChartHistory;
+            const prev  = window._clusterPrevSnapshot;
+            let agg = {select:0,insert:0,update:0,delete:0,tps:0,conn:0,connMax:0,cacheHit:0,cacheNodes:0,commits:0,rollbacks:0};
+
             targetProjs.forEach((proj, i) => {
                 const dataList = metricsResults[i];
                 if (!dataList || dataList.length === 0) return;
-                
+
                 dataList.forEach(node => {
                     let col = document.getElementById("dash-node-" + node.id);
-                    if(!col) {
+                    if (!col) {
                         col = document.createElement('div');
                         col.className = 'metrics-column';
                         col.id = "dash-node-" + node.id;
-                        
-                        const colors = ['#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#ec4899', '#06b6d4'];
+                        const colors = ['#3b82f6','#10b981','#f59e0b','#ef4444','#8b5cf6','#ec4899','#06b6d4'];
                         const projColor = colors[proj.id % colors.length] || 'var(--primary)';
-                        
-                        const headerHtml = `
-                            <div class="dash-node-header" data-proj-id="${proj.id}" style="display: flex; justify-content: space-between; align-items: flex-start; border-bottom: 1px solid var(--border); padding-bottom: 12px; margin-bottom: 20px; cursor: pointer;" title="Click to view Node List for ${escapeHTML(proj.name)}">
+                        col.innerHTML = `
+                            <div class="dash-node-header" data-proj-id="${proj.id}" style="display:flex;justify-content:space-between;align-items:flex-start;border-bottom:1px solid var(--border);padding-bottom:12px;margin-bottom:20px;cursor:pointer;" title="Click to view nodes for ${escapeHTML(proj.name)}">
                                 <div>
-                                    <div style="font-size: 0.8rem; color: ${projColor}; text-transform: uppercase; font-weight: bold; margin-bottom: 4px;">${escapeHTML(proj.name)}</div>
-                                    <h2 style="margin: 0; font-size: 1.2rem;">${escapeHTML(node.name)} <span style="font-size: 0.9rem; font-weight: normal; color: var(--text-muted);">(${escapeHTML(node.role)})</span></h2>
+                                    <div style="font-size:0.8rem;color:${projColor};text-transform:uppercase;font-weight:bold;margin-bottom:4px;">${escapeHTML(proj.name)}</div>
+                                    <h2 style="margin:0;font-size:1.2rem;">${escapeHTML(node.name)} <span style="font-size:0.9rem;font-weight:normal;color:var(--text-muted);">(${escapeHTML(node.role)})</span></h2>
                                 </div>
                                 <div style="display:flex;flex-direction:column;align-items:flex-end;gap:6px;">
                                     <span class="status-badge status-offline" id="metric-${node.id}-status">Offline</span>
-                                    <span style="font-size:0.75rem;color:#3a1c94;font-weight:500;display:flex;align-items:center;gap:3px;">
-                                        View nodes
-                                        <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"></polyline></svg>
-                                    </span>
+                                    <span style="font-size:0.75rem;color:#3a1c94;font-weight:500;display:flex;align-items:center;gap:3px;">View nodes <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"></polyline></svg></span>
                                 </div>
                             </div>
-                        `;
-                        
-                        const metricsHtml = `
-                            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px;">
-                                <div class="metric-card glass-panel" id="metric-${node.id}-card-cpu" style="display: none;"><div class="metric-label">CPU Kullanımı</div><div class="metric-val" id="metric-${node.id}-cpu" style="color: var(--primary);">-</div></div>
-                                <div class="metric-card glass-panel" id="metric-${node.id}-card-ram" style="display: none;"><div class="metric-label">RAM Kullanımı</div><div class="metric-val" id="metric-${node.id}-ram" style="color: var(--primary);">-</div></div>
-                                <div class="metric-card glass-panel"><div class="metric-label">Ağ Gecikmesi (Ping)</div><div class="metric-val" id="metric-${node.id}-ping">-</div></div>
-                                <div class="metric-card glass-panel"><div class="metric-label">Senkronizasyon (Lag)</div><div class="metric-val" id="metric-${node.id}-lag">-</div></div>
-                                <div class="metric-card glass-panel"><div class="metric-label">Depolama (Storage)</div><div class="metric-val" id="metric-${node.id}-storage">-</div></div>
-                                <div class="metric-card glass-panel"><div class="metric-label">Bağlantılar (Aktif/Top.)</div><div class="metric-val" id="metric-${node.id}-conn">-</div></div>
-                                <div class="metric-card glass-panel"><div class="metric-label">İşlem Yükü (Başarılı / İptal)</div><div class="metric-val" id="metric-${node.id}-xact">-</div></div>
-                                <div class="metric-card glass-panel"><div class="metric-label">Ana Tablo Kaydı</div><div class="metric-val" id="metric-${node.id}-plates">-</div></div>
-                                <div class="metric-card glass-panel"><div class="metric-label">Önbellek Başarısı</div><div class="metric-val" id="metric-${node.id}-cache">-</div></div>
-                                <div class="metric-card glass-panel"><div class="metric-label">Çalışma Süresi</div><div class="metric-val" id="metric-${node.id}-uptime">-</div></div>
+                            <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;">
+                                <div class="metric-card glass-panel" id="metric-${node.id}-card-cpu" style="display:none;"><div class="metric-label">CPU</div><div class="metric-val" id="metric-${node.id}-cpu" style="color:var(--primary);">-</div></div>
+                                <div class="metric-card glass-panel" id="metric-${node.id}-card-ram" style="display:none;"><div class="metric-label">RAM</div><div class="metric-val" id="metric-${node.id}-ram" style="color:var(--primary);">-</div></div>
+                                <div class="metric-card glass-panel"><div class="metric-label">Ping</div><div class="metric-val" id="metric-${node.id}-ping">-</div></div>
+                                <div class="metric-card glass-panel"><div class="metric-label">Lag</div><div class="metric-val" id="metric-${node.id}-lag">-</div></div>
+                                <div class="metric-card glass-panel"><div class="metric-label">Storage</div><div class="metric-val" id="metric-${node.id}-storage">-</div></div>
+                                <div class="metric-card glass-panel"><div class="metric-label">Connections</div><div class="metric-val" id="metric-${node.id}-conn">-</div></div>
+                                <div class="metric-card glass-panel"><div class="metric-label">Transactions</div><div class="metric-val" id="metric-${node.id}-xact">-</div></div>
+                                <div class="metric-card glass-panel"><div class="metric-label">Row Count</div><div class="metric-val" id="metric-${node.id}-plates">-</div></div>
+                                <div class="metric-card glass-panel"><div class="metric-label">Cache Hit</div><div class="metric-val" id="metric-${node.id}-cache">-</div></div>
+                                <div class="metric-card glass-panel"><div class="metric-label">Uptime</div><div class="metric-val" id="metric-${node.id}-uptime">-</div></div>
                             </div>
-                            <div style="margin-top: 16px; font-size: 0.8rem; color: var(--text-muted); text-align: right;">
-                                Motor Sürümü: <span id="metric-${node.id}-version">-</span>
-                            </div>
-                        `;
-                        col.innerHTML = headerHtml + metricsHtml;
+                            <div style="margin-top:16px;font-size:0.8rem;color:var(--text-muted);text-align:right;">Version: <span id="metric-${node.id}-version">-</span></div>`;
 
-                        // ── Click header → navigate to Clusters > Nodes > Node List ──
-                        const headerEl = col.querySelector('.dash-node-header');
-                        if (headerEl) {
-                            headerEl.addEventListener('click', () => {
-                                // Find the full project object from allProjs
-                                const targetProj = allProjs.find(p => p.id === proj.id);
-                                if (!targetProj) return;
-                                // Open project detail view
-                                showDetailView(targetProj);
-                                // After rendering, switch to Nodes tab
-                                setTimeout(() => {
-                                    const nodesTab = document.querySelector('.cluster-tab[data-tab="nodes"]');
-                                    if (nodesTab) nodesTab.click();
-                                }, 80);
-                            });
-                        }
-
+                        col.querySelector('.dash-node-header').addEventListener('click', () => {
+                            const tp = allProjs.find(p => p.id === proj.id);
+                            if (!tp) return;
+                            showDetailView(tp);
+                            setTimeout(() => { const t = document.querySelector('.cluster-tab[data-tab="nodes"]'); if(t) t.click(); }, 80);
+                        });
                         container.appendChild(col);
                     }
-                    
+
                     const m = node.metrics;
-                    if(m && m.status === 'online') {
-                        const statusEl = document.getElementById("metric-" + node.id + "-status");
-                        if(statusEl) { statusEl.className = 'status-badge status-online'; statusEl.innerText = 'Aktif'; }
-                        
-                        const setEl = (id, val) => { const el = document.getElementById(id); if(el) el.innerText = val; };
-                        setEl("metric-" + node.id + "-ping", m.ping);
-                        setEl("metric-" + node.id + "-lag", m.lag);
-                        setEl("metric-" + node.id + "-storage", m.storage);
-                        setEl("metric-" + node.id + "-conn", m.connections);
-                        setEl("metric-" + node.id + "-xact", m.xact);
-                        setEl("metric-" + node.id + "-cache", m.cache_hit);
-                        setEl("metric-" + node.id + "-version", m.version);
-                        setEl("metric-" + node.id + "-plates", m.plates || m.row_count || "N/A");
-                        setEl("metric-" + node.id + "-uptime", m.uptime || "N/A");
-                        
-                        // Hide CPU & RAM if N/A
+                    const setEl = (id, val) => { const el = document.getElementById(id); if(el) el.innerText = val; };
+
+                    if (m && m.status === 'online') {
+                        const statusEl = document.getElementById('metric-'+node.id+'-status');
+                        if(statusEl){statusEl.className='status-badge status-online';statusEl.innerText='Online';}
+                        setEl('metric-'+node.id+'-ping',    m.ping);
+                        setEl('metric-'+node.id+'-lag',     m.lag);
+                        setEl('metric-'+node.id+'-storage', m.storage);
+                        setEl('metric-'+node.id+'-conn',    m.connections);
+                        setEl('metric-'+node.id+'-xact',    m.xact);
+                        setEl('metric-'+node.id+'-cache',   m.cache_hit);
+                        setEl('metric-'+node.id+'-version', m.version);
+                        setEl('metric-'+node.id+'-plates',  m.plates||m.row_count||'N/A');
+                        setEl('metric-'+node.id+'-uptime',  m.uptime||'N/A');
                         const cardCpu = document.getElementById(`metric-${node.id}-card-cpu`);
-                        if (cardCpu) {
-                            if (m.cpu_usage && m.cpu_usage !== 'N/A') {
-                                cardCpu.style.display = 'block';
-                                setEl(`metric-${node.id}-cpu`, m.cpu_usage);
-                            } else {
-                                cardCpu.style.display = 'none';
-                            }
-                        }
+                        if(cardCpu){if(m.cpu_usage&&m.cpu_usage!=='N/A'){cardCpu.style.display='block';setEl(`metric-${node.id}-cpu`,m.cpu_usage);}else{cardCpu.style.display='none';}}
                         const cardRam = document.getElementById(`metric-${node.id}-card-ram`);
-                        if (cardRam) {
-                            if (m.ram_usage && m.ram_usage !== 'N/A') {
-                                cardRam.style.display = 'block';
-                                setEl(`metric-${node.id}-ram`, m.ram_usage);
-                            } else {
-                                cardRam.style.display = 'none';
-                            }
+                        if(cardRam){if(m.ram_usage&&m.ram_usage!=='N/A'){cardRam.style.display='block';setEl(`metric-${node.id}-ram`,m.ram_usage);}else{cardRam.style.display='none';}}
+
+                        // Compute rates from previous snapshot
+                        const nk = String(node.id);
+                        const snap = prev[nk];
+                        const curF=Number(m.tup_fetched)||0, curI=Number(m.tup_inserted)||0;
+                        const curU=Number(m.tup_updated)||0, curD=Number(m.tup_deleted)||0;
+                        const curC=Number(m.commits_raw)||0, curR=Number(m.rollbacks_raw)||0;
+                        const curConn=Number(m.active_conn)||0, curMax=Number(m.max_conn)||100;
+                        const curCache=Number(m.cache_hit_raw)||0;
+                        if(snap){
+                            const dt=Math.max((new Date(nowTs)-new Date(snap.ts))/1000,1);
+                            agg.select+=Math.max(0,(curF-snap.f)/dt);
+                            agg.insert+=Math.max(0,(curI-snap.i)/dt);
+                            agg.update+=Math.max(0,(curU-snap.u)/dt);
+                            agg.delete+=Math.max(0,(curD-snap.d)/dt);
+                            agg.tps   +=Math.max(0,(curC-snap.c)/dt);
                         }
+                        agg.conn+=curConn; agg.connMax=Math.max(agg.connMax,curMax);
+                        agg.cacheHit+=curCache; agg.cacheNodes++;
+                        agg.commits+=curC; agg.rollbacks+=curR;
+                        prev[nk]={ts:nowTs,f:curF,i:curI,u:curU,d:curD,c:curC};
                     } else if (m && m.status === 'offline') {
-                        const statusEl = document.getElementById("metric-" + node.id + "-status");
-                        if(statusEl) { statusEl.className = 'status-badge status-offline'; statusEl.innerText = 'Çevrimdışı'; }
-                        ['cpu','ram','ping','lag','storage','conn','xact','plates','cache','uptime'].forEach(key => {
-                            const el = document.getElementById(`metric-${node.id}-${key}`);
-                            if(el) el.innerText = '-';
-                        });
+                        const statusEl = document.getElementById('metric-'+node.id+'-status');
+                        if(statusEl){statusEl.className='status-badge status-offline';statusEl.innerText='Offline';}
+                        ['ping','lag','storage','conn','xact','plates','cache','uptime'].forEach(k=>{setEl('metric-'+node.id+'-'+k,'-');});
                     }
                 });
             });
-        } catch (e) {
-            console.error("Dashboard error:", e);
+
+            // ── Push aggregated samples ──────────────────────────────────────
+            pushRolling(hist.labels,                          nowTs,                        CHART_MAX_POINTS);
+            pushRolling(hist.ops.select=hist.ops.select||[], +agg.select.toFixed(2),        CHART_MAX_POINTS);
+            pushRolling(hist.ops.insert=hist.ops.insert||[], +agg.insert.toFixed(2),        CHART_MAX_POINTS);
+            pushRolling(hist.ops.update=hist.ops.update||[], +agg.update.toFixed(2),        CHART_MAX_POINTS);
+            pushRolling(hist.ops.delete=hist.ops.delete||[], +agg.delete.toFixed(2),        CHART_MAX_POINTS);
+            pushRolling(hist.ops.tps   =hist.ops.tps   ||[], +agg.tps.toFixed(2),           CHART_MAX_POINTS);
+            pushRolling(hist.conn.active=hist.conn.active||[],agg.conn,                     CHART_MAX_POINTS);
+            pushRolling(hist.conn.max  =hist.conn.max  ||[], agg.connMax,                   CHART_MAX_POINTS);
+            const labels = hist.labels.map(fmtTimeLabel);
+
+            // ── Chart 1: Operations / s ──────────────────────────────────────
+            const opsChart = getOrCreateChart('ops',{type:'line',data:{labels,datasets:[
+                {label:'SELECT/s',data:[...hist.ops.select],borderColor:'#3b82f6',backgroundColor:'#3b82f622',borderWidth:2,tension:0.3,pointRadius:3,fill:false},
+                {label:'INSERT/s',data:[...hist.ops.insert],borderColor:'#10b981',backgroundColor:'#10b98122',borderWidth:2,tension:0.3,pointRadius:3,fill:false},
+                {label:'UPDATE/s',data:[...hist.ops.update],borderColor:'#f59e0b',backgroundColor:'#f59e0b22',borderWidth:2,tension:0.3,pointRadius:3,fill:false},
+                {label:'DELETE/s',data:[...hist.ops.delete],borderColor:'#ef4444',backgroundColor:'#ef444422',borderWidth:2,tension:0.3,pointRadius:3,fill:false},
+                {label:'TPS',     data:[...hist.ops.tps],   borderColor:'#8b5cf6',backgroundColor:'#8b5cf622',borderWidth:2,tension:0.3,pointRadius:3,fill:false}
+            ]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{x:{ticks:{font:{size:10},color:'#9ca3af'},grid:{color:'#f3f4f6'}},y:{beginAtZero:true,ticks:{font:{size:10},color:'#9ca3af'},grid:{color:'#f3f4f6'}}}}});
+            if(opsChart){
+                opsChart.data.labels=labels;
+                opsChart.data.datasets[0].data=[...hist.ops.select];
+                opsChart.data.datasets[1].data=[...hist.ops.insert];
+                opsChart.data.datasets[2].data=[...hist.ops.update];
+                opsChart.data.datasets[3].data=[...hist.ops.delete];
+                opsChart.data.datasets[4].data=[...hist.ops.tps];
+                opsChart.update('none');
+            }
+            const opsLegend=document.getElementById('chart-ops-legend');
+            if(opsLegend&&!opsLegend.children.length){
+                [['SELECT/s','#3b82f6'],['INSERT/s','#10b981'],['UPDATE/s','#f59e0b'],['DELETE/s','#ef4444'],['TPS','#8b5cf6']].forEach(([l,c])=>{
+                    opsLegend.insertAdjacentHTML('beforeend',`<span style="display:flex;align-items:center;gap:4px;"><span style="width:12px;height:3px;background:${c};display:inline-block;border-radius:2px;"></span>${l}</span>`);
+                });
+            }
+
+            // ── Chart 2: Active Connections ──────────────────────────────────
+            const connChart = getOrCreateChart('conn',{type:'line',data:{labels,datasets:[
+                {label:'Active',   data:[...hist.conn.active],borderColor:'#6366f1',backgroundColor:'#6366f122',borderWidth:2,tension:0.3,pointRadius:3,fill:true},
+                {label:'Max Conn', data:[...hist.conn.max],   borderColor:'#ef444466',borderWidth:1.5,borderDash:[6,3],pointRadius:0,fill:false}
+            ]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{x:{ticks:{font:{size:10},color:'#9ca3af'},grid:{color:'#f3f4f6'}},y:{beginAtZero:true,ticks:{font:{size:10},color:'#9ca3af'},grid:{color:'#f3f4f6'}}}}});
+            if(connChart){
+                connChart.data.labels=labels;
+                connChart.data.datasets[0].data=[...hist.conn.active];
+                connChart.data.datasets[1].data=[...hist.conn.max];
+                connChart.update('none');
+            }
+            const connLegend=document.getElementById('chart-conn-legend');
+            if(connLegend&&!connLegend.children.length){
+                connLegend.insertAdjacentHTML('beforeend','<span style="display:flex;align-items:center;gap:4px;"><span style="width:12px;height:3px;background:#6366f1;display:inline-block;border-radius:2px;"></span>Active</span><span style="display:flex;align-items:center;gap:4px;"><span style="width:12px;height:3px;background:#ef4444;display:inline-block;border-radius:2px;border-top:2px dashed #ef4444;"></span>Max</span>');
+            }
+
+            // ── Chart 3: Cache Hit Ratio ─────────────────────────────────────
+            const avgCache = agg.cacheNodes>0 ? agg.cacheHit/agg.cacheNodes : 0;
+            const cachePctEl = document.getElementById('chart-cache-pct');
+            if(cachePctEl) cachePctEl.textContent = avgCache.toFixed(1)+'%';
+            const hitVal=+avgCache.toFixed(1), missVal=+(100-avgCache).toFixed(1);
+            const cacheChart = getOrCreateChart('cache',{type:'doughnut',data:{labels:['Hit','Miss'],datasets:[{data:[hitVal,missVal],backgroundColor:['#10b981','#f3f4f6'],borderWidth:0}]},options:{responsive:true,maintainAspectRatio:false,cutout:'72%',plugins:{legend:{display:false},tooltip:{callbacks:{label:function(ctx){return ctx.label+': '+ctx.raw+'%';}}}}}});
+            if(cacheChart){cacheChart.data.datasets[0].data=[hitVal,missVal];cacheChart.update('none');}
+
+            // ── Chart 4: Commits vs Rollbacks ────────────────────────────────
+            const commitsByProj=[],rollbacksByProj=[];
+            targetProjs.forEach((proj,i)=>{
+                let c=0,r=0;
+                (metricsResults[i]||[]).forEach(node=>{if(node.metrics&&node.metrics.status==='online'){c+=Number(node.metrics.commits_raw)||0;r+=Number(node.metrics.rollbacks_raw)||0;}});
+                commitsByProj.push(c);rollbacksByProj.push(r);
+            });
+            const xactChart = getOrCreateChart('xact',{type:'bar',data:{labels:targetProjs.map(p=>p.name),datasets:[{label:'Commits',data:[],backgroundColor:'#10b981cc',borderRadius:4},{label:'Rollbacks',data:[],backgroundColor:'#ef4444cc',borderRadius:4}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:'bottom',labels:{font:{size:10},boxWidth:10,padding:8}}},scales:{x:{ticks:{font:{size:10},color:'#9ca3af'},grid:{display:false}},y:{beginAtZero:true,ticks:{font:{size:10},color:'#9ca3af'},grid:{color:'#f3f4f6'}}}}});
+            if(xactChart){xactChart.data.labels=targetProjs.map(p=>p.name);xactChart.data.datasets[0].data=commitsByProj;xactChart.data.datasets[1].data=rollbacksByProj;xactChart.update('none');}
+
+            // ── PostgreSQL Overview Table ────────────────────────────────────
+            const tbody=document.getElementById('pg-overview-tbody');
+            if(tbody){
+                tbody.innerHTML='';
+                targetProjs.forEach((proj,i)=>{
+                    (metricsResults[i]||[]).forEach(node=>{
+                        const m=node.metrics||{};
+                        const online=m.status==='online';
+                        const statusBadge=online
+                            ?'<span style="display:inline-flex;align-items:center;gap:4px;color:#10b981;font-size:12px;"><span style="width:6px;height:6px;border-radius:50%;background:#10b981;"></span>Online</span>'
+                            :'<span style="display:inline-flex;align-items:center;gap:4px;color:#ef4444;font-size:12px;"><span style="width:6px;height:6px;border-radius:50%;background:#ef4444;"></span>Offline</span>';
+                        const nk=String(node.id),snap2=prev[nk];
+                        const lastS=hist.ops.select&&hist.ops.select.length?hist.ops.select[hist.ops.select.length-1]:0;
+                        const lastI=hist.ops.insert&&hist.ops.insert.length?hist.ops.insert[hist.ops.insert.length-1]:0;
+                        const lastU=hist.ops.update&&hist.ops.update.length?hist.ops.update[hist.ops.update.length-1]:0;
+                        const lastD=hist.ops.delete&&hist.ops.delete.length?hist.ops.delete[hist.ops.delete.length-1]:0;
+                        const lastT=hist.ops.tps&&hist.ops.tps.length?hist.ops.tps[hist.ops.tps.length-1]:0;
+                        const fmt=v=>v>0?v.toFixed(2)+'/s':'—';
+                        tbody.insertAdjacentHTML('beforeend','<tr style="border-bottom:1px solid #f3f4f6;">'
+                            +'<td style="padding:10px 4px 10px 0;font-weight:500;">'+escapeHTML(node.name)+'<br><span style="font-size:11px;color:#9ca3af;">'+escapeHTML(proj.name)+' · '+escapeHTML(node.role)+'</span></td>'
+                            +'<td style="padding:10px 4px;">'+statusBadge+'</td>'
+                            +'<td style="padding:10px 4px;font-family:monospace;">'+fmt(lastT)+'</td>'
+                            +'<td style="padding:10px 4px;font-family:monospace;color:#3b82f6;">'+fmt(lastS)+'</td>'
+                            +'<td style="padding:10px 4px;font-family:monospace;color:#10b981;">'+fmt(lastI)+'</td>'
+                            +'<td style="padding:10px 4px;font-family:monospace;color:#f59e0b;">'+fmt(lastU)+'</td>'
+                            +'<td style="padding:10px 4px;font-family:monospace;color:#ef4444;">'+fmt(lastD)+'</td>'
+                            +'<td style="padding:10px 4px;">'+(online?escapeHTML(m.connections||'—'):'—')+'</td>'
+                            +'<td style="padding:10px 4px;">'+(online?(m.active_conn??'—'):'—')+'</td>'
+                            +'<td style="padding:10px 4px;font-weight:600;color:'+(online&&parseFloat(m.cache_hit_raw)>90?'#10b981':'#f59e0b')+';">'+(online?escapeHTML(m.cache_hit||'—'):'—')+'</td>'
+                            +'</tr>');
+                    });
+                });
+                if(!tbody.children.length) tbody.innerHTML='<tr><td colspan="10" style="text-align:center;padding:20px;color:#9ca3af;">No nodes online</td></tr>';
+            }
+
+        } catch(e) {
+            console.error('Dashboard error:', e);
         }
     }
     
@@ -9342,3 +9452,160 @@ window.generateErrorReport = function() {
     }
     window.closeErrorReportModal();
 };
+
+
+// ── Manage Tab JS ─────────────────────────────────────────────────────────────
+window.switchManageSubtab = function(name, btn) {
+    document.querySelectorAll('.mgmt-subtab-content').forEach(function(el){ el.style.display='none'; });
+    document.querySelectorAll('.mgmt-subtab').forEach(function(b){ b.style.borderBottomColor='transparent'; b.style.color='#6b7280'; b.style.fontWeight='500'; });
+    var el = document.getElementById('mgmt-subtab-'+name);
+    if (el) el.style.display = (name==='configuration'||name==='scripts') ? 'flex' : 'block';
+    if (btn) { btn.style.borderBottomColor='#4f46e5'; btn.style.color='#4f46e5'; btn.style.fontWeight='600'; }
+    if (name==='configuration') window.loadConfigTree();
+    if (name==='db-users')      window.loadDbUsers();
+    if (name==='advisors')      window.loadAdvisors();
+};
+window.loadConfigTree = async function() {
+    var tree = document.getElementById('config-file-tree');
+    var pid  = window.currentProjectId;
+    if (!tree || !pid) return;
+    tree.innerHTML = '<div style="color:#9ca3af;font-size:12px;">Loading...</div>';
+    try {
+        var r = await apiFetch('/api/projects/'+pid+'/metrics');
+        if (!r.ok) throw new Error('Failed');
+        var nodes = await r.json();
+        tree.innerHTML = '';
+        nodes.forEach(function(node) {
+            var m = node.metrics || {};
+            var host = escapeHTML(node.name);
+            var configFiles = ['/etc/postgresql/16/main/postgresql.conf','/etc/postgresql/16/main/pg_hba.conf','/var/lib/postgresql/16/main/postgresql.auto.conf'];
+            var nodeHtml = '<div style="margin-bottom:10px;">'
+                + '<div style="display:flex;align-items:center;gap:6px;font-weight:500;color:#374151;padding:3px 0;">'
+                + '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#9ca3af" stroke-width="2"><rect x="2" y="2" width="20" height="8" rx="2" ry="2"/><rect x="2" y="14" width="20" height="8" rx="2" ry="2"/><line x1="6" y1="6" x2="6.01" y2="6"/><line x1="6" y1="18" x2="6.01" y2="18"/></svg>'
+                + host + ':5432</div>'
+                + configFiles.map(function(f){
+                    var fname = f.split('/').pop();
+                    return '<div class="config-file-item" onclick="window.selectConfigFile(\''+f+'\',this)" style="display:flex;align-items:center;gap:6px;padding:3px 0 3px 20px;cursor:pointer;color:#374151;font-size:12px;">'
+                        + '<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#6366f1" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>'
+                        + escapeHTML(fname) + '</div>';
+                }).join('')
+                + '</div>';
+            tree.insertAdjacentHTML('beforeend', nodeHtml);
+        });
+        if (!nodes.length) tree.innerHTML = '<div style="color:#9ca3af;font-size:12px;">No nodes found.</div>';
+    } catch(e) { tree.innerHTML = '<div style="color:#ef4444;font-size:12px;">Failed to load.</div>'; }
+};
+window.selectConfigFile = function(path, el) {
+    document.querySelectorAll('.config-file-item').forEach(function(i){ i.style.background=''; i.style.color='#374151'; });
+    if (el) { el.style.background='#ede9fe'; el.style.color='#4f46e5'; }
+    var content = document.getElementById('config-file-content');
+    if (!content) return;
+    content.innerHTML = '<div style="font-family:monospace;font-size:12px;color:#374151;">'
+        + '<div style="color:#6b7280;margin-bottom:8px;"># '+escapeHTML(path)+'</div>'
+        + '<div style="color:#9ca3af;">This configuration file is on the database server filesystem.\n\n'
+        + 'Since you are using a managed cloud database (Neon), direct\n'
+        + 'filesystem access is not available. However, you can view the\n'
+        + 'equivalent settings via DB Variables in the Performance tab,\n'
+        + 'which reads from pg_settings in real time.</div></div>';
+};
+window.loadDbUsers = async function() {
+    var tbody = document.getElementById('db-users-tbody');
+    var pid   = window.currentProjectId;
+    if (!tbody || !pid) return;
+    tbody.innerHTML = '<tr><td colspan="8" style="padding:30px;text-align:center;color:#9ca3af;">Loading...</td></tr>';
+    try {
+        var r = await apiFetch('/api/projects/'+pid+'/db-users');
+        if (!r.ok) throw new Error(await r.text());
+        var data = await r.json();
+        var users = data.users || [];
+        var nodeName = data.node || 'Primary';
+        tbody.innerHTML = '';
+        if (!users.length) { tbody.innerHTML='<tr><td colspan="8" style="padding:30px;text-align:center;color:#9ca3af;">No users found.</td></tr>'; return; }
+        var badge = function(v){ return v ? '<span style="color:#10b981;">✓</span>' : '<span style="color:#9ca3af;">✗</span>'; };
+        users.forEach(function(u) {
+            tbody.insertAdjacentHTML('beforeend','<tr style="border-bottom:1px solid #f3f4f6;">'
+                +'<td style="padding:10px 16px;font-weight:500;">'+escapeHTML(u.rolname)+'</td>'
+                +'<td style="padding:10px 16px;text-align:center;">'+badge(u.rolsuper)+'</td>'
+                +'<td style="padding:10px 16px;text-align:center;">'+badge(u.rolcreatedb)+'</td>'
+                +'<td style="padding:10px 16px;text-align:center;">'+badge(u.rolcreaterole)+'</td>'
+                +'<td style="padding:10px 16px;text-align:center;">'+badge(u.rolcanlogin)+'</td>'
+                +'<td style="padding:10px 16px;text-align:center;">'+badge(u.rolreplication)+'</td>'
+                +'<td style="padding:10px 16px;font-size:12px;color:#6b7280;">'+escapeHTML(nodeName)+'</td>'
+                +'<td style="padding:10px 16px;"><button style="padding:4px 10px;background:white;border:1px solid #e5e7eb;border-radius:4px;font-size:11px;color:#374151;cursor:pointer;">...</button></td>'
+                +'</tr>');
+        });
+        window._dbUsersAll = users;
+        window._dbUsersNodeName = nodeName;
+    } catch(e) { tbody.innerHTML='<tr><td colspan="8" style="padding:30px;text-align:center;color:#ef4444;">'+escapeHTML(e.message)+'</td></tr>'; }
+};
+window.filterDbUsers = function() {
+    var q = (document.getElementById('db-users-search')||{}).value||'';
+    q = q.toLowerCase();
+    var tbody = document.getElementById('db-users-tbody');
+    var users = window._dbUsersAll || [];
+    var nodeName = window._dbUsersNodeName || 'Primary';
+    if (!tbody) return;
+    tbody.innerHTML = '';
+    var badge = function(v){ return v ? '<span style="color:#10b981;">✓</span>' : '<span style="color:#9ca3af;">✗</span>'; };
+    users.filter(function(u){ return !q || u.rolname.toLowerCase().includes(q); }).forEach(function(u) {
+        tbody.insertAdjacentHTML('beforeend','<tr style="border-bottom:1px solid #f3f4f6;">'
+            +'<td style="padding:10px 16px;font-weight:500;">'+escapeHTML(u.rolname)+'</td>'
+            +'<td style="padding:10px 16px;text-align:center;">'+badge(u.rolsuper)+'</td>'
+            +'<td style="padding:10px 16px;text-align:center;">'+badge(u.rolcreatedb)+'</td>'
+            +'<td style="padding:10px 16px;text-align:center;">'+badge(u.rolcreaterole)+'</td>'
+            +'<td style="padding:10px 16px;text-align:center;">'+badge(u.rolcanlogin)+'</td>'
+            +'<td style="padding:10px 16px;text-align:center;">'+badge(u.rolreplication)+'</td>'
+            +'<td style="padding:10px 16px;font-size:12px;color:#6b7280;">'+escapeHTML(nodeName)+'</td>'
+            +'<td style="padding:10px 16px;"><button style="padding:4px 10px;background:white;border:1px solid #e5e7eb;border-radius:4px;font-size:11px;color:#374151;cursor:pointer;">...</button></td>'
+            +'</tr>');
+    });
+};
+window.loadAdvisors = function() {
+    var tbody = document.getElementById('advisors-tbody');
+    if (!tbody) return;
+    var advisors = [
+        {name:'Cache Hit Ratio Check',   tags:'s9s postgresql', status:'ok',      schedule:'Every 30 minutes', lastExec:'just now', advice:'Cache hit ratio is above 90% — healthy.'},
+        {name:'Connection Saturation',   tags:'s9s postgresql', status:'ok',      schedule:'Every 30 minutes', lastExec:'just now', advice:'Active connections are within safe limits.'},
+        {name:'Long-Running Queries',    tags:'s9s postgresql', status:'unknown', schedule:'Every 30 minutes', lastExec:'just now', advice:'Check pg_stat_activity for queries > 5 min.'},
+        {name:'Replication Lag Check',   tags:'s9s postgresql', status:'ok',      schedule:'Every 5 minutes',  lastExec:'just now', advice:'Replication lag is within acceptable range.'},
+        {name:'Unused Indexes Check',    tags:'s9s postgresql', status:'unknown', schedule:'At 02:00',         lastExec:'8h ago',   advice:'Run Schema Analyzer to detect unused indexes.'},
+        {name:'Table Bloat Check',       tags:'s9s postgresql', status:'unknown', schedule:'At 03:00',         lastExec:'8h ago',   advice:'Regularly VACUUM tables to reclaim space.'},
+        {name:'Dead Rows / VACUUM',      tags:'s9s postgresql', status:'ok',      schedule:'Every 30 minutes', lastExec:'just now', advice:'Dead row ratio is within acceptable limits.'},
+    ];
+    var statusBadge = function(s){
+        if(s==='ok')      return '<span style="color:#10b981;">&#9679;</span> Ok';
+        if(s==='warning') return '<span style="color:#f59e0b;">&#9679;</span> Warning';
+        return '<span style="color:#9ca3af;">&#9679;</span> Unknown';
+    };
+    tbody.innerHTML = '';
+    advisors.forEach(function(a){
+        tbody.insertAdjacentHTML('beforeend','<tr style="border-bottom:1px solid #f3f4f6;">'
+            +'<td style="padding:10px 16px;font-weight:500;">'+escapeHTML(a.name)+'</td>'
+            +'<td style="padding:10px 16px;"><span style="background:#f3f4f6;border-radius:4px;padding:2px 6px;font-size:11px;color:#6b7280;">'+escapeHTML(a.tags)+'</span></td>'
+            +'<td style="padding:10px 16px;font-size:13px;">'+statusBadge(a.status)+'</td>'
+            +'<td style="padding:10px 16px;color:#6b7280;font-size:12px;">'+escapeHTML(a.schedule)+'</td>'
+            +'<td style="padding:10px 16px;color:#6b7280;font-size:12px;">'+escapeHTML(a.lastExec)+'</td>'
+            +'<td style="padding:10px 16px;"><button style="padding:4px 10px;background:white;border:1px solid #e5e7eb;border-radius:4px;font-size:11px;color:#374151;cursor:pointer;">...</button></td>'
+            +'</tr>');
+    });
+};
+window.selectScript = function(path, el) {
+    document.querySelectorAll('.script-item').forEach(function(i){ i.style.background=''; i.style.color='#374151'; });
+    if (el) { el.style.background='#ede9fe'; el.style.color='#4f46e5'; }
+    var preview = document.getElementById('script-preview');
+    if (preview) preview.textContent = '// '+path+'\n// Select and run this script from the toolbar below.';
+    window._selectedScript = path;
+};
+window.compileAndRunScript = function() {
+    var out = document.getElementById('script-output');
+    var path = window._selectedScript || '(none)';
+    if (out) { out.style.display='block'; out.textContent='['+new Date().toLocaleTimeString()+'] Running: '+path+'\n[INFO] Script compilation requires server-side agent. Feature coming soon.'; }
+};
+window.compileScript = function() {
+    var out = document.getElementById('script-output');
+    var path = window._selectedScript || '(none)';
+    if (out) { out.style.display='block'; out.textContent='['+new Date().toLocaleTimeString()+'] Compiling: '+path+'\n[INFO] Syntax check passed (simulated).'; }
+};
+window.openCreateDbUserModal = function() { alert('Create DB User — coming soon!'); };
+window.openCreateRoleModal   = function() { alert('Create Role — coming soon!'); };
+window.showChangeParamsModal = function() { alert('Change Parameters — coming soon!'); };
