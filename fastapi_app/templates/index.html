@@ -1112,11 +1112,10 @@ Real OS metrics (CPU, RAM, Disk I/O) cannot be fetched directly from PostgreSQL 
                           </tr>
                       </tbody>
                   </table>
-              </div></div>
-
               </div>
-        </div>
-        </section>
+          </div>
+      </div>
+      </section>
 
         
         
@@ -1294,14 +1293,15 @@ Real OS metrics (CPU, RAM, Disk I/O) cannot be fetched directly from PostgreSQL 
                     </ul>
 
                     <h2 id="v1-6-0" style="color: #4b5563; font-weight: 300; font-size: 1.8rem; margin-bottom: 20px; border-top: 1px solid #e5e7eb; padding-top: 32px;">v1.6.0</h2>
-
-                    
+                    <h3 id="release-cycle-1-6-0" style="color: #4b5563; font-weight: 400; font-size: 1.4rem; margin-bottom: 16px;">Release cycle</h3>
+                    <p style="color: #4b5563; margin-bottom: 16px; line-height: 1.6;">We highly advise you to keep up to date with the latest version for the following reasons:</p>
+                    <ul style="color: #4b5563; margin-bottom: 32px; padding-left: 20px; line-height: 1.7;">
                         <li>ClusterControl has a short release cycle compared to other software applications (likely a new major release every quarter of the year).</li>
                         <li>ClusterControl has to keep up with all the latest changes and modifications introduced by supported database and application vendors.</li>
                         <li>Some of the issues you have encountered may already be fixed in the latest weekly maintenance or major release.</li>
                     </ul>
                     
-                    <h3 id="whats-new" style="color: #4b5563; font-weight: 400; font-size: 1.4rem; margin-bottom: 16px;">What's New</h3>
+                    <h3 id="whats-new-1-6-0" style="color: #4b5563; font-weight: 400; font-size: 1.4rem; margin-bottom: 16px;">What's New</h3>
                     <ul style="color: #4b5563; line-height: 1.7; padding-left: 20px; margin-bottom: 40px;">
                         <li><span style="font-weight: 600;">Core Fix (Persistent Auth &amp; Instant Nodes View Loading):</span> Doğrudan <code>#nodes-view</code> veya sol menüdeki <b>Nodes</b> sekmesine geçildiğinde yaşanan takılma/sonsuz yüklenme (infinite loading) sorunu çözüldü. Kimlik doğrulama belirteci (<code>globalAuthToken</code>) kalıcı olarak <code>localStorage</code> ile ilişkilendirildi ve tüm direkt sayfa geçişlerinin anında yüklenmesi sağlandı.</li>
                     </ul>
@@ -1468,10 +1468,6 @@ Real OS metrics (CPU, RAM, Disk I/O) cannot be fetched directly from PostgreSQL 
                 </div>
             </div>
         </section>
-
-        </main>
-        </div>
-    </div>
 
     <!-- Add Project Modal -->
     <div class="modal-overlay" id="modal-add-project" style="display: none;">
@@ -2746,6 +2742,7 @@ Real OS metrics (CPU, RAM, Disk I/O) cannot be fetched directly from PostgreSQL 
 
                 </div>
             </div>
+        </div>
     </div>
 
     <!-- Modal: Team details (ClusterControl Exact) -->
@@ -2952,8 +2949,6 @@ Real OS metrics (CPU, RAM, Disk I/O) cannot be fetched directly from PostgreSQL 
         </div>
     </div>
 
-</body>
-</html>
 <section id="activity-view" class="view-section" style="display: none;">
   <div style="padding: 24px;">
     <!-- Header -->
@@ -5255,6 +5250,10 @@ Real OS metrics (CPU, RAM, Disk I/O) cannot be fetched directly from PostgreSQL 
   </div>
 </div>
 
-<script src="/static/main.js?v=119"></script>
+</main>
+</div>
+</div>
+
+<script src="/static/main.js?v=120"></script>
 </body>
 </html>
