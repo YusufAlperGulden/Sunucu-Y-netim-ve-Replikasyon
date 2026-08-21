@@ -291,6 +291,9 @@ document.addEventListener('DOMContentLoaded', () => {
         } else if (hash === 'backups-view') {
             if(typeof stopDashboardInterval === 'function') stopDashboardInterval();
             if(typeof window.loadAllBackups === 'function') window.loadAllBackups();
+        } else if (hash === 'users-view') {
+            if(typeof stopDashboardInterval === 'function') stopDashboardInterval();
+            if(typeof window.reloadUsers === 'function') window.reloadUsers();
         } else {
             if(typeof stopDashboardInterval === 'function') stopDashboardInterval();
         }
@@ -3400,8 +3403,17 @@ function renderBackups() {
     async function loadUsersFromAPI() {
         try {
             const res = await apiFetch('/api/users');
-            if (!res.ok) return;
+            if (!res.ok) {
+                // Fallback: at least show the currently-logged-in user
+                await loadCurrentUserFallback();
+                return;
+            }
             const data = await res.json();
+            if (data.length === 0) {
+                // API returned empty — fall back to /api/users/me
+                await loadCurrentUserFallback();
+                return;
+            }
             usersData = data.map((u, i) => ({
                 ...u,
                 ...avatarStyle(u.username, i),
@@ -3410,8 +3422,38 @@ function renderBackups() {
             renderUsers();
         } catch (e) {
             console.error('Failed to load users:', e);
+            await loadCurrentUserFallback();
         }
     }
+
+    // Fallback: build a single-row table from /api/users/me
+    async function loadCurrentUserFallback() {
+        try {
+            const res = await apiFetch('/api/users/me');
+            if (!res.ok) return;
+            const u = await res.json();
+            usersData = [{
+                id: 0,
+                username: u.username || 'admin',
+                email: u.email || `${u.username}@localhost`,
+                first_name: u.first_name || (u.username || 'admin').charAt(0).toUpperCase() + (u.username || 'admin').slice(1),
+                last_name: u.last_name || '',
+                role: u.role || 'admin',
+                team: u.team || 'admins',
+                timezone: u.timezone || 'UTC',
+                origin: 'cmon',
+                status: 'Enabled',
+                created_at: '',
+                ...avatarStyle(u.username || 'admin', 0),
+            }];
+            renderUsers();
+        } catch (e) {
+            console.error('Fallback user load failed:', e);
+        }
+    }
+
+    // Expose so the router can call it when navigating to users-view
+    window.reloadUsers = loadUsersFromAPI;
 
     // ── Render table ──────────────────────────────────────────────────────
     function renderUsers() {
