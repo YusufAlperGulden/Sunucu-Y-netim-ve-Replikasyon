@@ -413,9 +413,10 @@ document.addEventListener('DOMContentLoaded', () => {
         fetchRecentAlarms();
     }
 
-    window.showDetailView = function(proj) {
+    window.showDetailView = function(proj, initialTab) {
         if (!proj) return;
         currentProjectId = proj.id;
+        window.currentProjectId = proj.id;
         window.currentProjectData = proj;
         
         const targetHash = `cluster-detail-${proj.id}`;
@@ -457,21 +458,30 @@ document.addEventListener('DOMContentLoaded', () => {
         
         renderNodes(proj.nodes || []);
         
-        // Ensure "Dashboards" tab is active by default
-        const dashTab = document.querySelector('.cluster-tab[data-tab="dashboards"]');
-        if(dashTab) dashTab.click();
+        // Activate specified tab or default to "Dashboards"
+        const defaultTabName = initialTab || 'dashboards';
+        const targetTabEl = document.querySelector(`.cluster-tab[data-tab="${defaultTabName}"]`);
+        if (targetTabEl) {
+            targetTabEl.click();
+            if (defaultTabName === 'backups' && typeof window.loadClusterBackups === 'function') {
+                setTimeout(function() { window.loadClusterBackups(proj.id); }, 100);
+            }
+        } else {
+            const dashTab = document.querySelector('.cluster-tab[data-tab="dashboards"]');
+            if(dashTab) dashTab.click();
+        }
         
         fetchDashboardMetrics();
     };
     function showDetailView(proj) { window.showDetailView(proj); }
 
-    window.openClusterDetail = async function(clusterId) {
+    window.openClusterDetail = async function(clusterId, initialTab) {
         if (!clusterId) return;
         try {
             const res = await apiFetch(`/api/projects/${clusterId}`);
             if (!res.ok) throw new Error(await res.text());
             const proj = await res.json();
-            window.showDetailView(proj);
+            window.showDetailView(proj, initialTab);
         } catch (err) {
             console.error("Error loading cluster detail:", err);
             alert("Error loading cluster: " + (err.message || err));
@@ -5313,7 +5323,7 @@ window.loadAllBackups = async function() {
                 <tr style="border-bottom:1px solid #f3f4f6;">
                     <td style="padding:12px 16px;font-weight:600;color:#111827;">${b.id}</td>
                     <td style="padding:12px 16px;color:#6b7280;cursor:pointer;" title="${escapeHTML(b.error_msg || b.file_path || 'Backup Info')}">ⓘ</td>
-                    <td style="padding:12px 16px;font-weight:600;color:#111827;">${dbIcon} ${escapeHTML(b.cluster_name)}</td>
+                    <td style="padding:12px 16px;font-weight:600;"><span onclick="window.openClusterDetail(${b.project_id || 1}, 'backups')" style="color:#4f46e5;cursor:pointer;display:inline-flex;align-items:center;gap:6px;" onmouseover="this.style.textDecoration='underline'" onmouseout="this.style.textDecoration='none'" title="Go to ${escapeHTML(b.cluster_name)} Backups">${dbIcon} ${escapeHTML(b.cluster_name)}</span></td>
                     <td style="padding:12px 16px;color:#4b5563;font-family:monospace;font-size:0.82rem;">${escapeHTML(b.backup_method)}</td>
                     <td style="padding:12px 16px;">
                         <span style="font-size:0.75rem;padding:3px 8px;border-radius:10px;font-weight:600;background:${statusBg};color:${statusColor};">
