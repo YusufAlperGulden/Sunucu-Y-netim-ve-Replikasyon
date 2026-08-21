@@ -52,7 +52,7 @@ def run_backup_job(job_id: int):
         if job.db_type == 'mssql':
             _execute_mssql_backup(job, node, local_file_path)
         else: # Default: PostgreSQL
-            _execute_postgres_backup(job, node, local_file_path)
+            _execute_postgres_backup(job, node, local_file_path, db=db)
 
         # ── 2. Calculate Final File Size ──────────────────────────────────────
         size_bytes = 0
@@ -106,7 +106,7 @@ def run_backup_job(job_id: int):
         db.close()
 
 
-def _execute_postgres_backup(job: BackupJob, node: DatabaseNode, local_file_path: str):
+def _execute_postgres_backup(job: BackupJob, node: DatabaseNode, local_file_path: str, db: Session = None):
     """Executes a real PostgreSQL backup (pgdumpall or pg_basebackup)."""
     # If SSH node credentials exist, try executing via SSH on the host
     if node and node.ssh_host and node.ssh_username:
@@ -142,14 +142,18 @@ def _execute_postgres_backup(job: BackupJob, node: DatabaseNode, local_file_path
     import psycopg2
 
     conn_str = None
-    if node and node.encrypted_credential:
+    if node and node.encrypted_url:
         try:
-            pw = decrypt(node.encrypted_credential)
-            host = node.host or 'localhost'
-            port = node.port or 5432
-            user = node.username or 'postgres'
-            db_name = node.database or 'postgres'
-            conn_str = f"host={host} port={port} user={user} password={pw} dbname={db_name} sslmode=prefer"
+            from ha_manager import decrypt_url
+            conn_str = decrypt_url(node.encrypted_url)
+        except Exception:
+            conn_str = None
+    elif not node and job.project_id:
+        try:
+            proj_node = db.query(DatabaseNode).filter(DatabaseNode.project_id == job.project_id).first()
+            if proj_node and proj_node.encrypted_url:
+                from ha_manager import decrypt_url
+                conn_str = decrypt_url(proj_node.encrypted_url)
         except Exception:
             conn_str = None
 
