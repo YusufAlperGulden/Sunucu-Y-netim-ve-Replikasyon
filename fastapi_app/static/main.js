@@ -1581,6 +1581,8 @@ window.fetchWatchlists = async function() {
 function renderWatchlists(list) {
     const tbody = document.getElementById('watchlists-tbody');
     if (!tbody) return;
+    // Cache for viewer access
+    window._wlList = list;
     if (list.length === 0) {
         tbody.innerHTML = `<tr><td colspan="6" style="text-align:center;padding:60px 20px;color:#9ca3af;">
             <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="#d1d5db" stroke-width="1.5" style="display:block;margin:0 auto 12px;"><path d="M2.036 12.322a1.012 1.012 0 010-.639C3.423 7.51 7.36 4.5 12 4.5c4.638 0 8.573 3.007 9.963 7.178.07.207.07.431 0 .639C20.577 16.49 16.64 19.5 12 19.5c-4.638 0-8.573-3.007-9.963-7.178z"></path><path d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path></svg>
@@ -1588,24 +1590,28 @@ function renderWatchlists(list) {
         </td></tr>`;
         return;
     }
-    tbody.innerHTML = list.map(wl => {
+    tbody.innerHTML = list.map((wl, idx) => {
         const topicBadges = (wl.topics || []).map(t =>
             `<span style="background:#ede9fe;color:#5b21b6;border-radius:4px;padding:2px 8px;font-size:0.78rem;font-weight:500;">${escapeHTML(t)}</span>`
         ).join(' ');
         const clusterBadges = (wl.clusters || []).length === 0
             ? '<span style="color:#9ca3af;font-size:0.82rem;">All clusters</span>'
-            : wl.clusters.map(c => `<span style="font-size:0.82rem;color:#374151;">${escapeHTML(c.name)} (ID:${c.id})</span>`).join(', ');
+            : wl.clusters.map(c => `<span style="font-size:0.82rem;color:#374151;">${escapeHTML(c.name)}</span>`).join(', ');
         return `<tr style="border-bottom:1px solid #f3f4f6;transition:background 0.15s;" onmouseenter="this.style.background='#fafafa'" onmouseleave="this.style.background='white'">
             <td style="padding:14px 20px;font-size:0.85rem;font-weight:600;color:#111827;">${escapeHTML(wl.name)}</td>
             <td style="padding:14px 20px;">${topicBadges}</td>
             <td style="padding:14px 20px;font-size:0.85rem;color:#374151;">${escapeHTML(wl.page_by)}</td>
             <td style="padding:14px 20px;font-size:0.85rem;color:#374151;">${escapeHTML(wl.grid)}</td>
             <td style="padding:14px 20px;font-size:0.85rem;">${clusterBadges}</td>
-            <td style="padding:14px 20px;">
+            <td style="padding:14px 20px;display:flex;gap:6px;align-items:center;">
+                <button onclick="window.openWatchlistViewer(window._wlList[${idx}])"
+                  style="border:none;background:#4338ca;color:white;cursor:pointer;font-size:0.82rem;padding:5px 12px;border-radius:5px;font-weight:600;"
+                  onmouseover="this.style.background='#3730a3'" onmouseout="this.style.background='#4338ca'"
+                  title="Open live viewer">▶ View</button>
                 <button onclick="window.deleteWatchlist(${wl.id})"
                   style="border:none;background:none;cursor:pointer;color:#ef4444;font-size:0.82rem;padding:4px 8px;border-radius:4px;"
                   onmouseover="this.style.background='#fef2f2'" onmouseout="this.style.background='none'"
-                  title="Delete watchlist">🗑 Delete</button>
+                  title="Delete watchlist">🗑</button>
             </td>
         </tr>`;
     }).join('');
@@ -1846,6 +1852,455 @@ document.addEventListener('click', e => {
         if (dd) dd.style.display = 'none';
     }
 });
+
+// ══════════════════════════════════════════════════════════════
+// WATCHLIST LIVE VIEWER
+// ══════════════════════════════════════════════════════════════
+
+const wlViewer = {
+    wl: null,           // current watchlist object
+    pages: [],          // array of page descriptors { label, cells:[{topic,cluster}] }
+    pageIndex: 0,
+    paused: false,
+    timer: null,        // setInterval handle
+    countdown: 0,       // current countdown value
+    metricsCache: {},   // { projectId: metricsArray }
+    auditCache: [],     // audit log cache
+};
+
+// ─── Grid column/row helpers ─────────────────────────────────────────────────
+function wlParseGrid(grid) {
+    const parts = (grid || '2x2').split('x');
+    return { cols: parseInt(parts[0]) || 2, rows: parseInt(parts[1]) || 2 };
+}
+
+function wlGridTemplateCols(cols) {
+    return `repeat(${cols}, 1fr)`;
+}
+
+// ─── Build page descriptors ──────────────────────────────────────────────────
+// Page-by Topic: each page = one topic, cells = one per cluster
+// Page-by Cluster: each page = one cluster, cells = one per topic
+function wlBuildPages(wl, allClusters) {
+    const { cols, rows } = wlParseGrid(wl.grid);
+    const cellsPerPage = cols * rows;
+    const topics = wl.topics || [];
+    // Clusters: wl.clusters has {id,name}. If empty → use all projects
+    const clusters = (wl.clusters && wl.clusters.length > 0) ? wl.clusters : allClusters;
+
+    const pages = [];
+    if (wl.page_by === 'Topic') {
+        // Each page = one topic. Cells = clusters (up to cellsPerPage each)
+        for (const topic of topics) {
+            for (let start = 0; start < Math.max(clusters.length, 1); start += cellsPerPage) {
+                const slice = clusters.slice(start, start + cellsPerPage);
+                pages.push({
+                    label: topic,
+                    pageBy: 'Topic',
+                    cells: slice.map(c => ({ topic, cluster: c }))
+                });
+            }
+        }
+    } else {
+        // Page-by Cluster: each page = one cluster. Cells = topics
+        for (const cluster of clusters) {
+            for (let start = 0; start < Math.max(topics.length, 1); start += cellsPerPage) {
+                const slice = topics.slice(start, start + cellsPerPage);
+                pages.push({
+                    label: cluster.name,
+                    pageBy: 'Cluster',
+                    cells: slice.map(t => ({ topic: t, cluster }))
+                });
+            }
+        }
+    }
+    if (pages.length === 0) pages.push({ label: '—', cells: [] });
+    return pages;
+}
+
+// ─── Fetch metrics for all relevant clusters ─────────────────────────────────
+async function wlFetchAllMetrics(clusters) {
+    const results = {};
+    await Promise.all(clusters.map(async c => {
+        try {
+            const res = await apiFetch(`/api/projects/${c.id}/metrics`);
+            results[c.id] = res.ok ? await res.json() : [];
+        } catch(e) { results[c.id] = []; }
+    }));
+    return results;
+}
+
+async function wlFetchAuditLogs() {
+    try {
+        const res = await apiFetch('/api/audit-logs');
+        return res.ok ? await res.json() : [];
+    } catch { return []; }
+}
+
+// ─── Open / Close ─────────────────────────────────────────────────────────────
+window.openWatchlistViewer = async function(wl) {
+    if (!wl) return;
+    wlViewer.wl = wl;
+    wlViewer.pageIndex = 0;
+    wlViewer.paused = false;
+    wlViewer.metricsCache = {};
+    wlViewer.auditCache = [];
+
+    // Show overlay
+    const overlay = document.getElementById('modal-wl-viewer');
+    if (overlay) overlay.style.display = 'flex';
+
+    // Update header
+    const nameEl = document.getElementById('wl-viewer-name');
+    if (nameEl) nameEl.textContent = wl.name;
+    const gridBadge = document.getElementById('wl-viewer-grid-badge');
+    if (gridBadge) gridBadge.textContent = `Grid: ${wl.grid}  ·  Page by: ${wl.page_by}  ·  ${wl.page_speed}s`;
+
+    // Determine which clusters to use
+    let allClusters = wl.clusters || [];
+    if (allClusters.length === 0) {
+        // Load all projects
+        try {
+            const res = await apiFetch('/api/projects');
+            const projs = res.ok ? await res.json() : [];
+            allClusters = projs.map(p => ({ id: p.id, name: p.name }));
+        } catch { allClusters = []; }
+    }
+
+    wlViewer.pages = wlBuildPages(wl, allClusters);
+
+    // Show loading while fetching
+    const grid = document.getElementById('wl-viewer-grid');
+    if (grid) grid.innerHTML = '<div style="color:#64748b;text-align:center;padding:60px;grid-column:1/-1;"><div class="cc-spinner" style="margin:0 auto 16px;border-color:#334155;border-top-color:#6366f1;"></div><span>Loading live metrics…</span></div>';
+
+    // Fetch all data
+    const [metricsCache, auditCache] = await Promise.all([
+        wlFetchAllMetrics(allClusters),
+        wlFetchAuditLogs()
+    ]);
+    wlViewer.metricsCache = metricsCache;
+    wlViewer.auditCache = auditCache;
+
+    wlRenderCurrentPage();
+    wlStartPager();
+};
+
+window.closeWatchlistViewer = function() {
+    const overlay = document.getElementById('modal-wl-viewer');
+    if (overlay) overlay.style.display = 'none';
+    wlStopPager();
+    wlViewer.wl = null;
+};
+
+// ─── Pager ───────────────────────────────────────────────────────────────────
+function wlStartPager() {
+    wlStopPager();
+    if (!wlViewer.wl || wlViewer.paused) return;
+    const speed = wlViewer.wl.page_speed || 5;
+    wlViewer.countdown = speed;
+    wlUpdateProgress(speed, speed);
+
+    wlViewer.timer = setInterval(() => {
+        if (wlViewer.paused) return;
+        wlViewer.countdown--;
+        wlUpdateProgress(wlViewer.countdown, speed);
+        if (wlViewer.countdown <= 0) {
+            wlAdvancePage(1);
+        }
+    }, 1000);
+}
+
+function wlStopPager() {
+    if (wlViewer.timer) { clearInterval(wlViewer.timer); wlViewer.timer = null; }
+}
+
+function wlUpdateProgress(remaining, total) {
+    const bar = document.getElementById('wl-viewer-progress');
+    if (!bar) return;
+    const pct = total > 0 ? (remaining / total) * 100 : 100;
+    // Turn off transition for instant reset, then re-enable
+    bar.style.transition = 'none';
+    bar.style.width = pct + '%';
+    requestAnimationFrame(() => { bar.style.transition = 'width 1s linear'; });
+}
+
+window.toggleWlPager = function() {
+    wlViewer.paused = !wlViewer.paused;
+    const btn = document.getElementById('wl-viewer-pause-btn');
+    if (btn) btn.textContent = wlViewer.paused ? '▶ Resume' : '⏸ Pause';
+};
+
+function wlAdvancePage(dir) {
+    const n = wlViewer.pages.length;
+    if (n === 0) return;
+    wlViewer.pageIndex = (wlViewer.pageIndex + dir + n) % n;
+    const speed = wlViewer.wl ? wlViewer.wl.page_speed : 5;
+    wlViewer.countdown = speed;
+    wlUpdateProgress(speed, speed);
+    wlRenderCurrentPage();
+}
+
+window.wlNextPage = function() { wlAdvancePage(1); };
+window.wlPrevPage = function() { wlAdvancePage(-1); };
+
+window.wlRefreshPage = async function() {
+    const wl = wlViewer.wl;
+    if (!wl) return;
+    const grid = document.getElementById('wl-viewer-grid');
+    if (grid) grid.innerHTML = '<div style="color:#64748b;text-align:center;padding:60px;grid-column:1/-1;"><div class="cc-spinner" style="margin:0 auto 16px;border-color:#334155;border-top-color:#6366f1;"></div><span>Refreshing…</span></div>';
+
+    let allClusters = wl.clusters || [];
+    if (allClusters.length === 0) {
+        try { const res = await apiFetch('/api/projects'); const p = res.ok ? await res.json() : []; allClusters = p.map(x => ({id:x.id,name:x.name})); } catch {}
+    }
+    const [metricsCache, auditCache] = await Promise.all([
+        wlFetchAllMetrics(allClusters),
+        wlFetchAuditLogs()
+    ]);
+    wlViewer.metricsCache = metricsCache;
+    wlViewer.auditCache = auditCache;
+    wlRenderCurrentPage();
+};
+
+// ─── Render current page ─────────────────────────────────────────────────────
+function wlRenderCurrentPage() {
+    const grid = document.getElementById('wl-viewer-grid');
+    const pageLabel = document.getElementById('wl-viewer-page-label');
+    if (!grid || !wlViewer.wl) return;
+
+    const pages = wlViewer.pages;
+    const page = pages[wlViewer.pageIndex];
+    if (!page) { grid.innerHTML = '<div style="color:#64748b;padding:40px;grid-column:1/-1;">No pages.</div>'; return; }
+
+    const { cols, rows } = wlParseGrid(wlViewer.wl.grid);
+    grid.style.gridTemplateColumns = wlGridTemplateCols(cols);
+    grid.style.gridAutoRows = `calc((100vh - 110px) / ${rows})`;
+
+    if (pageLabel) {
+        const indicator = `${wlViewer.pageIndex + 1} / ${pages.length}`;
+        pageLabel.textContent = `${page.label}  —  ${indicator}`;
+    }
+
+    if (page.cells.length === 0) {
+        grid.innerHTML = '<div style="color:#64748b;padding:40px;grid-column:1/-1;text-align:center;">No clusters configured for this watchlist.</div>';
+        return;
+    }
+
+    grid.innerHTML = page.cells.map(cell => wlBuildMetricPanel(cell.topic, cell.cluster)).join('');
+}
+
+// ─── Master panel dispatcher ─────────────────────────────────────────────────
+function wlBuildMetricPanel(topic, cluster) {
+    const metricsArr = wlViewer.metricsCache[cluster.id] || [];
+    // metricsArr is [{id, name, role, metrics:{status,ping,storage,...}}]
+    const panelId = `wl-panel-${cluster.id}-${topic.replace(/\s+/g,'_')}`;
+
+    const topicIcon = {
+        'Alarms': '🔔', 'DB Growth': '📈', 'DB Processes': '🔗',
+        'Load': '⚡', 'Load average': '📊', 'Status': '✅', 'Top queries': '🔍'
+    }[topic] || '📌';
+
+    const innerHtml = wlBuildTopicInner(topic, cluster, metricsArr);
+
+    return `<div id="${panelId}" style="background:#1e293b;border:1px solid #334155;border-radius:10px;display:flex;flex-direction:column;overflow:hidden;min-height:120px;">
+        <div style="display:flex;align-items:center;justify-content:space-between;padding:10px 14px;border-bottom:1px solid #334155;background:#172033;flex-shrink:0;">
+            <div style="display:flex;align-items:center;gap:8px;">
+                <span style="font-size:1rem;">${topicIcon}</span>
+                <span style="color:#e2e8f0;font-size:0.85rem;font-weight:600;">${escapeHTML(topic)}</span>
+            </div>
+            <span style="color:#64748b;font-size:0.75rem;">${escapeHTML(cluster.name)}</span>
+        </div>
+        <div style="flex:1;padding:12px 14px;overflow-y:auto;">${innerHtml}</div>
+    </div>`;
+}
+
+// ─── Topic inner content builders ────────────────────────────────────────────
+function wlBuildTopicInner(topic, cluster, metricsArr) {
+    switch(topic) {
+        case 'Status':       return wlBuildStatusInner(metricsArr, cluster);
+        case 'Load':         return wlBuildLoadInner(metricsArr, false);
+        case 'Load average': return wlBuildLoadInner(metricsArr, true);
+        case 'DB Processes': return wlBuildDbProcessesInner(metricsArr);
+        case 'DB Growth':    return wlBuildDbGrowthInner(metricsArr);
+        case 'Alarms':       return wlBuildAlarmsInner(cluster);
+        case 'Top queries':  return wlBuildTopQueriesInner(metricsArr);
+        default:             return `<span style="color:#64748b;font-size:0.82rem;">No panel for this topic.</span>`;
+    }
+}
+
+// STATUS panel
+function wlBuildStatusInner(metricsArr, cluster) {
+    if (!metricsArr.length) return wlNoNodes();
+    return metricsArr.map(node => {
+        const m = node.metrics || {};
+        const online = m.status === 'online';
+        const dotColor = online ? '#22c55e' : '#ef4444';
+        const statusLabel = online ? 'Online' : 'Offline';
+        return `<div style="display:flex;align-items:center;justify-content:space-between;padding:6px 0;border-bottom:1px solid #1e293b;">
+            <div style="display:flex;align-items:center;gap:8px;">
+                <span style="width:9px;height:9px;border-radius:50%;background:${dotColor};display:inline-block;flex-shrink:0;"></span>
+                <span style="color:#cbd5e1;font-size:0.82rem;font-weight:500;">${escapeHTML(node.name)}</span>
+                <span style="color:#64748b;font-size:0.75rem;">${escapeHTML(node.role || '')}</span>
+            </div>
+            <div style="text-align:right;">
+                <span style="color:${dotColor};font-size:0.78rem;font-weight:600;">${statusLabel}</span>
+                ${m.ping ? `<span style="color:#64748b;font-size:0.72rem;margin-left:6px;">${escapeHTML(m.ping)}</span>` : ''}
+            </div>
+        </div>
+        <div style="display:flex;gap:12px;padding:4px 0 6px 17px;flex-wrap:wrap;">
+            ${m.version ? `<span style="color:#64748b;font-size:0.72rem;">v${escapeHTML(m.version)}</span>` : ''}
+            ${m.uptime ? `<span style="color:#64748b;font-size:0.72rem;">⬆ ${escapeHTML(m.uptime)}</span>` : ''}
+            ${m.connections ? `<span style="color:#64748b;font-size:0.72rem;">🔗 ${escapeHTML(m.connections)}</span>` : ''}
+        </div>`;
+    }).join('');
+}
+
+// LOAD panel (also used for Load average with extra cache_hit)
+function wlBuildLoadInner(metricsArr, showCacheHit) {
+    if (!metricsArr.length) return wlNoNodes();
+    return metricsArr.map(node => {
+        const m = node.metrics || {};
+        const cpu = m.cpu_usage || 'N/A';
+        const ram = m.ram_usage || 'N/A';
+        const cpuNum = parseFloat(cpu) || 0;
+        const ramNum = parseFloat(ram) || 0;
+        const cpuColor = cpuNum > 80 ? '#ef4444' : cpuNum > 60 ? '#f59e0b' : '#22c55e';
+        const ramColor = ramNum > 85 ? '#ef4444' : ramNum > 70 ? '#f59e0b' : '#22c55e';
+        return `<div style="margin-bottom:10px;">
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:3px;">
+                <span style="color:#94a3b8;font-size:0.78rem;">${escapeHTML(node.name)}</span>
+            </div>
+            <div style="margin-bottom:5px;">
+                <div style="display:flex;justify-content:space-between;margin-bottom:2px;">
+                    <span style="color:#64748b;font-size:0.72rem;">CPU</span>
+                    <span style="color:${cpuColor};font-size:0.72rem;font-weight:600;">${escapeHTML(cpu)}</span>
+                </div>
+                <div style="background:#334155;border-radius:3px;height:6px;overflow:hidden;">
+                    <div style="background:${cpuColor};height:100%;width:${Math.min(cpuNum,100)}%;border-radius:3px;transition:width 0.5s;"></div>
+                </div>
+            </div>
+            <div style="margin-bottom:${showCacheHit?'5px':'0'};">
+                <div style="display:flex;justify-content:space-between;margin-bottom:2px;">
+                    <span style="color:#64748b;font-size:0.72rem;">RAM</span>
+                    <span style="color:${ramColor};font-size:0.72rem;font-weight:600;">${escapeHTML(ram)}</span>
+                </div>
+                <div style="background:#334155;border-radius:3px;height:6px;overflow:hidden;">
+                    <div style="background:${ramColor};height:100%;width:${Math.min(ramNum,100)}%;border-radius:3px;transition:width 0.5s;"></div>
+                </div>
+            </div>
+            ${showCacheHit && m.cache_hit ? `<div style="margin-top:5px;display:flex;justify-content:space-between;">
+                <span style="color:#64748b;font-size:0.72rem;">Cache hit</span>
+                <span style="color:#38bdf8;font-size:0.72rem;font-weight:600;">${escapeHTML(m.cache_hit)}</span>
+            </div>` : ''}
+            ${cpu === 'N/A' && ram === 'N/A' ? `<p style="color:#475569;font-size:0.72rem;margin-top:4px;">SSH not configured — OS metrics unavailable</p>` : ''}
+        </div>`;
+    }).join('<hr style="border:none;border-top:1px solid #1e293b;margin:4px 0;">');
+}
+
+// DB PROCESSES panel
+function wlBuildDbProcessesInner(metricsArr) {
+    if (!metricsArr.length) return wlNoNodes();
+    return metricsArr.map(node => {
+        const m = node.metrics || {};
+        const active = parseInt(m.active_conn) || 0;
+        const max = parseInt(m.max_conn) || 1;
+        const pct = Math.min((active / max) * 100, 100);
+        const barColor = pct > 85 ? '#ef4444' : pct > 65 ? '#f59e0b' : '#6366f1';
+        return `<div style="margin-bottom:10px;">
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px;">
+                <span style="color:#94a3b8;font-size:0.78rem;">${escapeHTML(node.name)}</span>
+                <span style="color:${barColor};font-size:0.78rem;font-weight:700;">${escapeHTML(m.connections || '—')}</span>
+            </div>
+            <div style="background:#334155;border-radius:4px;height:8px;overflow:hidden;">
+                <div style="background:${barColor};height:100%;width:${pct.toFixed(1)}%;border-radius:4px;transition:width 0.5s;"></div>
+            </div>
+            <div style="display:flex;justify-content:space-between;margin-top:3px;">
+                <span style="color:#475569;font-size:0.7rem;">${active} active</span>
+                <span style="color:#475569;font-size:0.7rem;">${max} max</span>
+            </div>
+        </div>`;
+    }).join('<hr style="border:none;border-top:1px solid #1e293b;margin:4px 0;">');
+}
+
+// DB GROWTH panel
+function wlBuildDbGrowthInner(metricsArr) {
+    if (!metricsArr.length) return wlNoNodes();
+    return metricsArr.map(node => {
+        const m = node.metrics || {};
+        const tuples = [
+            { label: 'Fetched',   val: m.tup_fetched,  color: '#6366f1' },
+            { label: 'Inserted',  val: m.tup_inserted, color: '#22c55e' },
+            { label: 'Updated',   val: m.tup_updated,  color: '#f59e0b' },
+            { label: 'Deleted',   val: m.tup_deleted,  color: '#ef4444' },
+        ];
+        return `<div style="margin-bottom:10px;">
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">
+                <span style="color:#94a3b8;font-size:0.78rem;">${escapeHTML(node.name)}</span>
+                <span style="color:#38bdf8;font-size:0.82rem;font-weight:700;">${escapeHTML(m.storage || '—')}</span>
+            </div>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:4px;">
+                ${tuples.map(t => `<div style="background:#172033;border-radius:5px;padding:5px 8px;">
+                    <div style="color:#475569;font-size:0.68rem;">${t.label}</div>
+                    <div style="color:${t.color};font-size:0.78rem;font-weight:600;">${t.val != null ? Number(t.val).toLocaleString() : '—'}</div>
+                </div>`).join('')}
+            </div>
+        </div>`;
+    }).join('<hr style="border:none;border-top:1px solid #1e293b;margin:4px 0;">');
+}
+
+// ALARMS panel
+function wlBuildAlarmsInner(cluster) {
+    const logs = (wlViewer.auditCache || []).filter(l =>
+        l.project_id === cluster.id &&
+        l.action && (l.action.toLowerCase().includes('fail') ||
+                     l.action.toLowerCase().includes('error') ||
+                     l.action.toLowerCase().includes('alarm') ||
+                     l.action.toLowerCase().includes('offline'))
+    ).slice(0, 8);
+    if (!logs.length) return `<div style="color:#22c55e;font-size:0.82rem;text-align:center;padding:12px 0;">
+        <span style="font-size:1.5rem;display:block;margin-bottom:6px;">✅</span>No alarms</div>`;
+    return logs.map(l => `<div style="display:flex;align-items:flex-start;gap:8px;padding:5px 0;border-bottom:1px solid #172033;">
+        <span style="color:#ef4444;font-size:0.75rem;flex-shrink:0;margin-top:1px;">⚠</span>
+        <div>
+            <div style="color:#fca5a5;font-size:0.78rem;font-weight:500;">${escapeHTML(l.action)}</div>
+            <div style="color:#475569;font-size:0.7rem;">${escapeHTML(l.timestamp || '')}</div>
+        </div>
+    </div>`).join('');
+}
+
+// TOP QUERIES panel (shows transaction stats since pg_stat_statements may not be installed)
+function wlBuildTopQueriesInner(metricsArr) {
+    if (!metricsArr.length) return wlNoNodes();
+    return metricsArr.map(node => {
+        const m = node.metrics || {};
+        const commits = parseInt(m.commits_raw) || 0;
+        const rollbacks = parseInt(m.rollbacks_raw) || 0;
+        const total = commits + rollbacks;
+        const rollbackPct = total > 0 ? ((rollbacks / total) * 100).toFixed(1) : '0.0';
+        const rollbackColor = parseFloat(rollbackPct) > 5 ? '#f59e0b' : parseFloat(rollbackPct) > 10 ? '#ef4444' : '#22c55e';
+        const stats = [
+            { label: 'Commits ✓',   val: commits.toLocaleString(),  color: '#22c55e' },
+            { label: 'Rollbacks ✗',  val: rollbacks.toLocaleString(), color: '#ef4444' },
+            { label: 'Rollback %',   val: rollbackPct + '%',          color: rollbackColor },
+            { label: 'Fetched rows', val: m.tup_fetched != null ? Number(m.tup_fetched).toLocaleString() : '—', color: '#6366f1' },
+        ];
+        return `<div style="margin-bottom:10px;">
+            <div style="color:#94a3b8;font-size:0.78rem;margin-bottom:6px;">${escapeHTML(node.name)}</div>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:4px;">
+                ${stats.map(s => `<div style="background:#172033;border-radius:5px;padding:5px 8px;">
+                    <div style="color:#475569;font-size:0.68rem;">${s.label}</div>
+                    <div style="color:${s.color};font-size:0.78rem;font-weight:600;">${s.val}</div>
+                </div>`).join('')}
+            </div>
+            ${m.xact ? `<div style="color:#64748b;font-size:0.71rem;margin-top:5px;">Transactions: ${escapeHTML(m.xact)}</div>` : ''}
+        </div>`;
+    }).join('<hr style="border:none;border-top:1px solid #1e293b;margin:4px 0;">');
+}
+
+// Helper
+function wlNoNodes() {
+    return '<div style="color:#475569;font-size:0.82rem;text-align:center;padding:12px 0;">No nodes connected.</div>';
+}
 
     async function fetchDashboardMetrics() {
         try {
