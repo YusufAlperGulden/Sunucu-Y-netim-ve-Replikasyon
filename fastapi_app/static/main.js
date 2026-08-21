@@ -10669,3 +10669,116 @@ window.removeCurrentCluster = async function() {
         alert('Error: ' + e.message);
     }
 };
+
+
+// ═══════════════════════════════════════════════════════════════════════════
+// Header Alarms / Jobs / Audit Log Switcher (Title + Content)
+// ═══════════════════════════════════════════════════════════════════════════
+
+window.switchAlarmSubtab = function(tab) {
+    var tabs = ['alarms', 'jobs', 'audit'];
+    tabs.forEach(function(t) {
+        var btn = document.getElementById('btn-alarm-subtab-' + t);
+        var pane = document.getElementById('alarm-content-' + t);
+        if (btn) {
+            if (t === tab) {
+                btn.style.background = 'white';
+                btn.style.color = '#3a1c94';
+                btn.style.fontWeight = '600';
+                btn.style.boxShadow = '0 1px 2px rgba(0,0,0,0.05)';
+            } else {
+                btn.style.background = 'transparent';
+                btn.style.color = '#6b7280';
+                btn.style.fontWeight = '500';
+                btn.style.boxShadow = 'none';
+            }
+        }
+        if (pane) pane.style.display = (t === tab) ? 'block' : 'none';
+    });
+    
+    // Dynamically update Header Title & Icon
+    var titleEl = document.getElementById('header-alarms-panel-title');
+    var footerEl = document.getElementById('header-alarms-panel-footer-text');
+    
+    if (tab === 'alarms') {
+        if (titleEl) {
+            titleEl.innerHTML = '<span style="color:#ef4444;font-size:1.2rem;">((o))</span> Alarms (unmuted)';
+        }
+        if (footerEl) {
+            var count = (document.getElementById('alarms-unmuted-count') || {}).textContent || '0';
+            footerEl.innerHTML = 'You have <span id="alarms-unmuted-count" style="font-weight:700;color:#111827;">' + count + '</span> unmuted alarms. To see all alarms, go to <a href="#activity-view" onclick="switchView(\'activity-view\', \'alarms\'); closeAlarmsPanel(); return false;" style="color:#3a1c94;font-weight:600;text-decoration:none;cursor:pointer;">Activity center</a>.';
+        }
+        loadHeaderAlarms();
+    } else if (tab === 'jobs') {
+        if (titleEl) {
+            titleEl.innerHTML = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align:middle;"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg> Jobs';
+        }
+        loadHeaderJobsTable();
+    } else if (tab === 'audit') {
+        if (titleEl) {
+            titleEl.innerHTML = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align:middle;"><rect x="4" y="2" width="16" height="20" rx="2" ry="2"/><line x1="8" y1="6" x2="16" y2="6"/><line x1="8" y1="10" x2="16" y2="10"/><line x1="8" y1="14" x2="12" y2="14"/></svg> Audit Log';
+        }
+        loadHeaderAuditTable();
+    }
+};
+
+window.loadHeaderJobsTable = async function() {
+    var tbody = document.getElementById('tbody-header-jobs');
+    var footerEl = document.getElementById('header-alarms-panel-footer-text');
+    if (!tbody) return;
+    try {
+        var res = await apiFetch('/api/backups');
+        var jobs = await res.json();
+        var count = jobs.length;
+        if (footerEl) {
+            footerEl.innerHTML = 'You have <span style="font-weight:700;color:#111827;">' + count + '</span> jobs. To see all jobs, go to <a href="#activity-view" onclick="switchView(\'activity-view\', \'jobs\'); closeAlarmsPanel(); return false;" style="color:#3a1c94;font-weight:600;text-decoration:none;cursor:pointer;">Activity center</a>.';
+        }
+        if (!jobs.length) {
+            tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;padding:36px;color:#9ca3af;"><svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="#d1d5db" stroke-width="1.5" style="margin:0 auto 12px auto;display:block;"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>No active jobs.</td></tr>';
+            return;
+        }
+        tbody.innerHTML = jobs.map(function(j) {
+            var isPg = (j.db_type || '').toLowerCase() === 'postgresql';
+            var dbIcon = isPg ? '🐘' : '🗄️';
+            var statusBg = j.status === 'COMPLETED' ? '#d1fae5' : (j.status === 'FAILED' ? '#fee2e2' : '#fef3c7');
+            var statusColor = j.status === 'COMPLETED' ? '#065f46' : (j.status === 'FAILED' ? '#991b1b' : '#92400e');
+            return '<tr style="border-bottom:1px solid #f3f4f6;">' +
+                '<td style="padding:10px 12px;font-weight:600;color:#111827;">' + escapeHTML(j.title || ('BACKUP-' + j.id)) + '</td>' +
+                '<td style="padding:10px 12px;"><span style="font-size:0.75rem;padding:2px 8px;border-radius:10px;font-weight:600;background:' + statusBg + ';color:' + statusColor + ';">● ' + escapeHTML(j.status) + '</span></td>' +
+                '<td style="padding:10px 12px;font-weight:500;color:#111827;">' + dbIcon + ' ' + escapeHTML(j.cluster_name) + '</td>' +
+                '<td style="padding:10px 12px;color:#4b5563;">admin</td>' +
+                '<td style="padding:10px 12px;color:#6b7280;font-size:0.8rem;">' + escapeHTML(j.created_human || j.created_at || 'Recently') + '</td>' +
+                '<td style="padding:10px 12px;color:#6b7280;font-size:0.8rem;">0s</td>' +
+                '<td style="padding:10px 12px;text-align:right;"><button style="padding:3px 8px;background:white;border:1px solid #d1d5db;border-radius:4px;font-size:0.75rem;cursor:pointer;">...</button></td>' +
+                '</tr>';
+        }).join('');
+    } catch(e) {}
+};
+
+window.loadHeaderAuditTable = async function() {
+    var tbody = document.getElementById('tbody-header-audit');
+    var footerEl = document.getElementById('header-alarms-panel-footer-text');
+    if (!tbody) return;
+    try {
+        var res = await apiFetch('/api/audit-logs');
+        var logs = await res.json();
+        var count = logs.length;
+        if (footerEl) {
+            footerEl.innerHTML = 'You have <span style="font-weight:700;color:#111827;">' + count + '</span> audit log. To see all audit log, go to <a href="#activity-view" onclick="switchView(\'activity-view\', \'audit\'); closeAlarmsPanel(); return false;" style="color:#3a1c94;font-weight:600;text-decoration:none;cursor:pointer;">Activity center</a>.';
+        }
+        if (!logs.length) {
+            tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;padding:36px;color:#9ca3af;"><svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="#d1d5db" stroke-width="1.5" style="margin:0 auto 12px auto;display:block;"><rect x="4" y="2" width="16" height="20" rx="2" ry="2"/><line x1="8" y1="6" x2="16" y2="6"/><line x1="8" y1="10" x2="16" y2="10"/><line x1="8" y1="14" x2="12" y2="14"/></svg>No audit log events.</td></tr>';
+            return;
+        }
+        tbody.innerHTML = logs.map(function(l) {
+            return '<tr style="border-bottom:1px solid #f3f4f6;">' +
+                '<td style="padding:10px 12px;color:#6b7280;font-size:0.8rem;">' + escapeHTML(l.created_at || 'Just now') + '</td>' +
+                '<td style="padding:10px 12px;font-weight:500;color:#111827;">' + escapeHTML(l.action) + '</td>' +
+                '<td style="padding:10px 12px;color:#4b5563;">authentication</td>' +
+                '<td style="padding:10px 12px;color:#4b5563;">' + escapeHTML(l.user || 'admin') + '</td>' +
+                '<td style="padding:10px 12px;color:#6b7280;font-family:monospace;font-size:0.8rem;">127.0.0.1</td>' +
+                '<td style="padding:10px 12px;color:#4b5563;">' + escapeHTML(l.details || 'N/A') + '</td>' +
+                '</tr>';
+        }).join('');
+    } catch(e) {}
+};
