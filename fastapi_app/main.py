@@ -1068,6 +1068,53 @@ async def get_db_vars(project_id: int, db: Session = Depends(get_db)):
     return {'nodes': list(results)}
 
 
+class EmailNotifPayload(BaseModel):
+    user_group: str = "admins"
+    email: str
+    enabled: bool = True
+    digest_time: str = "instant"
+    daily_limit: str = "unlimited"
+
+@app.get('/api/projects/{project_id}/email-notifications', dependencies=[Depends(verify_credentials)])
+def get_project_email_notifications(project_id: int, db: Session = Depends(get_db)):
+    from models import Project, User
+    proj = db.query(Project).filter(Project.id == project_id).first()
+    if not proj:
+        return JSONResponse(status_code=404, content={'message': 'Project not found'})
+    
+    users = db.query(User).all()
+    user_emails = [u.email for u in users if u.email]
+    if not user_emails:
+        user_emails = ["admin@example.com", "stajyer@tp.com"]
+        
+    return {
+        "project_id": project_id,
+        "cluster_name": proj.name,
+        "user_groups": {
+            "admins": user_emails,
+            "operators": ["ops@example.com"],
+            "viewers": ["viewer@example.com"],
+            "external": ["yusufalpergulden3@gmail.com"]
+        },
+        "active_email": user_emails[0],
+        "enabled": True,
+        "digest_time": "instant",
+        "daily_limit": "unlimited"
+    }
+
+@app.post('/api/projects/{project_id}/email-notifications', dependencies=[Depends(verify_credentials)])
+def save_project_email_notifications(project_id: int, payload: EmailNotifPayload, db: Session = Depends(get_db)):
+    from models import AuditLog
+    audit = AuditLog(
+        project_id=project_id,
+        action="UPDATE_EMAIL_NOTIFICATION",
+        user="admin",
+        details=f"Email notifications for {payload.email} set to enabled={payload.enabled}."
+    )
+    db.add(audit)
+    db.commit()
+    return {"success": True, "message": f"Settings saved for {payload.email}"}
+
 class NodeUpdate(BaseModel):
     url: str
     # SSH Credentials (opsiyonel)

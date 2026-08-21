@@ -10424,3 +10424,159 @@ window.loadClusterBackups = async function(projectId) {
         tbodyAll.innerHTML = '<tr><td colspan="11" style="padding:40px;text-align:center;color:#ef4444;">' + escapeHTML(e.message) + '</td></tr>';
     }
 };
+
+
+// ═══════════════════════════════════════════════════════════════════════════
+// Cluster Detail Settings — Email Notifications JS
+// ═══════════════════════════════════════════════════════════════════════════
+
+window._clusterEmailNotifState = {
+    group: 'admins',
+    email: 'admin@example.com',
+    enabled: true,
+    groups: {
+        admins: ['admin@example.com', 'stajyer@tp.com'],
+        operators: ['ops@example.com'],
+        viewers: ['viewer@example.com'],
+        external: ['yusufalpergulden3@gmail.com']
+    }
+};
+
+window.switchClusterSettingsSubtab = function(tab, btn) {
+    document.querySelectorAll('.cluster-settings-subtab').forEach(function(b){
+        b.style.borderBottomColor = 'transparent';
+        b.style.color = '#6b7280';
+        b.style.fontWeight = '500';
+    });
+    if (btn) {
+        btn.style.borderBottomColor = '#4f46e5';
+        btn.style.color = '#4f46e5';
+        btn.style.fontWeight = '600';
+    }
+    var pSys = document.getElementById('cluster-settings-panel-system');
+    var pEmail = document.getElementById('cluster-settings-panel-email');
+    if (pSys)   pSys.style.display   = (tab === 'system') ? 'block' : 'none';
+    if (pEmail) pEmail.style.display = (tab === 'email')  ? 'block' : 'none';
+    
+    if (tab === 'email') window.loadClusterEmailNotifications();
+};
+
+window.loadClusterEmailNotifications = async function() {
+    var pid = window.currentProjectId;
+    if (!pid) return;
+    try {
+        var r = await apiFetch('/api/projects/' + pid + '/email-notifications');
+        if (r.ok) {
+            var data = await r.json();
+            if (data.user_groups) window._clusterEmailNotifState.groups = data.user_groups;
+        }
+    } catch(e) {}
+    window.updateEmailRecipientDropdown();
+    window.renderEmailNotificationState();
+};
+
+window.updateEmailRecipientDropdown = function() {
+    var groupSelect = document.getElementById('email-notif-user-group');
+    var userSelect  = document.getElementById('email-notif-user-select');
+    if (!groupSelect || !userSelect) return;
+    
+    var grp = groupSelect.value || 'admins';
+    var emails = window._clusterEmailNotifState.groups[grp] || [];
+    userSelect.innerHTML = '';
+    if (!emails.length) {
+        userSelect.innerHTML = '<option value="">No emails in this group</option>';
+    } else {
+        emails.forEach(function(em) {
+            userSelect.insertAdjacentHTML('beforeend', '<option value="' + escapeHTML(em) + '">' + escapeHTML(em) + '</option>');
+        });
+    }
+    window._clusterEmailNotifState.email = userSelect.value || '';
+};
+
+window.onEmailUserGroupChange = function() {
+    window.updateEmailRecipientDropdown();
+    window.renderEmailNotificationState();
+};
+
+window.onEmailRecipientSelectChange = function() {
+    var userSelect = document.getElementById('email-notif-user-select');
+    if (userSelect) window._clusterEmailNotifState.email = userSelect.value;
+    window.renderEmailNotificationState();
+};
+
+window.toggleEmailRecipientEnable = function() {
+    window._clusterEmailNotifState.enabled = !window._clusterEmailNotifState.enabled;
+    window.renderEmailNotificationState();
+    
+    // Save to backend
+    var pid = window.currentProjectId;
+    if (pid) {
+        apiFetch('/api/projects/' + pid + '/email-notifications', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({
+                user_group: document.getElementById('email-notif-user-group').value,
+                email: window._clusterEmailNotifState.email,
+                enabled: window._clusterEmailNotifState.enabled
+            })
+        }).catch(function(){});
+    }
+};
+
+window.renderEmailNotificationState = function() {
+    var btn = document.getElementById('btn-toggle-email-enable');
+    var matrix = document.getElementById('email-notif-matrix');
+    var disabledState = document.getElementById('email-notif-disabled-state');
+    var enabled = window._clusterEmailNotifState.enabled;
+    
+    if (btn) {
+        btn.textContent = enabled ? 'Disable' : 'Enable';
+        btn.style.background = enabled ? '#fee2e2' : '#3a1c94';
+        btn.style.color = enabled ? '#ef4444' : 'white';
+    }
+    if (matrix) matrix.style.display = enabled ? 'block' : 'none';
+    if (disabledState) disabledState.style.display = enabled ? 'none' : 'block';
+};
+
+window.openAddExternalEmailModal = function() {
+    var m = document.getElementById('modal-add-external-email');
+    if (m) {
+        m.style.display = 'flex';
+        var inp = document.getElementById('input-external-email-addr');
+        if (inp) { inp.value = ''; inp.focus(); }
+    }
+};
+
+window.closeAddExternalEmailModal = function() {
+    var m = document.getElementById('modal-add-external-email');
+    if (m) m.style.display = 'none';
+};
+
+window.submitAddExternalEmail = function() {
+    var inp = document.getElementById('input-external-email-addr');
+    var email = inp ? inp.value.trim() : '';
+    if (!email || !email.includes('@')) {
+        alert('Please enter a valid email address.');
+        return;
+    }
+    
+    if (!window._clusterEmailNotifState.groups.external) {
+        window._clusterEmailNotifState.groups.external = [];
+    }
+    if (!window._clusterEmailNotifState.groups.external.includes(email)) {
+        window._clusterEmailNotifState.groups.external.push(email);
+    }
+    
+    // Select external group and newly added email
+    var grpSelect = document.getElementById('email-notif-user-group');
+    if (grpSelect) grpSelect.value = 'external';
+    window.updateEmailRecipientDropdown();
+    
+    var usrSelect = document.getElementById('email-notif-user-select');
+    if (usrSelect) usrSelect.value = email;
+    window._clusterEmailNotifState.email = email;
+    window._clusterEmailNotifState.enabled = true;
+    
+    window.renderEmailNotificationState();
+    window.closeAddExternalEmailModal();
+};
