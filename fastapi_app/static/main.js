@@ -3445,9 +3445,6 @@ window.onBackupMethodChange = function() {
     const alertPartial = document.getElementById('bk-alert-partial');
     const dumpTypeContainer = document.getElementById('bk-dumptype-container');
     const wrapStream = document.getElementById('wrap-toggle-bk-stream');
-    const toggleCloud = document.getElementById('toggle-backup-cloud');
-    const labelCloud = document.getElementById('label-toggle-backup-cloud');
-    const thumbCloud = document.getElementById('toggle-thumb-backup-cloud');
 
     if (method === 'pg_basebackup') {
         if (alertPitr) alertPitr.style.display = 'none';
@@ -3455,20 +3452,7 @@ window.onBackupMethodChange = function() {
         if (alertPartial) alertPartial.style.display = 'none';
         if (dumpTypeContainer) dumpTypeContainer.style.display = 'none';
 
-        // In pg_basebackup, Upload to cloud is locked ON and Stream toggle appears
-        backupWizardState.cloudUpload = true;
-        if (toggleCloud && labelCloud && thumbCloud) {
-            toggleCloud.style.background = '#3a1c94';
-            toggleCloud.style.opacity = '0.85';
-            toggleCloud.style.cursor = 'default';
-            labelCloud.textContent = 'On';
-            labelCloud.style.left = '6px';
-            labelCloud.style.right = '';
-            thumbCloud.style.transform = 'translateX(24px)';
-        }
-
-        if (wrapStream) wrapStream.style.display = 'flex';
-        backupWizardState.cloudStream = true;
+        if (wrapStream) wrapStream.style.display = backupWizardState.cloudUpload ? 'flex' : 'none';
         updateStreamToggleUI();
     } else {
         if (alertPitr) alertPitr.style.display = 'block';
@@ -3477,21 +3461,18 @@ window.onBackupMethodChange = function() {
         if (dumpTypeContainer) dumpTypeContainer.style.display = 'block';
 
         if (wrapStream) wrapStream.style.display = 'none';
-        backupWizardState.cloudStream = false;
-
-        if (toggleCloud) {
-            toggleCloud.style.opacity = '1';
-            toggleCloud.style.cursor = 'pointer';
-        }
-        updateCloudToggleUI();
     }
 
+    updateCloudToggleUI();
     renderBackupStepperNav();
 };
 
 window.toggleBackupCloudSwitch = function() {
-    if (backupWizardState.method === 'pg_basebackup') return; // Locked in basebackup
     backupWizardState.cloudUpload = !backupWizardState.cloudUpload;
+    const wrapStream = document.getElementById('wrap-toggle-bk-stream');
+    if (wrapStream) {
+        wrapStream.style.display = (backupWizardState.method === 'pg_basebackup' && backupWizardState.cloudUpload) ? 'flex' : 'none';
+    }
     updateCloudToggleUI();
     renderBackupStepperNav();
 };
@@ -3595,7 +3576,15 @@ window.toggleGenericPillSwitch = function(swId, thumbId, labelId, defaultOn = fa
 
 function getBackupStepsList() {
     if (backupWizardState.method === 'pg_basebackup') {
-        if (backupWizardState.cloudStream) {
+        if (!backupWizardState.cloudUpload) {
+            // Exactly matching media_1787293443329.png: 3 steps!
+            return [
+                { num: 1, key: 'config', label: 'Configuration' },
+                { num: 2, key: 'advanced', label: 'Advanced settings' },
+                { num: 3, key: 'preview', label: 'Preview' }
+            ];
+        } else if (backupWizardState.cloudStream) {
+            // Exactly matching media_1787293519802.png: 4 steps!
             return [
                 { num: 1, key: 'config', label: 'Configuration' },
                 { num: 2, key: 'advanced', label: 'Advanced settings' },
@@ -3624,7 +3613,7 @@ function getBackupStepsList() {
             return [
                 { num: 1, key: 'config', label: 'Configuration' },
                 { num: 2, key: 'advanced', label: 'Advanced settings' },
-                { num: 3, key: 'local', label: 'Local storage' },
+                { num: 3, key: 'local', label: 'Storage' },
                 { num: 4, key: 'preview', label: 'Preview' }
             ];
         }
@@ -3753,8 +3742,8 @@ function updateBackupPreview() {
     if (el('pv-bk-retention')) el('pv-bk-retention').innerText = `${retentionDays} Days`;
     
     // Target and cloud details
-    const isStream = backupWizardState.method === 'pg_basebackup' && backupWizardState.cloudStream;
-    const isCloud = backupWizardState.cloudUpload || isStream;
+    const isStream = backupWizardState.method === 'pg_basebackup' && backupWizardState.cloudStream && backupWizardState.cloudUpload;
+    const isCloud = backupWizardState.cloudUpload;
     const cloudCredText = cloudCredSelect?.options[cloudCredSelect.selectedIndex]?.text || 'AWS S3';
 
     if (el('pv-bk-target')) {
@@ -3789,8 +3778,8 @@ window.submitCreateBackup = async function() {
     const pid = parseInt(clusterSelect?.value) || null;
     const proj = allProjectsForBackup.find(p => p.id === pid);
     const dbType = proj && (proj.db_type === 'mssql' || (proj.name||'').toLowerCase().includes('mssql')) ? 'mssql' : 'postgresql';
-    const isStream = backupWizardState.method === 'pg_basebackup' && backupWizardState.cloudStream;
-    const isCloud = backupWizardState.cloudUpload || isStream;
+    const isStream = backupWizardState.method === 'pg_basebackup' && backupWizardState.cloudStream && backupWizardState.cloudUpload;
+    const isCloud = backupWizardState.cloudUpload;
 
     const payload = {
         project_id: pid,
@@ -3829,6 +3818,286 @@ window.submitCreateBackup = async function() {
         alert('Connection error while initiating backup.');
     } finally {
         if (btn) { btn.disabled = false; btn.innerText = 'Create'; }
+    }
+};
+
+// ── Link Cloud Service Provider (ClusterControl AWS/S3 Integration) ──────────
+
+let selectedCloudProviderKey = null; // 'aws' or 's3'
+let linkCloudWizardStep = 1;
+
+window.openLinkCloudModal = function() {
+    selectedCloudProviderKey = null;
+    linkCloudWizardStep = 1;
+
+    const modal = document.getElementById('modal-link-cloud-provider');
+    const title = document.getElementById('link-cloud-modal-title');
+    const screenSelect = document.getElementById('screen-link-cloud-select');
+    const screenForm = document.getElementById('screen-link-cloud-form');
+    const viewEmpty = document.getElementById('view-prov-empty');
+    const viewSelected = document.getElementById('view-prov-selected');
+    const wizardBtns = document.getElementById('link-cloud-wizard-btns');
+
+    if (title) title.innerText = 'Link a cloud service provider';
+    if (screenSelect) screenSelect.style.display = 'flex';
+    if (screenForm) screenForm.style.display = 'none';
+    if (viewEmpty) viewEmpty.style.display = 'flex';
+    if (viewSelected) viewSelected.style.display = 'none';
+    if (wizardBtns) wizardBtns.style.display = 'none';
+
+    // Reset cards
+    const cardAws = document.getElementById('card-prov-aws');
+    const cardS3 = document.getElementById('card-prov-s3');
+    const checkAws = document.getElementById('check-prov-aws');
+    const checkS3 = document.getElementById('check-prov-s3');
+    if (cardAws) { cardAws.style.borderColor = '#d1d5db'; cardAws.style.background = 'white'; }
+    if (cardS3) { cardS3.style.borderColor = '#d1d5db'; cardS3.style.background = 'white'; }
+    if (checkAws) checkAws.style.display = 'none';
+    if (checkS3) checkS3.style.display = 'none';
+
+    if (modal) modal.style.display = 'flex';
+};
+
+window.closeLinkCloudModal = function() {
+    const modal = document.getElementById('modal-link-cloud-provider');
+    if (modal) modal.style.display = 'none';
+};
+
+window.openAddCloudCredModal = function() {
+    openLinkCloudModal();
+};
+
+window.closeAddCloudCredModal = function() {
+    closeLinkCloudModal();
+};
+
+window.selectCloudProviderToLink = function(key) {
+    selectedCloudProviderKey = key;
+    const cardAws = document.getElementById('card-prov-aws');
+    const cardS3 = document.getElementById('card-prov-s3');
+    const checkAws = document.getElementById('check-prov-aws');
+    const checkS3 = document.getElementById('check-prov-s3');
+
+    if (cardAws) {
+        cardAws.style.borderColor = (key === 'aws') ? '#3a1c94' : '#d1d5db';
+        cardAws.style.background = (key === 'aws') ? '#fbfaff' : 'white';
+    }
+    if (cardS3) {
+        cardS3.style.borderColor = (key === 's3') ? '#3a1c94' : '#d1d5db';
+        cardS3.style.background = (key === 's3') ? '#fbfaff' : 'white';
+    }
+    if (checkAws) checkAws.style.display = (key === 'aws') ? 'block' : 'none';
+    if (checkS3) checkS3.style.display = (key === 's3') ? 'block' : 'none';
+
+    const viewEmpty = document.getElementById('view-prov-empty');
+    const viewSelected = document.getElementById('view-prov-selected');
+    const provIcon = document.getElementById('detail-prov-icon');
+    const provTitle = document.getElementById('detail-prov-title');
+    const provDesc = document.getElementById('detail-prov-desc');
+
+    if (viewEmpty) viewEmpty.style.display = 'none';
+    if (viewSelected) viewSelected.style.display = 'flex';
+
+    if (key === 'aws') {
+        if (provIcon) provIcon.innerHTML = `
+            <svg width="40" height="40" viewBox="0 0 50 50" fill="none">
+              <rect width="50" height="50" rx="8" fill="#f8fafc"/>
+              <path d="M14 26C18 31 32 31 36 26" stroke="#FF9900" stroke-width="3" stroke-linecap="round"/>
+              <path d="M33 24L36 26L34 29" fill="#FF9900"/>
+              <text x="11" y="21" font-family="Arial, sans-serif" font-weight="900" font-size="14" fill="#232F3E">aws</text>
+            </svg>
+        `;
+        if (provTitle) provTitle.innerText = 'Amazon Web Services';
+        if (provDesc) provDesc.innerText = 'Amazon Web Services provides a highly reliable, scalable, low-cost infrastructure platform in the cloud with data center locations in the U.S., Europe, Brazil, Singapore, Japan, and Australia.';
+    } else {
+        if (provIcon) provIcon.innerHTML = `
+            <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="#2563eb" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M17.5 19H9a7 7 0 1 1 6.71-9h1.79a4.5 4.5 0 1 1 0 9Z"/>
+            </svg>
+        `;
+        if (provTitle) provTitle.innerText = 'S3 Compatible storage provider';
+        if (provDesc) provDesc.innerText = 'Connect to any S3-compatible cloud object storage provider such as MinIO, Wasabi, DigitalOcean Spaces, Backblaze B2, or Ceph.';
+    }
+};
+
+window.goToLinkCloudAuthWizard = function() {
+    const screenSelect = document.getElementById('screen-link-cloud-select');
+    const screenForm = document.getElementById('screen-link-cloud-form');
+    const wizardBtns = document.getElementById('link-cloud-wizard-btns');
+    const title = document.getElementById('link-cloud-modal-title');
+
+    if (title) {
+        title.innerText = (selectedCloudProviderKey === 'aws') ? 'Link Amazon Web Services' : 'Link S3 Compatible storage provider';
+    }
+    if (screenSelect) screenSelect.style.display = 'none';
+    if (screenForm) screenForm.style.display = 'flex';
+    if (wizardBtns) wizardBtns.style.display = 'flex';
+
+    linkCloudWizardStep = 1;
+    setLinkCloudStepUI(1);
+};
+
+function setLinkCloudStepUI(step) {
+    linkCloudWizardStep = step;
+    const nav1 = document.getElementById('link-step-nav-1');
+    const nav2 = document.getElementById('link-step-nav-2');
+    const badge1 = document.getElementById('link-step-badge-1');
+    const badge2 = document.getElementById('link-step-badge-2');
+    const paneAuth = document.getElementById('link-pane-auth');
+    const panePrev = document.getElementById('link-pane-prev');
+    const btnNext = document.getElementById('btn-link-next');
+
+    if (paneAuth) paneAuth.style.display = (step === 1) ? 'block' : 'none';
+    if (panePrev) panePrev.style.display = (step === 2) ? 'block' : 'none';
+
+    if (step === 1) {
+        if (nav1 && badge1) {
+            nav1.style.color = '#3a1c94';
+            badge1.style.background = '#3a1c94';
+            badge1.style.color = 'white';
+            badge1.innerHTML = '1';
+        }
+        if (nav2 && badge2) {
+            nav2.style.color = '#9ca3af';
+            badge2.style.background = 'transparent';
+            badge2.style.color = '#9ca3af';
+            badge2.innerHTML = '2';
+        }
+        if (btnNext) {
+            btnNext.innerText = 'Continue';
+            btnNext.onclick = nextLinkCloudStep;
+        }
+    } else {
+        if (nav1 && badge1) {
+            nav1.style.color = '#10b981';
+            badge1.style.background = '#10b981';
+            badge1.style.color = 'white';
+            badge1.innerHTML = '✓';
+        }
+        if (nav2 && badge2) {
+            nav2.style.color = '#3a1c94';
+            badge2.style.background = '#3a1c94';
+            badge2.style.color = 'white';
+            badge2.innerHTML = '2';
+        }
+        if (btnNext) {
+            btnNext.innerText = 'Create';
+            btnNext.onclick = submitLinkCloudProvider;
+        }
+        updateLinkCloudPreview();
+    }
+}
+
+window.nextLinkCloudStep = function() {
+    if (linkCloudWizardStep === 1) {
+        const name = document.getElementById('link-aws-name')?.value || '';
+        const keyId = document.getElementById('link-aws-key-id')?.value || '';
+        const secret = document.getElementById('link-aws-secret')?.value || '';
+        if (!name.trim()) {
+            alert('Please enter a name for your integration.');
+            return;
+        }
+        if (!keyId.trim()) {
+            alert('Please enter AWS key ID.');
+            return;
+        }
+        if (!secret.trim()) {
+            alert('Please enter AWS key secret.');
+            return;
+        }
+        setLinkCloudStepUI(2);
+    }
+};
+
+window.prevLinkCloudStep = function() {
+    if (linkCloudWizardStep === 2) {
+        setLinkCloudStepUI(1);
+    } else {
+        const screenSelect = document.getElementById('screen-link-cloud-select');
+        const screenForm = document.getElementById('screen-link-cloud-form');
+        const wizardBtns = document.getElementById('link-cloud-wizard-btns');
+        const title = document.getElementById('link-cloud-modal-title');
+        if (title) title.innerText = 'Link a cloud service provider';
+        if (screenSelect) screenSelect.style.display = 'flex';
+        if (screenForm) screenForm.style.display = 'none';
+        if (wizardBtns) wizardBtns.style.display = 'none';
+    }
+};
+
+function updateLinkCloudPreview() {
+    const name = document.getElementById('link-aws-name')?.value || 'AWS Integration';
+    const keyId = document.getElementById('link-aws-key-id')?.value || '';
+    const region = document.getElementById('link-aws-region')?.value || 'us-east-1';
+    const bucket = document.getElementById('link-aws-bucket')?.value || '-';
+    const comment = document.getElementById('link-aws-comment')?.value || '—';
+
+    const provText = (selectedCloudProviderKey === 'aws') ? 'Amazon Web Services' : 'S3 Compatible storage';
+    const maskedKey = keyId.length > 6 ? (keyId.substring(0, 4) + '...' + keyId.slice(-4)) : keyId;
+
+    const el = id => document.getElementById(id);
+    if (el('pv-link-provider')) el('pv-link-provider').innerText = provText;
+    if (el('pv-link-name')) el('pv-link-name').innerText = name;
+    if (el('pv-link-key')) el('pv-link-key').innerText = maskedKey;
+    if (el('pv-link-region')) el('pv-link-region').innerText = region;
+    if (el('pv-link-bucket')) el('pv-link-bucket').innerText = bucket;
+    if (el('pv-link-comment')) el('pv-link-comment').innerText = comment;
+}
+
+window.submitLinkCloudProvider = async function() {
+    const btn = document.getElementById('btn-link-next');
+    if (btn) { btn.disabled = true; btn.innerText = 'Saving...'; }
+
+    const name = document.getElementById('link-aws-name')?.value || '';
+    const keyId = document.getElementById('link-aws-key-id')?.value || '';
+    const secret = document.getElementById('link-aws-secret')?.value || '';
+    const region = document.getElementById('link-aws-region')?.value || 'us-east-1';
+    const bucket = document.getElementById('link-aws-bucket')?.value || '';
+    const provider = (selectedCloudProviderKey === 'aws') ? 'AWS S3' : 'S3 Compatible';
+
+    try {
+        const res = await apiFetch('/api/cloud-credentials', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                provider: provider,
+                label: name.trim(),
+                key_id: keyId.trim(),
+                secret: secret.trim(),
+                bucket: bucket.trim(),
+                region: region.trim()
+            })
+        });
+        const data = await res.json();
+        if (res.ok && data.success) {
+            closeLinkCloudModal();
+            if (typeof window.loadCloudCredentials === 'function') {
+                window.loadCloudCredentials();
+            }
+            const credRes = await apiFetch('/api/cloud-credentials');
+            if (credRes.ok) {
+                allCloudCredsForBackup = await credRes.json();
+                const selectCloudCred = document.getElementById('backup-cloud-cred-select');
+                if (selectCloudCred) {
+                    selectCloudCred.innerHTML = '<option value="">Create new credentials</option>' +
+                        allCloudCredsForBackup.map(c => `<option value="${c.id}">${escapeHTML(c.provider)} - ${escapeHTML(c.label)} (${escapeHTML(c.bucket || 'default')})</option>`).join('');
+                    selectCloudCred.value = data.id;
+                }
+            }
+            alert(`✓ Successfully linked ${provider} integration: "${name}"`);
+        } else {
+            alert(data.message || 'Failed to save cloud credentials');
+        }
+    } catch(e) {
+        alert('Connection error while saving credentials.');
+    } finally {
+        if (btn) { btn.disabled = false; btn.innerText = 'Create'; }
+    }
+};
+
+window.onBackupCloudCredSelectChange = function() {
+    const val = document.getElementById('backup-cloud-cred-select')?.value;
+    if (!val || val === 'create_new') {
+        openLinkCloudModal();
     }
 };
 

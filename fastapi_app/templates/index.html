@@ -2019,11 +2019,16 @@ Real OS metrics (CPU, RAM, Disk I/O) cannot be fetched directly from PostgreSQL 
                     <h3 style="margin: 0 0 20px 0; font-size: 1.1rem; color: #111827; font-weight: 600;">Cloud Storage</h3>
 
                     <div style="margin-bottom: 20px;">
-                        <label style="display: flex; align-items: center; gap: 6px; margin-bottom: 6px; font-size: 0.85rem; color: #374151; font-weight: 500;">
-                            <span style="color: #ef4444;">*</span> Credentials
-                            <span title="Select cloud storage provider credentials to upload backups to AWS S3, Google Cloud Storage, or Azure." style="display: inline-flex; align-items: center; justify-content: center; width: 16px; height: 16px; border-radius: 50%; background: #e5e7eb; color: #4b5563; font-size: 0.72rem; cursor: help; font-weight: bold;">i</span>
-                        </label>
-                        <select id="backup-cloud-cred-select" style="width: 100%; padding: 9px 12px; border: 1px solid #d1d5db; border-radius: 6px; font-size: 0.88rem; background: white;">
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
+                            <label style="display: flex; align-items: center; gap: 6px; font-size: 0.85rem; color: #374151; font-weight: 500;">
+                                <span style="color: #ef4444;">*</span> Credentials
+                                <span title="Select cloud storage provider credentials to upload backups to AWS S3 or S3-compatible cloud storage." style="display: inline-flex; align-items: center; justify-content: center; width: 16px; height: 16px; border-radius: 50%; background: #e5e7eb; color: #4b5563; font-size: 0.72rem; cursor: help; font-weight: bold;">i</span>
+                            </label>
+                            <button onclick="openLinkCloudModal()" type="button" style="background: none; border: none; color: #3a1c94; font-size: 0.82rem; font-weight: 600; cursor: pointer; display: flex; align-items: center; gap: 4px; padding: 0;">
+                                + Link a cloud service provider
+                            </button>
+                        </div>
+                        <select id="backup-cloud-cred-select" onchange="onBackupCloudCredSelectChange()" style="width: 100%; padding: 9px 12px; border: 1px solid #d1d5db; border-radius: 6px; font-size: 0.88rem; background: white;">
                             <option value="">Create new credentials</option>
                         </select>
                         <span style="font-size: 0.78rem; color: #6b7280; margin-top: 4px; display: block;">Select cloud credentials configured in Settings &gt; Cloud Storage</span>
@@ -2844,38 +2849,186 @@ Real OS metrics (CPU, RAM, Disk I/O) cannot be fetched directly from PostgreSQL 
             </div>
             
 
-<!-- ===== CLOUD CREDENTIAL MODAL ===== -->
-<div id="modal-add-cloud-cred" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:9999;align-items:center;justify-content:center;">
-  <div style="background:white;border-radius:8px;padding:32px;width:480px;max-width:95vw;">
-    <h3 style="margin:0 0 20px;font-size:1.1rem;color:#111827;">Add Cloud Storage Credentials</h3>
-    <div style="display:flex;flex-direction:column;gap:14px;">
-      <div><label style="font-size:0.85rem;color:#4b5563;display:block;margin-bottom:4px;">Provider</label>
-        <select id="cloud-cred-provider" style="width:100%;padding:8px 10px;border:1px solid #d1d5db;border-radius:4px;font-size:0.9rem;">
-          <option>AWS S3</option><option>GCS</option><option>Azure Blob</option>
-        </select>
-      </div>
-      <div><label style="font-size:0.85rem;color:#4b5563;display:block;margin-bottom:4px;">Label *</label>
-        <input id="cloud-cred-label" type="text" placeholder="e.g. Production S3 Backups" style="width:100%;padding:8px 10px;border:1px solid #d1d5db;border-radius:4px;font-size:0.9rem;box-sizing:border-box;">
-      </div>
-      <div><label style="font-size:0.85rem;color:#4b5563;display:block;margin-bottom:4px;">Access Key ID</label>
-        <input id="cloud-cred-keyid" type="text" placeholder="AKIAIOSFODNN7EXAMPLE" style="width:100%;padding:8px 10px;border:1px solid #d1d5db;border-radius:4px;font-size:0.9rem;box-sizing:border-box;">
-      </div>
-      <div><label style="font-size:0.85rem;color:#4b5563;display:block;margin-bottom:4px;">Secret Access Key</label>
-        <input id="cloud-cred-secret" type="password" placeholder="••••••••" style="width:100%;padding:8px 10px;border:1px solid #d1d5db;border-radius:4px;font-size:0.9rem;box-sizing:border-box;">
-      </div>
-      <div style="display:flex;gap:12px;">
-        <div style="flex:1;"><label style="font-size:0.85rem;color:#4b5563;display:block;margin-bottom:4px;">Bucket</label>
-          <input id="cloud-cred-bucket" type="text" placeholder="my-backup-bucket" style="width:100%;padding:8px 10px;border:1px solid #d1d5db;border-radius:4px;font-size:0.9rem;box-sizing:border-box;">
+<!-- ===== CLOUD CREDENTIAL / LINK CLOUD SERVICE PROVIDER MODAL (ClusterControl Exact) ===== -->
+<div id="modal-link-cloud-provider" class="modal-overlay" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:10005;align-items:center;justify-content:center;">
+  <div class="modal-content" style="background:white;border-radius:12px;width:780px;max-width:95vw;padding:0;overflow:hidden;box-shadow:0 20px 25px -5px rgba(0,0,0,0.15);border:1px solid #e5e7eb;display:flex;flex-direction:column;">
+    
+    <!-- Modal Header -->
+    <div style="display:flex;justify-content:space-between;align-items:center;padding:18px 24px;border-bottom:1px solid #e5e7eb;">
+      <h3 id="link-cloud-modal-title" style="margin:0;font-size:1.15rem;font-weight:700;color:#111827;">Link a cloud service provider</h3>
+      <button onclick="closeLinkCloudModal()" style="background:none;border:none;cursor:pointer;font-size:1.2rem;color:#9ca3af;padding:4px;">✕</button>
+    </div>
+
+    <!-- SCREEN 1: PROVIDER SELECTION (Matches Screenshots 3 & 4) -->
+    <div id="screen-link-cloud-select" style="display:flex;min-height:360px;">
+      <!-- Left List of Providers -->
+      <div style="width:280px;border-right:1px solid #e5e7eb;padding:20px 16px;background:#fafafa;display:flex;flex-direction:column;gap:12px;flex-shrink:0;">
+        
+        <!-- AWS Option Card -->
+        <div id="card-prov-aws" onclick="selectCloudProviderToLink('aws')" style="display:flex;align-items:center;justify-content:space-between;padding:14px 16px;background:white;border:1px solid #d1d5db;border-radius:8px;cursor:pointer;transition:all 0.2s;">
+          <div style="display:flex;align-items:center;gap:12px;">
+            <svg width="28" height="28" viewBox="0 0 50 50" fill="none">
+              <rect width="50" height="50" rx="6" fill="#f8fafc"/>
+              <path d="M14 26C18 31 32 31 36 26" stroke="#FF9900" stroke-width="3" stroke-linecap="round"/>
+              <path d="M33 24L36 26L34 29" fill="#FF9900"/>
+              <text x="11" y="21" font-family="Arial, sans-serif" font-weight="900" font-size="12" fill="#232F3E">aws</text>
+            </svg>
+            <span style="font-size:0.9rem;font-weight:600;color:#111827;">Amazon Web Services</span>
+          </div>
+          <span id="check-prov-aws" style="display:none;color:#3a1c94;font-weight:700;font-size:1rem;">✓</span>
         </div>
-        <div style="flex:1;"><label style="font-size:0.85rem;color:#4b5563;display:block;margin-bottom:4px;">Region</label>
-          <input id="cloud-cred-region" type="text" placeholder="us-east-1" style="width:100%;padding:8px 10px;border:1px solid #d1d5db;border-radius:4px;font-size:0.9rem;box-sizing:border-box;">
+
+        <!-- S3 Compatible Option Card -->
+        <div id="card-prov-s3" onclick="selectCloudProviderToLink('s3')" style="display:flex;align-items:center;justify-content:space-between;padding:14px 16px;background:white;border:1px solid #d1d5db;border-radius:8px;cursor:pointer;transition:all 0.2s;">
+          <div style="display:flex;align-items:center;gap:12px;">
+            <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#2563eb" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M17.5 19H9a7 7 0 1 1 6.71-9h1.79a4.5 4.5 0 1 1 0 9Z"/>
+            </svg>
+            <span style="font-size:0.9rem;font-weight:600;color:#111827;">S3 Compatible storage provider</span>
+          </div>
+          <span id="check-prov-s3" style="display:none;color:#3a1c94;font-weight:700;font-size:1rem;">✓</span>
+        </div>
+
+      </div>
+
+      <!-- Right Detail / Preview Pane -->
+      <div id="pane-prov-detail" style="flex:1;padding:32px;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;">
+        <!-- Default: Placeholder Cloud Illustration -->
+        <div id="view-prov-empty" style="display:flex;flex-direction:column;align-items:center;gap:16px;">
+          <div style="width:120px;height:120px;background:#f3f4f6;border-radius:50%;display:flex;align-items:center;justify-content:center;position:relative;">
+            <svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="#9ca3af" stroke-width="1.5">
+              <path d="M17.5 19H9a7 7 0 1 1 6.71-9h1.79a4.5 4.5 0 1 1 0 9Z"/>
+            </svg>
+            <svg style="position:absolute;color:#3a1c94;" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
+              <line x1="12" y1="19" x2="12" y2="5"></line>
+              <polyline points="5 12 12 5 19 12"></polyline>
+            </svg>
+          </div>
+          <span style="font-size:0.95rem;color:#6b7280;font-weight:500;">Choose a cloud service provider on your left</span>
+        </div>
+
+        <!-- Selected Provider Details (AWS / S3) -->
+        <div id="view-prov-selected" style="display:none;width:100%;text-align:left;flex-direction:column;gap:16px;">
+          <div style="display:flex;align-items:center;gap:14px;">
+            <div id="detail-prov-icon"></div>
+            <div>
+              <h4 id="detail-prov-title" style="margin:0;font-size:1.15rem;font-weight:700;color:#111827;">Amazon Web Services</h4>
+            </div>
+          </div>
+          <p id="detail-prov-desc" style="font-size:0.88rem;color:#4b5563;line-height:1.5;margin:12px 0;">
+            Amazon Web Services provides a highly reliable, scalable, low-cost infrastructure platform in the cloud with data center locations in the U.S., Europe, Brazil, Singapore, Japan, and Australia.
+          </p>
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-top:24px;">
+            <a href="https://docs.severalnines.com/docs/clustercontrol/user-guide-gui/sidebar-2/integrations/#amazon-web-services-credential" target="_blank" style="font-size:0.88rem;color:#3a1c94;text-decoration:none;display:inline-flex;align-items:center;gap:6px;font-weight:500;">
+              📖 Learn more
+            </a>
+            <button onclick="goToLinkCloudAuthWizard()" style="padding:9px 24px;background:#3a1c94;color:white;border:none;border-radius:6px;font-weight:600;cursor:pointer;">Continue</button>
+          </div>
         </div>
       </div>
     </div>
-    <div style="display:flex;justify-content:flex-end;gap:12px;margin-top:24px;">
-      <button onclick="window.closeAddCloudCredModal()" style="padding:8px 20px;border:1px solid #d1d5db;border-radius:4px;background:white;cursor:pointer;font-size:0.9rem;">Cancel</button>
-      <button onclick="window.submitCloudCredForm()" style="padding:8px 20px;border:none;border-radius:4px;background:#3a1c94;color:white;cursor:pointer;font-size:0.9rem;font-weight:600;">Save Credentials</button>
+
+    <!-- SCREEN 2: AUTHENTICATION & PREVIEW WIZARD (Matches Screenshot 5) -->
+    <div id="screen-link-cloud-form" style="display:none;min-height:420px;flex-grow:1;">
+      <!-- Left Stepper (1. Authentication, 2. Preview) -->
+      <div style="width:210px;border-right:1px solid #e5e7eb;padding:24px 16px;background:#fafafa;flex-shrink:0;">
+        <div style="display:flex;flex-direction:column;gap:20px;">
+          <div id="link-step-nav-1" style="display:flex;align-items:center;gap:12px;color:#3a1c94;font-weight:600;font-size:0.9rem;">
+            <div id="link-step-badge-1" style="width:24px;height:24px;border-radius:50%;background:#3a1c94;color:white;display:flex;align-items:center;justify-content:center;font-size:0.75rem;font-weight:700;">1</div>
+            Authentication
+          </div>
+          <div id="link-step-nav-2" style="display:flex;align-items:center;gap:12px;color:#9ca3af;font-weight:500;font-size:0.9rem;">
+            <div id="link-step-badge-2" style="width:24px;height:24px;border-radius:50%;border:2px solid #d1d5db;color:#9ca3af;display:flex;align-items:center;justify-content:center;font-size:0.75rem;font-weight:700;">2</div>
+            Preview
+          </div>
+        </div>
+      </div>
+
+      <!-- Right Form Content -->
+      <div style="flex-grow:1;padding:24px 32px;background:white;overflow-y:auto;max-height:480px;">
+        
+        <!-- Step 1: Authentication -->
+        <div id="link-pane-auth">
+          <h4 style="margin:0 0 18px 0;font-size:1.05rem;font-weight:600;color:#111827;">Authentication</h4>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px;">
+            <div>
+              <label style="display:block;margin-bottom:6px;font-size:0.85rem;color:#374151;font-weight:500;"><span style="color:#ef4444;">*</span> Name</label>
+              <input id="link-aws-name" type="text" placeholder="Name your integration" style="width:100%;padding:9px 12px;border:1px solid #d1d5db;border-radius:6px;font-size:0.88rem;outline:none;" />
+            </div>
+            <div>
+              <label style="display:block;margin-bottom:6px;font-size:0.85rem;color:#374151;font-weight:500;"><span style="color:#ef4444;">*</span> AWS key ID <span title="AWS Access Key ID with S3 read/write permissions" style="display:inline-flex;align-items:center;justify-content:center;width:15px;height:15px;border-radius:50%;background:#e5e7eb;color:#4b5563;font-size:0.7rem;cursor:help;">i</span></label>
+              <input id="link-aws-key-id" type="text" placeholder="Enter AWS key ID" style="width:100%;padding:9px 12px;border:1px solid #d1d5db;border-radius:6px;font-size:0.88rem;outline:none;" />
+            </div>
+          </div>
+
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px;">
+            <div>
+              <label style="display:block;margin-bottom:6px;font-size:0.85rem;color:#374151;font-weight:500;"><span style="color:#ef4444;">*</span> AWS key secret <span title="AWS Secret Access Key" style="display:inline-flex;align-items:center;justify-content:center;width:15px;height:15px;border-radius:50%;background:#e5e7eb;color:#4b5563;font-size:0.7rem;cursor:help;">i</span></label>
+              <input id="link-aws-secret" type="password" placeholder="Enter AWS key secret" style="width:100%;padding:9px 12px;border:1px solid #d1d5db;border-radius:6px;font-size:0.88rem;outline:none;" />
+            </div>
+            <div>
+              <label style="display:block;margin-bottom:6px;font-size:0.85rem;color:#374151;font-weight:500;"><span style="color:#ef4444;">*</span> Default region <span title="Default AWS S3 bucket region" style="display:inline-flex;align-items:center;justify-content:center;width:15px;height:15px;border-radius:50%;background:#e5e7eb;color:#4b5563;font-size:0.7rem;cursor:help;">i</span></label>
+              <select id="link-aws-region" style="width:100%;padding:9px 12px;border:1px solid #d1d5db;border-radius:6px;font-size:0.88rem;outline:none;background:white;">
+                <option value="us-east-1">us-east-1 (N. Virginia)</option>
+                <option value="us-east-2">us-east-2 (Ohio)</option>
+                <option value="us-west-1">us-west-1 (N. California)</option>
+                <option value="us-west-2">us-west-2 (Oregon)</option>
+                <option value="eu-west-1">eu-west-1 (Ireland)</option>
+                <option value="eu-central-1">eu-central-1 (Frankfurt)</option>
+                <option value="eu-west-2">eu-west-2 (London)</option>
+                <option value="ap-southeast-1">ap-southeast-1 (Singapore)</option>
+                <option value="ap-northeast-1">ap-northeast-1 (Tokyo)</option>
+              </select>
+            </div>
+          </div>
+
+          <div style="margin-bottom:16px;">
+            <label style="display:block;margin-bottom:6px;font-size:0.85rem;color:#374151;font-weight:500;">Default Bucket (Optional)</label>
+            <input id="link-aws-bucket" type="text" placeholder="e.g. prod-backups-bucket" style="width:100%;padding:9px 12px;border:1px solid #d1d5db;border-radius:6px;font-size:0.88rem;outline:none;" />
+          </div>
+
+          <div style="margin-bottom:16px;">
+            <label style="display:block;margin-bottom:6px;font-size:0.85rem;color:#374151;font-weight:500;">Comment</label>
+            <input id="link-aws-comment" type="text" placeholder="Enter a comment" style="width:100%;padding:9px 12px;border:1px solid #d1d5db;border-radius:6px;font-size:0.88rem;outline:none;" />
+          </div>
+
+          <!-- Help Callout Box Matching Screenshot 5 -->
+          <div style="background:#eff6ff;border:1px solid #bfdbfe;border-radius:8px;padding:14px 16px;display:flex;gap:12px;align-items:flex-start;">
+            <div style="color:#2563eb;font-weight:bold;font-size:1.1rem;line-height:1;">ℹ️</div>
+            <div>
+              <div style="font-weight:600;font-size:0.85rem;color:#1e3a8a;margin-bottom:4px;">Need help?</div>
+              <div style="font-size:0.8rem;color:#1e40af;line-height:1.4;">
+                Check our <a href="https://docs.severalnines.com/docs/clustercontrol/user-guide-gui/sidebar-2/integrations/#amazon-web-services-credential" target="_blank" style="color:#2563eb;text-decoration:underline;font-weight:600;">online documentation</a> for detailed instructions on how to create your cloud credentials for Amazon Web Services.
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Step 2: Preview -->
+        <div id="link-pane-prev" style="display:none;">
+          <h4 style="margin:0 0 16px 0;font-size:1.05rem;font-weight:600;color:#111827;">Preview Integration</h4>
+          <div style="display:flex;flex-direction:column;gap:12px;font-size:0.88rem;background:#f9fafb;padding:16px;border-radius:8px;border:1px solid #e5e7eb;">
+            <div><span style="color:#6b7280;">Provider:</span> <strong id="pv-link-provider" style="color:#111827;">Amazon Web Services</strong></div>
+            <div><span style="color:#6b7280;">Name:</span> <strong id="pv-link-name" style="color:#111827;">AWS Prod Backups</strong></div>
+            <div><span style="color:#6b7280;">AWS Key ID:</span> <strong id="pv-link-key" style="color:#111827;font-family:monospace;">AKIA...</strong></div>
+            <div><span style="color:#6b7280;">Default Region:</span> <strong id="pv-link-region" style="color:#111827;">us-east-1</strong></div>
+            <div><span style="color:#6b7280;">Bucket:</span> <strong id="pv-link-bucket" style="color:#111827;">prod-backups</strong></div>
+            <div><span style="color:#6b7280;">Comment:</span> <span id="pv-link-comment" style="color:#374151;">—</span></div>
+          </div>
+        </div>
+
+      </div>
     </div>
+
+    <!-- Modal Footer -->
+    <div style="display:flex;justify-content:space-between;align-items:center;padding:14px 24px;border-top:1px solid #e5e7eb;background:#f9fafb;">
+      <button onclick="closeLinkCloudModal()" style="padding:8px 18px;border:1px solid #d1d5db;border-radius:6px;background:white;color:#374151;cursor:pointer;font-size:0.88rem;font-weight:500;">Cancel</button>
+      <div id="link-cloud-wizard-btns" style="display:none;gap:10px;">
+        <button id="btn-link-back" onclick="prevLinkCloudStep()" style="padding:8px 18px;border:1px solid #d1d5db;border-radius:6px;background:white;color:#374151;cursor:pointer;font-size:0.88rem;font-weight:500;">Back</button>
+        <button id="btn-link-next" onclick="nextLinkCloudStep()" style="padding:8px 24px;border:none;border-radius:6px;background:#3a1c94;color:white;cursor:pointer;font-size:0.88rem;font-weight:600;">Continue</button>
+      </div>
+    </div>
+
   </div>
 </div>
 
@@ -4031,6 +4184,6 @@ Real OS metrics (CPU, RAM, Disk I/O) cannot be fetched directly from PostgreSQL 
   </div>
 </div>
 
-<script src="/static/main.js?v=99"></script>
+<script src="/static/main.js?v=100"></script>
 </body>
 </html>
