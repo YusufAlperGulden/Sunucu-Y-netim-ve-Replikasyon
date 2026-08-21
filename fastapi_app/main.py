@@ -91,8 +91,16 @@ def run_background_db_init():
             "ALTER TABLE users ADD COLUMN IF NOT EXISTS last_name VARCHAR(100)",
             "ALTER TABLE users ADD COLUMN IF NOT EXISTS team VARCHAR(50) DEFAULT 'admins'",
             "ALTER TABLE users ADD COLUMN IF NOT EXISTS timezone VARCHAR(50) DEFAULT 'UTC'",
+            """CREATE TABLE IF NOT EXISTS teams (
+                id SERIAL PRIMARY KEY,
+                name VARCHAR(100) UNIQUE NOT NULL,
+                owner VARCHAR(100) DEFAULT 'admin',
+                permissions_json TEXT DEFAULT '{}',
+                created_at TIMESTAMP DEFAULT NOW()
+            )""",
 
             "ALTER TABLE deploy_jobs ADD COLUMN IF NOT EXISTS log_output TEXT",
+
             """CREATE TABLE IF NOT EXISTS cloud_credentials (
                 id SERIAL PRIMARY KEY,
                 provider VARCHAR(50) NOT NULL,
@@ -1454,6 +1462,100 @@ def delete_user(user_id: int, db: Session = Depends(get_db)):
     db.delete(user)
     db.commit()
     return {"success": True}
+
+
+class TeamCreate(BaseModel):
+    name: str
+    owner: Optional[str] = "admin"
+    members: Optional[List[str]] = []
+    permissions: Optional[Dict[str, Any]] = None
+    cluster_permission_level: Optional[str] = "Manage"
+
+
+@app.get("/api/teams", dependencies=[Depends(verify_credentials)])
+def get_teams(db: Session = Depends(get_db)):
+    from models import Team
+    default_teams = [
+        {"id": 1, "name": "admins", "owner": "system", "created_at": "—"},
+        {"id": 2, "name": "nobody", "owner": "system", "created_at": "—"},
+        {"id": 3, "name": "users", "owner": "system", "created_at": "—"}
+    ]
+    try:
+        db_teams = db.query(Team).order_by(Team.id.asc()).all()
+        result = list(default_teams)
+        for t in db_teams:
+            if t.name not in ["admins", "nobody", "users"]:
+                result.append({
+                    "id": t.id,
+                    "name": t.name,
+                    "owner": t.owner or "admin",
+                    "created_at": t.created_at.strftime("%Y-%m-%d %H:%M:%S") if t.created_at else "Just now"
+                })
+        return result
+    except Exception:
+        return default_teams
+
+
+@app.post("/api/teams", dependencies=[Depends(verify_credentials)])
+def create_team(payload: TeamCreate, credentials: HTTPBasicCredentials = Depends(security), db: Session = Depends(get_db)):
+    import json
+    from models import Team, User
+
+    name = payload.name.strip()
+    if not name:
+        return JSONResponse(status_code=400, content={"message": "Team name is required"})
+
+    existing = db.query(Team).filter(Team.name == name).first()
+    if existing or name in ["admins", "nobody", "users"]:
+        return JSONResponse(status_code=400, content={"message": "Team name already exists"})
+
+    owner = payload.owner or (credentials.username if credentials else "admin")
+    perms = payload.permissions or {
+        "controller_config": True,
+        "manage_users_teams": False,
+        "ldap_settings": True,
+        "deploy_clusters": True,
+        "cluster_permission_level": payload.cluster_permission_level or "Manage"
+    }
+
+    new_team = Team(
+        name=name,
+        owner=owner,
+        permissions_json=json.dumps(perms)
+    )
+    db.add(new_team)
+    db.commit()
+    db.refresh(new_team)
+
+    # Update selected users' team to this new team
+    if payload.members:
+        for username in payload.members:
+            u = db.query(User).filter(User.username == username).first()
+            if u:
+                u.team = name
+        db.commit()
+
+    return {
+        "success": True,
+        "team": {
+            "id": new_team.id,
+            "name": new_team.name,
+            "owner": new_team.owner,
+            "created_at": new_team.created_at.strftime("%Y-%m-%d %H:%M:%S") if new_team.created_at else "Just now"
+        }
+    }
+
+
+@app.delete("/api/teams/{team_id}", dependencies=[Depends(verify_credentials)])
+def delete_team(team_id: int, db: Session = Depends(get_db)):
+    from models import Team
+    team = db.query(Team).filter(Team.id == team_id).first()
+    if not team:
+        return JSONResponse(status_code=404, content={"message": "Team not found"})
+    db.delete(team)
+    db.commit()
+    return {"success": True}
+
 
 
 @app.get("/api/users/me", dependencies=[Depends(verify_credentials)])

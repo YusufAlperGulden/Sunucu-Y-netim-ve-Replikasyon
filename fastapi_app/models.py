@@ -185,7 +185,17 @@ class User(Base):
 
 
 
+class Team(Base):
+    __tablename__ = 'teams'
+    id = Column(Integer, primary_key=True, index=True)
+    name = Column(String(100), unique=True, index=True, nullable=False)
+    owner = Column(String(100), default="admin")
+    permissions_json = Column(Text, default="{}")
+    created_at = Column(DateTime, default=datetime.datetime.utcnow)
+
+
 class CloudCredential(Base):
+
     """Cloud storage provider credentials (AWS S3, GCS, Azure Blob)."""
     __tablename__ = 'cloud_credentials'
     id = Column(Integer, primary_key=True, index=True)

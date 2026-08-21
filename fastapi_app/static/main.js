@@ -3743,10 +3743,15 @@ function renderBackups() {
             if (btn) { btn.classList.remove('active'); btn.style.color = '#4b5563'; btn.style.borderBottom = '2px solid transparent'; }
         });
         [contentUsers, contentTeams, contentLdap].forEach(c => { if (c) c.style.display = 'none'; });
-        if (tab === 'users')  { if (btnTabUsers) { btnTabUsers.style.color = 'var(--primary)'; btnTabUsers.style.borderBottom = '2px solid var(--primary)'; } if (contentUsers) contentUsers.style.display = 'block'; }
-        else if (tab === 'teams') { if (btnTabTeams) { btnTabTeams.style.color = 'var(--primary)'; btnTabTeams.style.borderBottom = '2px solid var(--primary)'; } if (contentTeams) contentTeams.style.display = 'block'; }
+        if (tab === 'users')  { if (btnTabUsers) { btnTabUsers.style.color = 'var(--primary)'; btnTabUsers.style.borderBottom = '2px solid var(--primary)'; } if (contentUsers) contentUsers.style.display = 'block'; loadUsersFromAPI(); }
+        else if (tab === 'teams') { if (btnTabTeams) { btnTabTeams.style.color = 'var(--primary)'; btnTabTeams.style.borderBottom = '2px solid var(--primary)'; } if (contentTeams) contentTeams.style.display = 'block'; loadTeamsFromAPI(); }
         else if (tab === 'ldap')  { if (btnTabLdap)  { btnTabLdap.style.color  = 'var(--primary)'; btnTabLdap.style.borderBottom  = '2px solid var(--primary)'; } if (contentLdap)  contentLdap.style.display  = 'block'; }
     }
+
+    if (btnTabUsers) btnTabUsers.addEventListener('click', () => switchUsersTab('users'));
+    if (btnTabTeams) btnTabTeams.addEventListener('click', () => switchUsersTab('teams'));
+    if (btnTabLdap)  btnTabLdap.addEventListener('click',  () => switchUsersTab('ldap'));
+
     // ── Create User 3-Step Wizard ──────────────────────────────────────────
     let createUserCurrentStep = 1;
 
@@ -3952,18 +3957,339 @@ function renderBackups() {
         }
     };
 
+    // ── Create Team 4-Step Wizard ──────────────────────────────────────────
+    let createTeamCurrentStep = 1;
+    let selectedTeamMembers = [];
+
+    window.openCreateTeamWizard = function() {
+        const chooser = document.getElementById('modal-create-user-team');
+        if (chooser) chooser.style.display = 'none';
+
+        // Reset inputs
+        const tn = document.getElementById('new-team-name'); if (tn) tn.value = '';
+        selectedTeamMembers = [];
+        renderTeamUserTags();
+        populateTeamUsersDropdown();
+
+        // Reset perms
+        setSwitchState('team-perm-controller', true);
+        setSwitchState('team-perm-users', false);
+        setSwitchState('team-perm-ldap', true);
+        setSwitchState('team-perm-deploy', true);
+        const cpl = document.getElementById('new-team-cluster-perm-level'); if (cpl) cpl.value = 'Manage';
+
+        const wiz = document.getElementById('modal-create-team-wizard');
+        if (wiz) wiz.style.display = 'flex';
+        setCreateTeamStep(1);
+    };
+
+    window.closeCreateTeamWizard = function() {
+        const wiz = document.getElementById('modal-create-team-wizard');
+        if (wiz) wiz.style.display = 'none';
+    };
+
+    window.setCreateTeamStep = function(step) {
+        createTeamCurrentStep = step;
+        for (let i = 1; i <= 4; i++) {
+            const pane = document.getElementById(`wizard-team-pane-${i}`);
+            if (pane) pane.style.display = (i === step) ? 'flex' : 'none';
+
+            const dot = document.getElementById(`dot-team-step-${i}`);
+            const text = document.getElementById(`text-team-step-${i}`);
+            if (dot && text) {
+                if (step > i) {
+                    dot.style.background = '#3a1c94';
+                    dot.style.color = 'white';
+                    dot.innerHTML = '&#10003;';
+                    text.style.color = '#111827';
+                    text.style.fontWeight = '500';
+                } else if (step === i) {
+                    dot.style.background = '#3a1c94';
+                    dot.style.color = 'white';
+                    dot.innerHTML = `${i}`;
+                    text.style.color = '#111827';
+                    text.style.fontWeight = '600';
+                } else {
+                    dot.style.background = '#e5e7eb';
+                    dot.style.color = '#6b7280';
+                    dot.innerHTML = `${i}`;
+                    text.style.color = '#6b7280';
+                    text.style.fontWeight = '500';
+                }
+            }
+        }
+    };
+
+    window.nextCreateTeamStep = function() {
+        if (createTeamCurrentStep === 1) {
+            const name = document.getElementById('new-team-name')?.value?.trim();
+            if (!name) { alert('Team name is required.'); return; }
+            setCreateTeamStep(2);
+        } else if (createTeamCurrentStep === 2) {
+            setCreateTeamStep(3);
+        } else if (createTeamCurrentStep === 3) {
+            updateCreateTeamPreview();
+            setCreateTeamStep(4);
+        }
+    };
+
+    window.prevCreateTeamStep = function() {
+        if (createTeamCurrentStep > 1) {
+            setCreateTeamStep(createTeamCurrentStep - 1);
+        }
+    };
+
+    window.toggleSwitchState = function(key) {
+        const input = document.getElementById(key);
+        if (!input) return;
+        const current = input.value === 'true';
+        setSwitchState(key, !current);
+    };
+
+    function setSwitchState(key, val) {
+        const input = document.getElementById(key);
+        const btn = document.getElementById(`toggle-${key}`);
+        const label = document.getElementById(`label-${key}`);
+        const knob = document.getElementById(`knob-${key}`);
+        if (!input || !btn || !label || !knob) return;
+
+        input.value = val ? 'true' : 'false';
+        if (val) {
+            btn.style.background = '#3a1c94';
+            btn.style.textAlign = 'right';
+            btn.style.paddingRight = '8px';
+            btn.style.paddingLeft = '0px';
+            label.textContent = 'On';
+            knob.style.left = '3px';
+            knob.style.right = 'auto';
+        } else {
+            btn.style.background = '#d1d5db';
+            btn.style.textAlign = 'left';
+            btn.style.paddingLeft = '8px';
+            btn.style.paddingRight = '0px';
+            label.textContent = 'Off';
+            knob.style.left = 'auto';
+            knob.style.right = '3px';
+        }
+    }
+
+    window.toggleTeamUsersDropdown = function() {
+        const list = document.getElementById('team-users-dropdown-list');
+        if (list) {
+            list.style.display = list.style.display === 'none' || list.style.display === '' ? 'block' : 'none';
+        }
+    };
+
+    function populateTeamUsersDropdown() {
+        const list = document.getElementById('team-users-dropdown-list');
+        if (!list) return;
+        
+        const availableUsers = (usersData && usersData.length > 0) ? usersData : [
+            { username: 'admin' }, { username: 'demo' }, { username: 'nobody' }, { username: 'system' }
+        ];
+
+        list.innerHTML = availableUsers.map(u => {
+            const isSel = selectedTeamMembers.includes(u.username);
+            return `
+                <div onclick="event.stopPropagation(); toggleTeamUserMember('${escapeHTML(u.username)}')" style="padding: 10px 14px; display: flex; justify-content: space-between; align-items: center; cursor: pointer; border-bottom: 1px solid #f3f4f6; font-size: 0.9rem;">
+                    <span style="color: #111827; font-weight: ${isSel ? '600' : '400'};">${escapeHTML(u.username)}</span>
+                    <span style="color: #3a1c94; font-weight: bold; font-size: 1rem;">${isSel ? '&#10003;' : ''}</span>
+                </div>
+            `;
+        }).join('');
+    }
+
+    window.toggleTeamUserMember = function(username) {
+        if (selectedTeamMembers.includes(username)) {
+            selectedTeamMembers = selectedTeamMembers.filter(m => m !== username);
+        } else {
+            selectedTeamMembers.push(username);
+        }
+        renderTeamUserTags();
+        populateTeamUsersDropdown();
+    };
+
+    window.removeTeamMember = function(username) {
+        selectedTeamMembers = selectedTeamMembers.filter(m => m !== username);
+        renderTeamUserTags();
+        populateTeamUsersDropdown();
+    };
+
+    function renderTeamUserTags() {
+        const container = document.getElementById('team-users-tag-container');
+        if (!container) return;
+        const searchInput = document.getElementById('team-users-search-input');
+        
+        // Remove existing tags except input and arrow
+        const tags = container.querySelectorAll('.team-user-tag');
+        tags.forEach(t => t.remove());
+
+        selectedTeamMembers.forEach(u => {
+            const tag = document.createElement('span');
+            tag.className = 'team-user-tag';
+            tag.style.cssText = 'background: #f3f4f6; color: #1f2937; padding: 4px 10px; border-radius: 6px; font-size: 0.85rem; font-weight: 500; display: inline-flex; align-items: center; gap: 8px; border: 1px solid #e5e7eb;';
+            tag.innerHTML = `${escapeHTML(u)} <span onclick="event.stopPropagation(); removeTeamMember('${escapeHTML(u)}')" style="cursor: pointer; color: #9ca3af; font-size: 0.9rem; font-weight: bold;">&times;</span>`;
+            container.insertBefore(tag, searchInput);
+        });
+    }
+
+    window.filterTeamUsersDropdown = function() {
+        const q = document.getElementById('team-users-search-input')?.value?.toLowerCase() || '';
+        const list = document.getElementById('team-users-dropdown-list');
+        if (list) {
+            list.style.display = 'block';
+            const items = list.querySelectorAll('div');
+            items.forEach(it => {
+                const text = it.textContent.toLowerCase();
+                it.style.display = text.includes(q) ? 'flex' : 'none';
+            });
+        }
+    };
+
+    window.updateCreateTeamPreview = function() {
+        const name = document.getElementById('new-team-name')?.value?.trim() || '—';
+        const members = selectedTeamMembers.length > 0 ? selectedTeamMembers.join(', ') : '(None selected)';
+        const cVal = document.getElementById('team-perm-controller')?.value === 'true';
+        const uVal = document.getElementById('team-perm-users')?.value === 'true';
+        const lVal = document.getElementById('team-perm-ldap')?.value === 'true';
+        const dVal = document.getElementById('team-perm-deploy')?.value === 'true';
+        const permLevel = document.getElementById('new-team-cluster-perm-level')?.value || 'Manage';
+
+        const pn = document.getElementById('prev-team-name-val'); if (pn) pn.textContent = name;
+        const pm = document.getElementById('prev-team-members-val'); if (pm) pm.textContent = members;
+        
+        const pc = document.getElementById('prev-team-p-controller');
+        if (pc) { pc.textContent = cVal ? 'Yes' : 'No'; pc.style.color = cVal ? '#16a34a' : '#ef4444'; }
+        const pu = document.getElementById('prev-team-p-users');
+        if (pu) { pu.textContent = uVal ? 'Yes' : 'No'; pu.style.color = uVal ? '#16a34a' : '#ef4444'; }
+        const pl = document.getElementById('prev-team-p-ldap');
+        if (pl) { pl.textContent = lVal ? 'Yes' : 'No'; pl.style.color = lVal ? '#16a34a' : '#ef4444'; }
+        const pd = document.getElementById('prev-team-p-deploy');
+        if (pd) { pd.textContent = dVal ? 'Yes' : 'No'; pd.style.color = dVal ? '#16a34a' : '#ef4444'; }
+
+        const plv = document.getElementById('prev-team-cluster-level-val');
+        if (plv) plv.textContent = permLevel;
+    };
+
+    window.submitCreateTeam = async function() {
+        const name = document.getElementById('new-team-name')?.value?.trim();
+        if (!name) { alert('Team name is required.'); return; }
+
+        const permissions = {
+            controller_config: document.getElementById('team-perm-controller')?.value === 'true',
+            manage_users_teams: document.getElementById('team-perm-users')?.value === 'true',
+            ldap_settings: document.getElementById('team-perm-ldap')?.value === 'true',
+            deploy_clusters: document.getElementById('team-perm-deploy')?.value === 'true',
+            cluster_permission_level: document.getElementById('new-team-cluster-perm-level')?.value || 'Manage'
+        };
+
+        const finishBtn = document.getElementById('btn-finish-create-team');
+        if (finishBtn) {
+            finishBtn.disabled = true;
+            finishBtn.textContent = 'Creating...';
+        }
+
+        try {
+            const res = await apiFetch('/api/teams', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    name,
+                    owner: 'admin',
+                    members: selectedTeamMembers,
+                    permissions,
+                    cluster_permission_level: permissions.cluster_permission_level
+                })
+            });
+            const data = await res.json();
+            if (res.ok && data.success) {
+                closeCreateTeamWizard();
+                if (typeof showToast === 'function') {
+                    showToast(`Team "${name}" created successfully.`, 'success');
+                } else {
+                    alert(`Team "${name}" created successfully.`);
+                }
+                await loadTeamsFromAPI();
+                await loadUsersFromAPI();
+            } else {
+                alert(data.message || 'Failed to create team.');
+            }
+        } catch (e) {
+            console.error('Error creating team:', e);
+            alert('Failed to connect to server.');
+        } finally {
+            if (finishBtn) {
+                finishBtn.disabled = false;
+                finishBtn.textContent = 'Finish';
+            }
+        }
+    };
+
+    let teamsData = [];
+    async function loadTeamsFromAPI() {
+        try {
+            const res = await apiFetch('/api/teams');
+            if (res.ok) {
+                teamsData = await res.json();
+                renderTeams(teamsData);
+                updateTeamSelectDropdowns(teamsData);
+            }
+        } catch (e) {
+            console.warn('Failed to load teams from API', e);
+        }
+    }
+
+    function renderTeams(teams) {
+        const tbody = document.getElementById('teams-tbody');
+        if (!tbody) return;
+        if (!teams || teams.length === 0) {
+            teams = [
+                { name: 'admins', owner: 'system', created_at: '—' },
+                { name: 'nobody', owner: 'system', created_at: '—' },
+                { name: 'users',  owner: 'system', created_at: '—' }
+            ];
+        }
+
+        tbody.innerHTML = teams.map(t => `
+            <tr style="border-bottom: 1px solid #f3f4f6;">
+                <td style="padding: 14px 16px; font-weight: 500; color: #111827;">${escapeHTML(t.name)}</td>
+                <td style="padding: 14px 16px; font-size: 0.88rem; color: #6b7280;">${escapeHTML(t.owner || 'admin')}</td>
+                <td style="padding: 14px 16px; font-size: 0.88rem; color: #6b7280;">${escapeHTML(t.created_at || 'Just now')}</td>
+                <td style="padding: 14px 16px; text-align: right;">
+                    <button style="background: transparent; border: 1px solid #e5e7eb; border-radius: 4px; padding: 4px 10px; cursor: pointer; color: #6b7280; font-size: 0.82rem;">···</button>
+                </td>
+            </tr>
+        `).join('');
+    }
+
+    function updateTeamSelectDropdowns(teams) {
+        const userTeamSelect = document.getElementById('new-user-team');
+        if (!userTeamSelect) return;
+        const currentVal = userTeamSelect.value;
+        const defaultList = ['admins', 'nobody', 'users'];
+        const allNames = Array.from(new Set([...defaultList, ...teams.map(t => t.name)]));
+        userTeamSelect.innerHTML = allNames.map(name => `<option value="${escapeHTML(name)}" ${name === currentVal ? 'selected' : ''}>${escapeHTML(name)}</option>`).join('');
+    }
+
     // Reload whenever user navigates TO users-view (handles hash changes after IIFE runs)
     window.addEventListener('hashchange', function() {
-        if (window.location.hash === '#users-view') loadUsersFromAPI();
+        if (window.location.hash === '#users-view') {
+            loadUsersFromAPI();
+            loadTeamsFromAPI();
+        }
     });
 
     // Also reload if the page was ALREADY on users-view when IIFE ran
-    if (window.location.hash === '#users-view') loadUsersFromAPI();
-
+    if (window.location.hash === '#users-view') {
+        loadUsersFromAPI();
+        loadTeamsFromAPI();
+    }
 
     // Initial load (covers all other navigation paths)
     loadUsersFromAPI();
+    loadTeamsFromAPI();
 })();
+
 
 
 // --- NODES PAGE MANAGEMENT ---
