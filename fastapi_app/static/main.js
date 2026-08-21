@@ -3749,7 +3749,15 @@ function renderBackups() {
     if (btnTabTeams) btnTabTeams.addEventListener('click', () => switchUsersTab('teams'));
     if (btnTabLdap)  btnTabLdap.addEventListener('click',  () => switchUsersTab('ldap'));
 
-    // Initial load
+    // Reload whenever user navigates TO users-view (handles hash changes after IIFE runs)
+    window.addEventListener('hashchange', function() {
+        if (window.location.hash === '#users-view') loadUsersFromAPI();
+    });
+
+    // Also reload if the page was ALREADY on users-view when IIFE ran
+    if (window.location.hash === '#users-view') loadUsersFromAPI();
+
+    // Initial load (covers all other navigation paths)
     loadUsersFromAPI();
 })();
 
