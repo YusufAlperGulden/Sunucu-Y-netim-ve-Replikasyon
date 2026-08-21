@@ -10281,3 +10281,146 @@ window.loadClusterBackups = async function(projectId) {
     if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', hookClusterBackups);
     else hookClusterBackups();
 })();
+
+
+// ═══════════════════════════════════════════════════════════════════════════
+// Cluster Detail Backups Tab — ID Sorting & Modal Opener
+// ═══════════════════════════════════════════════════════════════════════════
+
+window._clusterBackupsData = [];
+window._clusterBackupSort = 'desc';
+
+window.openClusterCreateBackupModal = function() {
+    var modalType = document.getElementById('modal-backup-type-select');
+    if (modalType) modalType.style.display = 'flex';
+    
+    // Pre-populate and select target cluster in modal
+    var clusterSelect = document.getElementById('backup-target-cluster');
+    if (clusterSelect && window.currentProjectId) {
+        clusterSelect.value = String(window.currentProjectId);
+        if (typeof window.onBackupClusterSelect === 'function') {
+            window.onBackupClusterSelect();
+        }
+    }
+};
+
+window.toggleClusterBackupSort = function() {
+    window._clusterBackupSort = (window._clusterBackupSort === 'asc') ? 'desc' : 'asc';
+    var th = document.getElementById('cluster-backup-sort-id');
+    var icon = document.getElementById('cluster-backup-sort-icon');
+    if (th) {
+        th.title = (window._clusterBackupSort === 'asc') ? 'Click to sort descending' : 'Click to sort ascending';
+    }
+    if (icon) {
+        icon.textContent = (window._clusterBackupSort === 'asc') ? '▲' : '▼';
+        icon.style.color = '#4f46e5';
+    }
+    window.renderClusterBackupsTable();
+};
+
+window.toggleClusterBackupSelectAll = function(masterCb) {
+    var checked = masterCb ? masterCb.checked : false;
+    document.querySelectorAll('.cluster-backup-row-cb').forEach(function(cb) {
+        cb.checked = checked;
+        var tr = cb.closest('tr');
+        if (tr) tr.style.background = checked ? '#f5f3ff' : '';
+    });
+};
+
+window.onClusterBackupRowCheck = function(cb) {
+    var tr = cb ? cb.closest('tr') : null;
+    if (tr) tr.style.background = (cb && cb.checked) ? '#f5f3ff' : '';
+};
+
+window.renderClusterBackupsTable = function() {
+    var tbodyAll = document.getElementById('cluster-tbody-all-backups');
+    if (!tbodyAll) return;
+    
+    var backups = (window._clusterBackupsData || []).slice();
+    if (!backups.length) {
+        tbodyAll.innerHTML = '<tr><td colspan="11" style="padding:60px 20px;text-align:center;color:#6b7280;">' +
+            '<svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="#d1d5db" stroke-width="1.5" style="margin:0 auto 16px auto;display:block;"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>' +
+            'No backups created yet for this cluster.' +
+            '</td></tr>';
+        return;
+    }
+    
+    // Sort by ID
+    backups.sort(function(a, b) {
+        var idA = parseInt(a.id, 10) || 0;
+        var idB = parseInt(b.id, 10) || 0;
+        return (window._clusterBackupSort === 'asc') ? (idA - idB) : (idB - idA);
+    });
+    
+    tbodyAll.innerHTML = '';
+    backups.forEach(function(b) {
+        var isCompleted = (b.status === 'COMPLETED');
+        var isFailed    = (b.status === 'FAILED');
+        var statusDot   = isCompleted ? '#10b981' : (isFailed ? '#ef4444' : '#f59e0b');
+        var statusText  = isCompleted ? 'Completed' : (isFailed ? 'Failed' : 'Pending');
+        var storageStr  = b.is_cloud ? '<span title="Disk + Cloud Storage">💾 1 ☁ 1</span>' : '<span title="Disk Storage">💾 1 ☁ 0</span>';
+        var sizeStr     = b.size_display || (b.size_mb ? (b.size_mb + ' MB') : '0 KB');
+        var hostStr     = b.backup_host || 'localhost:5432';
+        var createdStr  = b.created_human || b.created_at || 'Just now';
+        var methodStr   = b.backup_method || 'pg_basebackup';
+        
+        tbodyAll.insertAdjacentHTML('beforeend', '<tr style="border-bottom:1px solid #f3f4f6;">' +
+            '<td style="padding:12px 14px;text-align:center;"><input type="checkbox" class="cluster-backup-row-cb" onchange="window.onClusterBackupRowCheck(this)" style="border-radius:3px;cursor:pointer;"></td>' +
+            '<td style="padding:12px 14px;font-weight:600;color:#111827;">' + escapeHTML(String(b.id)) + '</td>' +
+            '<td style="padding:12px 14px;text-align:center;color:#6b7280;cursor:pointer;" title="' + escapeHTML(b.file_path || b.error_msg || 'Backup Info') + '"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#9ca3af" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg></td>' +
+            '<td style="padding:12px 14px;font-family:monospace;font-size:12px;color:#374151;">' + escapeHTML(methodStr) + '</td>' +
+            '<td style="padding:12px 14px;"><span style="display:inline-flex;align-items:center;gap:6px;font-size:12px;font-weight:500;color:' + statusDot + ';"><span style="width:7px;height:7px;border-radius:50%;background:' + statusDot + ';"></span>' + statusText + '</span></td>' +
+            '<td style="padding:12px 14px;font-weight:500;color:#111827;">' + escapeHTML(b.title || ('BACKUP-' + b.id)) + '</td>' +
+            '<td style="padding:12px 14px;font-size:12px;color:#6b7280;">' + escapeHTML(createdStr) + '</td>' +
+            '<td style="padding:12px 14px;text-align:right;font-size:12px;color:#374151;">' + escapeHTML(sizeStr) + '</td>' +
+            '<td style="padding:12px 14px;font-size:12px;color:#6b7280;">' + escapeHTML(hostStr) + '</td>' +
+            '<td style="padding:12px 14px;text-align:center;font-size:12px;">' + storageStr + '</td>' +
+            '<td style="padding:12px 14px;text-align:right;"><button onclick="window.deleteBackup(' + b.id + ')" style="padding:4px 10px;background:white;border:1px solid #fee2e2;color:#ef4444;border-radius:4px;font-size:11px;cursor:pointer;">Delete</button></td>' +
+            '</tr>');
+    });
+};
+
+// Override loadClusterBackups to store data in _clusterBackupsData
+window.loadClusterBackups = async function(projectId) {
+    var pid = projectId || window.currentProjectId;
+    var tbodyAll = document.getElementById('cluster-tbody-all-backups');
+    var tbodySched = document.getElementById('cluster-tbody-schedules-backups');
+    if (!tbodyAll || !pid) return;
+    
+    tbodyAll.innerHTML = '<tr><td colspan="11" style="padding:40px;text-align:center;color:#9ca3af;">Loading cluster backups...</td></tr>';
+    
+    try {
+        var r = await apiFetch('/api/backups?project_id=' + pid);
+        if (!r.ok) throw new Error(await r.text());
+        window._clusterBackupsData = await r.json();
+        window.renderClusterBackupsTable();
+        
+        // Fetch Schedules
+        if (tbodySched) {
+            try {
+                var rs = await apiFetch('/api/backups/schedules?project_id=' + pid);
+                if (rs.ok) {
+                    var scheds = await rs.json();
+                    if (scheds.length) {
+                        tbodySched.innerHTML = '';
+                        scheds.forEach(function(s) {
+                            tbodySched.insertAdjacentHTML('beforeend', '<tr style="border-bottom:1px solid #f3f4f6;">' +
+                                '<td style="padding:12px 14px;font-weight:500;">' + escapeHTML(s.cluster_name || 'Daily Backup') + '</td>' +
+                                '<td style="padding:12px 14px;font-family:monospace;font-size:12px;">' + escapeHTML(s.backup_type || 'FULL') + '</td>' +
+                                '<td style="padding:12px 14px;"><span style="color:#10b981;">● Active</span></td>' +
+                                '<td style="padding:12px 14px;font-size:12px;color:#6b7280;">' + escapeHTML(s.schedule_expression || '0 2 * * *') + '</td>' +
+                                '<td style="padding:12px 14px;font-size:12px;">localhost:5432</td>' +
+                                '<td style="padding:12px 14px;font-size:12px;">Controller</td>' +
+                                '<td style="padding:12px 14px;font-size:12px;">/var/lib/backups</td>' +
+                                '<td style="padding:12px 14px;font-size:12px;color:#6b7280;">' + escapeHTML(s.created_at || '—') + '</td>' +
+                                '<td style="padding:12px 14px;text-align:right;"><button style="padding:4px 8px;background:white;border:1px solid #e5e7eb;border-radius:4px;font-size:11px;cursor:pointer;">...</button></td>' +
+                                '</tr>');
+                        });
+                    }
+                }
+            } catch(se) {}
+        }
+    } catch(e) {
+        tbodyAll.innerHTML = '<tr><td colspan="11" style="padding:40px;text-align:center;color:#ef4444;">' + escapeHTML(e.message) + '</td></tr>';
+    }
+};

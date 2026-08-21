@@ -1153,7 +1153,7 @@
                 
                 <!-- Action bar (Create Backup button + dropdown) -->
                 <div style="display: flex; justify-content: flex-end; align-items: center; margin-bottom: 20px; gap: 8px;">
-                    <button onclick="window.openCreateBackupConfigModal(window.currentProjectId)" class="btn-primary" style="background: #3a1c94; color: white; display: flex; align-items: center; gap: 8px; border-radius: 6px; padding: 8px 16px; font-weight: 500; font-size: 0.88rem; cursor: pointer; border: none;">
+                    <button onclick="window.openClusterCreateBackupModal()" class="btn-primary" style="background: #3a1c94; color: white; display: flex; align-items: center; gap: 8px; border-radius: 6px; padding: 8px 16px; font-weight: 500; font-size: 0.88rem; cursor: pointer; border: none;">
                         <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="16"></line><line x1="8" y1="12" x2="16" y2="12"></line></svg>
                         Create backup
                     </button>
@@ -1180,8 +1180,8 @@
                         <table style="width: 100%; border-collapse: collapse; font-size: 0.88rem;">
                             <thead style="background: #f9fafb; border-bottom: 1px solid var(--border); color: #4b5563;">
                                 <tr>
-                                    <th style="padding: 10px 14px; width: 40px; text-align: center;"><input type="checkbox" style="border-radius: 3px;"></th>
-                                    <th style="padding: 10px 14px; text-align: left; font-weight: 600;">ID</th>
+                                    <th style="padding: 10px 14px; width: 40px; text-align: center;"><input type="checkbox" id="cluster-backup-select-all" onchange="window.toggleClusterBackupSelectAll(this)" style="border-radius: 3px; cursor: pointer;"></th>
+                                    <th id="cluster-backup-sort-id" onclick="window.toggleClusterBackupSort()" style="padding: 10px 14px; text-align: left; font-weight: 600; cursor: pointer; user-select: none;" title="Click to sort ascending"><span style="display:inline-flex;align-items:center;gap:4px;">ID <span id="cluster-backup-sort-icon" style="font-size:12px;color:#6b7280;">⇅</span></span></th>
                                     <th style="padding: 10px 14px; text-align: center; font-weight: 600;">Info</th>
                                     <th style="padding: 10px 14px; text-align: left; font-weight: 600;">Method</th>
                                     <th style="padding: 10px 14px; text-align: left; font-weight: 600;">Status</th>
@@ -6151,6 +6151,6 @@
 </div>
 </div>
 
-<script src="/static/main.js?v=134"></script>
+<script src="/static/main.js?v=135"></script>
 </body>
 </html>
