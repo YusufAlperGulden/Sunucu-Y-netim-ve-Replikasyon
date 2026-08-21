@@ -1246,15 +1246,14 @@ Real OS metrics (CPU, RAM, Disk I/O) cannot be fetched directly from PostgreSQL 
                     <p style="color: #4b5563; line-height: 1.6; margin-bottom: 40px; font-size: 1.05rem;">Use this page as your guide to stay up to date on the latest enhancements and changes, ensuring you can make the most of ClusterControl's powerful capabilities.</p>
                     
                     <h2 id="v1-6-4" style="color: #4b5563; font-weight: 300; font-size: 1.8rem; margin-bottom: 20px; border-top: 1px solid #e5e7eb; padding-top: 32px;">v1.6.4</h2>
-                    <h3 style="color: #4b5563; font-weight: 400; font-size: 1.4rem; margin-bottom: 16px;">What's New</h3>
+                    <h3 id="whats-new-1-6-4" style="color: #4b5563; font-weight: 400; font-size: 1.4rem; margin-bottom: 16px;">What's New</h3>
                     <ul style="color: #4b5563; line-height: 1.7; padding-left: 20px; margin-bottom: 40px;">
                         <li><span style="font-weight: 600;">ClusterControl Team Details Information Modal:</span> Clicking any team name in the User Management Teams table opens the full Team Details modal with user counts, member avatar badges, group permissions breakdown, and complete cluster permission access levels.</li>
                         <li><span style="font-weight: 600;">3-State Table Header Sorting:</span> Implemented interactive 3-state sorting (Ascending &rarr; Descending &rarr; Cancel sorting) across table column headers with visual direction arrows (▲, ▼, ⇅) and real-time hover tooltips.</li>
                     </ul>
 
                     <h2 id="v1-6-3" style="color: #4b5563; font-weight: 300; font-size: 1.8rem; margin-bottom: 20px; border-top: 1px solid #e5e7eb; padding-top: 32px;">v1.6.3</h2>
-
-                    <h3 style="color: #4b5563; font-weight: 400; font-size: 1.4rem; margin-bottom: 16px;">What's New</h3>
+                    <h3 id="whats-new-1-6-3" style="color: #4b5563; font-weight: 400; font-size: 1.4rem; margin-bottom: 16px;">What's New</h3>
                     <ul style="color: #4b5563; line-height: 1.7; padding-left: 20px; margin-bottom: 40px;">
                         <li><span style="font-weight: 600;">ClusterControl 4-Step Create Team Wizard:</span> Added the complete interactive team creation wizard with step-by-step navigation (<b>Details</b> configuration, <b>Users</b> multi-select tag and search selector with team migration warnings, <b>Permissions</b> toggles for controller settings & cluster permission levels <code>Manage</code>, <code>View</code>, <code>No access</code>, <code>Custom</code>, and <b>Preview</b> summary).</li>
                         <li><span style="font-weight: 600;">Teams Management Table Sync:</span> The Teams tab in User Management dynamically lists team names, owners, creation timestamps, and action buttons synced with PostgreSQL.</li>
@@ -1262,8 +1261,7 @@ Real OS metrics (CPU, RAM, Disk I/O) cannot be fetched directly from PostgreSQL 
                     </ul>
 
                     <h2 id="v1-6-2" style="color: #4b5563; font-weight: 300; font-size: 1.8rem; margin-bottom: 20px; border-top: 1px solid #e5e7eb; padding-top: 32px;">v1.6.2</h2>
-
-                    <h3 style="color: #4b5563; font-weight: 400; font-size: 1.4rem; margin-bottom: 16px;">What's New</h3>
+                    <h3 id="whats-new-1-6-2" style="color: #4b5563; font-weight: 400; font-size: 1.4rem; margin-bottom: 16px;">What's New</h3>
                     <ul style="color: #4b5563; line-height: 1.7; padding-left: 20px; margin-bottom: 40px;">
                         <li><span style="font-weight: 600;">ClusterControl 3-Step Create User Wizard:</span> Added the complete interactive user creation wizard with step-by-step navigation (<b>Details</b>, <b>Team</b> group selection from <code>admins</code>, <code>nobody</code>, <code>users</code>, and <b>Preview</b> summary).</li>
                         <li><span style="font-weight: 600;">Real-time User Table Updates:</span> Newly created users are immediately persisted to PostgreSQL with full team metadata, encrypted credentials, and dynamically rendered into the User Management table upon creation.</li>
@@ -1272,7 +1270,7 @@ Real OS metrics (CPU, RAM, Disk I/O) cannot be fetched directly from PostgreSQL 
                     <h2 id="v1-6-1" style="color: #4b5563; font-weight: 300; font-size: 1.8rem; margin-bottom: 20px; border-top: 1px solid #e5e7eb; padding-top: 32px;">v1.6.1</h2>
 
                     
-                    <h3 id="release-cycle" style="color: #4b5563; font-weight: 400; font-size: 1.4rem; margin-bottom: 16px;">Release cycle</h3>
+                    <h3 id="release-cycle-1-6-1" style="color: #4b5563; font-weight: 400; font-size: 1.4rem; margin-bottom: 16px;">Release cycle</h3>
                     <p style="color: #4b5563; margin-bottom: 16px; line-height: 1.6;">We highly advise you to keep up to date with the latest version for the following reasons:</p>
                     <ul style="color: #4b5563; margin-bottom: 32px; padding-left: 20px; line-height: 1.7;">
                         <li>ClusterControl has a short release cycle compared to other software applications (likely a new major release every quarter of the year).</li>
@@ -1280,7 +1278,7 @@ Real OS metrics (CPU, RAM, Disk I/O) cannot be fetched directly from PostgreSQL 
                         <li>Some of the issues you have encountered may already be fixed in the latest weekly maintenance or major release.</li>
                     </ul>
                     
-                    <h3 id="whats-new" style="color: #4b5563; font-weight: 400; font-size: 1.4rem; margin-bottom: 16px;">What's New</h3>
+                    <h3 id="whats-new-1-6-1" style="color: #4b5563; font-weight: 400; font-size: 1.4rem; margin-bottom: 16px;">What's New</h3>
                     <ul style="color: #4b5563; line-height: 1.7; padding-left: 20px; margin-bottom: 40px;">
                         <li><span style="font-weight: 600;">User Management Table Sync Fix:</span> Fixed table DOM targeting (<code>users-tbody</code>) so the active Admin profile (<code>admin@localhost</code>, UTC timezone, Admins team) loads and renders immediately across all router navigation flows.</li>
                         <li><span style="font-weight: 600;">ClusterControl Settings Complete 7-Tab Alignment:</span> Fully aligned all Settings tabs with the official ClusterControl website:
@@ -1298,9 +1296,6 @@ Real OS metrics (CPU, RAM, Disk I/O) cannot be fetched directly from PostgreSQL 
                     <h2 id="v1-6-0" style="color: #4b5563; font-weight: 300; font-size: 1.8rem; margin-bottom: 20px; border-top: 1px solid #e5e7eb; padding-top: 32px;">v1.6.0</h2>
 
                     
-                    <h3 id="release-cycle" style="color: #4b5563; font-weight: 400; font-size: 1.4rem; margin-bottom: 16px;">Release cycle</h3>
-                    <p style="color: #4b5563; margin-bottom: 16px; line-height: 1.6;">We highly advise you to keep up to date with the latest version for the following reasons:</p>
-                    <ul style="color: #4b5563; margin-bottom: 32px; padding-left: 20px; line-height: 1.7;">
                         <li>ClusterControl has a short release cycle compared to other software applications (likely a new major release every quarter of the year).</li>
                         <li>ClusterControl has to keep up with all the latest changes and modifications introduced by supported database and application vendors.</li>
                         <li>Some of the issues you have encountered may already be fixed in the latest weekly maintenance or major release.</li>
@@ -1423,11 +1418,33 @@ Real OS metrics (CPU, RAM, Disk I/O) cannot be fetched directly from PostgreSQL 
                 <div style="width: 250px; flex-shrink: 0; border-left: 1px solid #e5e7eb; padding: 32px 24px; font-size: 0.85rem; background: #fafafa; position: sticky; top: 0; align-self: flex-start; height: 100%; overflow-y: auto; user-select: none;">
                     <div style="color: #9ca3af; margin-bottom: 16px; font-weight: 500;">Table of contents</div>
                     <div style="display: flex; flex-direction: column; gap: 12px; color: #4b5563;">
+                        <a href="#changelog-view" onclick="event.preventDefault(); document.getElementById('v1-6-4').scrollIntoView({behavior:'smooth'});" style="color: inherit; text-decoration: none; font-weight: 600;">v1.6.4 Release</a>
+                        <div style="margin-left: 12px; display: flex; flex-direction: column; gap: 8px;">
+                            <a href="#changelog-view" onclick="event.preventDefault(); document.getElementById('whats-new-1-6-4').scrollIntoView({behavior:'smooth'});" style="color: inherit; text-decoration: none;">What's New</a>
+                        </div>
+
+                        <a href="#changelog-view" onclick="event.preventDefault(); document.getElementById('v1-6-3').scrollIntoView({behavior:'smooth'});" style="color: inherit; text-decoration: none; font-weight: 600;">v1.6.3 Release</a>
+                        <div style="margin-left: 12px; display: flex; flex-direction: column; gap: 8px;">
+                            <a href="#changelog-view" onclick="event.preventDefault(); document.getElementById('whats-new-1-6-3').scrollIntoView({behavior:'smooth'});" style="color: inherit; text-decoration: none;">What's New</a>
+                        </div>
+
+                        <a href="#changelog-view" onclick="event.preventDefault(); document.getElementById('v1-6-2').scrollIntoView({behavior:'smooth'});" style="color: inherit; text-decoration: none; font-weight: 600;">v1.6.2 Release</a>
+                        <div style="margin-left: 12px; display: flex; flex-direction: column; gap: 8px;">
+                            <a href="#changelog-view" onclick="event.preventDefault(); document.getElementById('whats-new-1-6-2').scrollIntoView({behavior:'smooth'});" style="color: inherit; text-decoration: none;">What's New</a>
+                        </div>
+
+                        <a href="#changelog-view" onclick="event.preventDefault(); document.getElementById('v1-6-1').scrollIntoView({behavior:'smooth'});" style="color: inherit; text-decoration: none; font-weight: 600;">v1.6.1 Release</a>
+                        <div style="margin-left: 12px; display: flex; flex-direction: column; gap: 8px;">
+                            <a href="#changelog-view" onclick="event.preventDefault(); document.getElementById('release-cycle-1-6-1').scrollIntoView({behavior:'smooth'});" style="color: inherit; text-decoration: none;">Release cycle</a>
+                            <a href="#changelog-view" onclick="event.preventDefault(); document.getElementById('whats-new-1-6-1').scrollIntoView({behavior:'smooth'});" style="color: inherit; text-decoration: none;">What's New</a>
+                        </div>
+
                         <a href="#changelog-view" onclick="event.preventDefault(); document.getElementById('v1-6-0').scrollIntoView({behavior:'smooth'});" style="color: inherit; text-decoration: none; font-weight: 600;">v1.6.0 Release</a>
                         <div style="margin-left: 12px; display: flex; flex-direction: column; gap: 8px;">
-                            <a href="#changelog-view" onclick="event.preventDefault(); document.getElementById('release-cycle').scrollIntoView({behavior:'smooth'});" style="color: inherit; text-decoration: none;">Release cycle</a>
-                            <a href="#changelog-view" onclick="event.preventDefault(); document.getElementById('whats-new').scrollIntoView({behavior:'smooth'});" style="color: inherit; text-decoration: none;">What's New</a>
+                            <a href="#changelog-view" onclick="event.preventDefault(); document.getElementById('release-cycle-1-6-0').scrollIntoView({behavior:'smooth'});" style="color: inherit; text-decoration: none;">Release cycle</a>
+                            <a href="#changelog-view" onclick="event.preventDefault(); document.getElementById('whats-new-1-6-0').scrollIntoView({behavior:'smooth'});" style="color: inherit; text-decoration: none;">What's New</a>
                         </div>
+
                         <a href="#changelog-view" onclick="event.preventDefault(); document.getElementById('v1-5-9').scrollIntoView({behavior:'smooth'});" style="color: inherit; text-decoration: none; font-weight: 500;">v1.5.9 Release</a>
                         <a href="#changelog-view" onclick="event.preventDefault(); document.getElementById('v1-5-8').scrollIntoView({behavior:'smooth'});" style="color: inherit; text-decoration: none; font-weight: 500;">v1.5.8 Release</a>
                         <a href="#changelog-view" onclick="event.preventDefault(); document.getElementById('v1-5-7').scrollIntoView({behavior:'smooth'});" style="color: inherit; text-decoration: none; font-weight: 500;">v1.5.7 Release</a>
@@ -1774,7 +1791,7 @@ Real OS metrics (CPU, RAM, Disk I/O) cannot be fetched directly from PostgreSQL 
         </div>
     </div>
 
-    <script src="/static/main.js?v=118"></script>
+    <script src="/static/main.js?v=119"></script>
 
 
 
@@ -5238,6 +5255,6 @@ Real OS metrics (CPU, RAM, Disk I/O) cannot be fetched directly from PostgreSQL 
   </div>
 </div>
 
-<script src="/static/main.js?v=118"></script>
+<script src="/static/main.js?v=119"></script>
 </body>
 </html>
