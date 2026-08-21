@@ -179,8 +179,10 @@ class User(Base):
     email = Column(String(255), nullable=True)
     first_name = Column(String(100), nullable=True)
     last_name = Column(String(100), nullable=True)
+    team = Column(String(50), default="admins")
     timezone = Column(String(50), default="UTC")
     created_at = Column(DateTime, default=datetime.datetime.utcnow)
+
 
 
 class CloudCredential(Base):

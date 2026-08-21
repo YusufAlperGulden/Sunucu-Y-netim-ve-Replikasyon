@@ -3747,9 +3747,210 @@ function renderBackups() {
         else if (tab === 'teams') { if (btnTabTeams) { btnTabTeams.style.color = 'var(--primary)'; btnTabTeams.style.borderBottom = '2px solid var(--primary)'; } if (contentTeams) contentTeams.style.display = 'block'; }
         else if (tab === 'ldap')  { if (btnTabLdap)  { btnTabLdap.style.color  = 'var(--primary)'; btnTabLdap.style.borderBottom  = '2px solid var(--primary)'; } if (contentLdap)  contentLdap.style.display  = 'block'; }
     }
-    if (btnTabUsers) btnTabUsers.addEventListener('click', () => switchUsersTab('users'));
-    if (btnTabTeams) btnTabTeams.addEventListener('click', () => switchUsersTab('teams'));
-    if (btnTabLdap)  btnTabLdap.addEventListener('click',  () => switchUsersTab('ldap'));
+    // ── Create User 3-Step Wizard ──────────────────────────────────────────
+    let createUserCurrentStep = 1;
+
+    window.openCreateUserWizard = function() {
+        const chooser = document.getElementById('modal-create-user-team');
+        if (chooser) chooser.style.display = 'none';
+
+        // Reset inputs
+        const u = document.getElementById('new-user-username'); if (u) u.value = '';
+        const e = document.getElementById('new-user-email'); if (e) e.value = '';
+        const fn = document.getElementById('new-user-firstname'); if (fn) fn.value = '';
+        const ln = document.getElementById('new-user-lastname'); if (ln) ln.value = '';
+        const p = document.getElementById('new-user-password'); if (p) p.value = '';
+        const cp = document.getElementById('new-user-confirm-password'); if (cp) cp.value = '';
+        const tz = document.getElementById('new-user-timezone'); if (tz) tz.value = 'UTC';
+        const fc = document.getElementById('new-user-force-change'); if (fc) fc.checked = true;
+        const tm = document.getElementById('new-user-team'); if (tm) tm.value = 'admins';
+
+        const wiz = document.getElementById('modal-create-user-wizard');
+        if (wiz) wiz.style.display = 'flex';
+        setCreateUserStep(1);
+    };
+
+    window.closeCreateUserWizard = function() {
+        const wiz = document.getElementById('modal-create-user-wizard');
+        if (wiz) wiz.style.display = 'none';
+    };
+
+    window.setCreateUserStep = function(step) {
+        createUserCurrentStep = step;
+        const p1 = document.getElementById('wizard-user-pane-1');
+        const p2 = document.getElementById('wizard-user-pane-2');
+        const p3 = document.getElementById('wizard-user-pane-3');
+        if (p1) p1.style.display = step === 1 ? 'flex' : 'none';
+        if (p2) p2.style.display = step === 2 ? 'flex' : 'none';
+        if (p3) p3.style.display = step === 3 ? 'flex' : 'none';
+
+        // Update Steppers
+        const dot1 = document.getElementById('dot-user-step-1');
+        const text1 = document.getElementById('text-user-step-1');
+        const dot2 = document.getElementById('dot-user-step-2');
+        const text2 = document.getElementById('text-user-step-2');
+        const dot3 = document.getElementById('dot-user-step-3');
+        const text3 = document.getElementById('text-user-step-3');
+
+        if (dot1 && text1) {
+            if (step > 1) {
+                dot1.style.background = '#3a1c94';
+                dot1.style.color = 'white';
+                dot1.innerHTML = '&#10003;';
+                text1.style.color = '#111827';
+                text1.style.fontWeight = '500';
+            } else {
+                dot1.style.background = '#3a1c94';
+                dot1.style.color = 'white';
+                dot1.innerHTML = '1';
+                text1.style.color = '#111827';
+                text1.style.fontWeight = '600';
+            }
+        }
+
+        if (dot2 && text2) {
+            if (step > 2) {
+                dot2.style.background = '#3a1c94';
+                dot2.style.color = 'white';
+                dot2.innerHTML = '&#10003;';
+                text2.style.color = '#111827';
+                text2.style.fontWeight = '500';
+            } else if (step === 2) {
+                dot2.style.background = '#3a1c94';
+                dot2.style.color = 'white';
+                dot2.innerHTML = '2';
+                text2.style.color = '#111827';
+                text2.style.fontWeight = '600';
+            } else {
+                dot2.style.background = '#e5e7eb';
+                dot2.style.color = '#6b7280';
+                dot2.innerHTML = '2';
+                text2.style.color = '#6b7280';
+                text2.style.fontWeight = '500';
+            }
+        }
+
+        if (dot3 && text3) {
+            if (step === 3) {
+                dot3.style.background = '#3a1c94';
+                dot3.style.color = 'white';
+                dot3.innerHTML = '3';
+                text3.style.color = '#111827';
+                text3.style.fontWeight = '600';
+            } else {
+                dot3.style.background = '#e5e7eb';
+                dot3.style.color = '#6b7280';
+                dot3.innerHTML = '3';
+                text3.style.color = '#6b7280';
+                text3.style.fontWeight = '500';
+            }
+        }
+    };
+
+    window.nextCreateUserStep = function() {
+        if (createUserCurrentStep === 1) {
+            const username = document.getElementById('new-user-username')?.value?.trim();
+            const email = document.getElementById('new-user-email')?.value?.trim();
+            const password = document.getElementById('new-user-password')?.value;
+            const confirmPassword = document.getElementById('new-user-confirm-password')?.value;
+
+            if (!username) { alert('Username is required.'); return; }
+            if (!email) { alert('Email is required.'); return; }
+            if (!password) { alert('Password is required.'); return; }
+            if (password !== confirmPassword) { alert('Passwords do not match.'); return; }
+
+            setCreateUserStep(2);
+        } else if (createUserCurrentStep === 2) {
+            const team = document.getElementById('new-user-team')?.value || 'admins';
+            updateCreateUserPreview();
+            setCreateUserStep(3);
+        }
+    };
+
+    window.prevCreateUserStep = function() {
+        if (createUserCurrentStep > 1) {
+            setCreateUserStep(createUserCurrentStep - 1);
+        }
+    };
+
+    window.updateCreateUserPreview = function() {
+        const username = document.getElementById('new-user-username')?.value?.trim() || '—';
+        const email = document.getElementById('new-user-email')?.value?.trim() || '—';
+        const fname = document.getElementById('new-user-firstname')?.value?.trim() || '—';
+        const lname = document.getElementById('new-user-lastname')?.value?.trim() || '—';
+        const timezone = document.getElementById('new-user-timezone')?.value || 'UTC';
+        const forceChange = document.getElementById('new-user-force-change')?.checked ? 'Yes' : 'No';
+        const team = document.getElementById('new-user-team')?.value || 'admins';
+
+        const pFn = document.getElementById('prev-user-firstname'); if (pFn) pFn.textContent = fname;
+        const pLn = document.getElementById('prev-user-lastname'); if (pLn) pLn.textContent = lname;
+        const pUn = document.getElementById('prev-user-username'); if (pUn) pUn.textContent = username;
+        const pEm = document.getElementById('prev-user-email'); if (pEm) pEm.textContent = email;
+        const pTz = document.getElementById('prev-user-timezone'); if (pTz) pTz.textContent = timezone;
+        const pFc = document.getElementById('prev-user-force-change'); if (pFc) pFc.textContent = forceChange;
+        const pTm = document.getElementById('prev-user-team'); if (pTm) pTm.textContent = team;
+    };
+
+    window.submitCreateUser = async function() {
+        const username = document.getElementById('new-user-username')?.value?.trim();
+        const email = document.getElementById('new-user-email')?.value?.trim();
+        const first_name = document.getElementById('new-user-firstname')?.value?.trim() || '';
+        const last_name = document.getElementById('new-user-lastname')?.value?.trim() || '';
+        const password = document.getElementById('new-user-password')?.value;
+        const team = document.getElementById('new-user-team')?.value || 'admins';
+        const timezone = document.getElementById('new-user-timezone')?.value || 'UTC';
+        const role = team === 'admins' ? 'admin' : 'viewer';
+
+        const finishBtn = document.getElementById('btn-finish-create-user');
+        if (finishBtn) {
+            finishBtn.disabled = true;
+            finishBtn.textContent = 'Creating...';
+        }
+
+        try {
+            const res = await apiFetch('/api/users', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    username,
+                    password,
+                    email,
+                    first_name,
+                    last_name,
+                    team,
+                    timezone,
+                    role
+                })
+            });
+            const data = await res.json();
+            if (res.ok && data.success) {
+                closeCreateUserWizard();
+                if (typeof showToast === 'function') {
+                    showToast(`User "${username}" created successfully.`, 'success');
+                } else {
+                    alert(`User "${username}" created successfully.`);
+                }
+                await loadUsersFromAPI();
+            } else {
+                alert(data.message || 'Failed to create user.');
+            }
+        } catch (e) {
+            console.error('Error creating user:', e);
+            alert('Failed to connect to server.');
+        } finally {
+            if (finishBtn) {
+                finishBtn.disabled = false;
+                finishBtn.textContent = 'Finish';
+            }
+        }
+    };
+
+    window.togglePasswordVisibility = function(inputId) {
+        const el = document.getElementById(inputId);
+        if (el) {
+            el.type = el.type === 'password' ? 'text' : 'password';
+        }
+    };
 
     // Reload whenever user navigates TO users-view (handles hash changes after IIFE runs)
     window.addEventListener('hashchange', function() {
@@ -3758,6 +3959,7 @@ function renderBackups() {
 
     // Also reload if the page was ALREADY on users-view when IIFE ran
     if (window.location.hash === '#users-view') loadUsersFromAPI();
+
 
     // Initial load (covers all other navigation paths)
     loadUsersFromAPI();

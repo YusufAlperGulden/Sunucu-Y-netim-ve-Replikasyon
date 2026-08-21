@@ -89,7 +89,9 @@ def run_background_db_init():
             "ALTER TABLE users ADD COLUMN IF NOT EXISTS email VARCHAR(255)",
             "ALTER TABLE users ADD COLUMN IF NOT EXISTS first_name VARCHAR(100)",
             "ALTER TABLE users ADD COLUMN IF NOT EXISTS last_name VARCHAR(100)",
+            "ALTER TABLE users ADD COLUMN IF NOT EXISTS team VARCHAR(50) DEFAULT 'admins'",
             "ALTER TABLE users ADD COLUMN IF NOT EXISTS timezone VARCHAR(50) DEFAULT 'UTC'",
+
             "ALTER TABLE deploy_jobs ADD COLUMN IF NOT EXISTS log_output TEXT",
             """CREATE TABLE IF NOT EXISTS cloud_credentials (
                 id SERIAL PRIMARY KEY,
@@ -1330,7 +1332,12 @@ def get_schedules(db: Session = Depends(get_db)):
 class UserCreate(BaseModel):
     username: str
     password: str
-    role: str
+    role: Optional[str] = "admin"
+    email: Optional[str] = None
+    first_name: Optional[str] = None
+    last_name: Optional[str] = None
+    team: Optional[str] = "admins"
+    timezone: Optional[str] = "UTC"
 
 @app.get("/api/users", dependencies=[Depends(verify_credentials)])
 def get_users(credentials: HTTPBasicCredentials = Depends(security), db: Session = Depends(get_db)):
@@ -1374,6 +1381,7 @@ def get_users(credentials: HTTPBasicCredentials = Depends(security), db: Session
 
     for u in db_users:
         try:
+            team_val = getattr(u, 'team', None) or ("admins" if u.role == "admin" else "users")
             result.append({
                 "id": u.id,
                 "username": u.username,
@@ -1381,7 +1389,7 @@ def get_users(credentials: HTTPBasicCredentials = Depends(security), db: Session
                 "first_name": u.first_name or u.username.capitalize(),
                 "last_name": u.last_name or "",
                 "role": u.role,
-                "team": "admins" if u.role == "admin" else "viewers",
+                "team": team_val,
                 "timezone": u.timezone or "UTC",
                 "origin": "cmon",
                 "status": "Enabled",
@@ -1402,10 +1410,38 @@ def create_user(payload: UserCreate, db: Session = Depends(get_db)):
     existing = db.query(User).filter(User.username == payload.username).first()
     if existing:
         return JSONResponse(status_code=400, content={"message": "Username already exists"})
-    new_user = User(username=payload.username, password_hash=hash_password(payload.password), role=payload.role)
+    
+    role = payload.role or ("admin" if payload.team == "admins" else "viewer")
+    new_user = User(
+        username=payload.username,
+        password_hash=hash_password(payload.password),
+        role=role,
+        email=payload.email or f"{payload.username}@localhost",
+        first_name=payload.first_name or payload.username.capitalize(),
+        last_name=payload.last_name or "",
+        team=payload.team or "admins",
+        timezone=payload.timezone or "UTC"
+    )
     db.add(new_user)
     db.commit()
-    return {"success": True}
+    db.refresh(new_user)
+    return {
+        "success": True,
+        "user": {
+            "id": new_user.id,
+            "username": new_user.username,
+            "email": new_user.email,
+            "first_name": new_user.first_name,
+            "last_name": new_user.last_name,
+            "role": new_user.role,
+            "team": getattr(new_user, "team", "admins") or "admins",
+            "timezone": new_user.timezone,
+            "origin": "cmon",
+            "status": "Enabled",
+            "created_at": new_user.created_at.strftime("%Y-%m-%d %H:%M:%S") if new_user.created_at else ""
+        }
+    }
+
 
 @app.delete("/api/users/{user_id}", dependencies=[Depends(verify_credentials)])
 def delete_user(user_id: int, db: Session = Depends(get_db)):
