@@ -2767,6 +2767,8 @@ window.renderNodesPage = function() {
     }
 
     if (filteredData.length === 0) {
+        // If we're still loading, don't replace the loading spinner with the empty state
+        if (window.nodesPageLoading) return;
         tbody.innerHTML = `<tr><td colspan="10" style="text-align: center; padding: 40px; color: #9ca3af; font-size: 0.9rem;">There are no matches</td></tr>`;
         return;
     }
@@ -2865,7 +2867,10 @@ window.sortNodes = function(col) {
 
 window.fetchNodesPage = async function() {
     const tbody = document.getElementById('nodes-page-tbody');
-    if (tbody && (!window.nodesPageData || window.nodesPageData.length === 0)) {
+    // Always reset and show loading on every visit
+    window.nodesPageData = [];
+    window.nodesPageLoading = true;
+    if (tbody) {
         tbody.innerHTML = '<tr class="cc-loading-row"><td colspan="10"><div class="cc-loading-container"><div class="cc-spinner cc-spinner-lg"></div><span style="color:#9ca3af;font-size:0.85rem;">Loading nodes...</span></div></td></tr>';
     }
 
@@ -2903,6 +2908,7 @@ window.fetchNodesPage = async function() {
             }
         }
 
+        window.nodesPageLoading = false;
         window.renderNodesPage();
 
         // Fetch live metrics in background to resolve versions and actual statuses
@@ -2931,6 +2937,7 @@ window.fetchNodesPage = async function() {
         }
 
     } catch(e) {
+        window.nodesPageLoading = false;
         console.error('fetchNodesPage error:', e);
         if (tbody) tbody.innerHTML = '<tr><td colspan="10" style="text-align:center;padding:30px;color:#ef4444;">Error: ' + escapeHTML(String(e)) + '</td></tr>';
     }
