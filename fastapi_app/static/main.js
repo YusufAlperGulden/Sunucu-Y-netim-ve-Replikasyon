@@ -298,6 +298,9 @@ document.addEventListener('DOMContentLoaded', () => {
         } else if (hash === 'projects-view') {
             if(typeof showProjectsView === 'function') showProjectsView();
             if(typeof stopDashboardInterval === 'function') stopDashboardInterval();
+        } else if (hash === 'clusters-view') {
+            if(typeof stopDashboardInterval === 'function') stopDashboardInterval();
+            if(typeof fetchProjects === 'function') fetchProjects();
         } else if (hash === 'activity-view' || hash === 'audit-logs-view') {
             if(typeof stopDashboardInterval === 'function') stopDashboardInterval();
             const subtab = window.pendingActivitySubtab || 'alarms';
@@ -677,7 +680,8 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    async function fetchProjects() {
+    window.fetchProjects = async function fetchProjects() {
+    async function fetchProjects() { return window.fetchProjects(); }
         try {
             // Clear any old error messages
             document.querySelectorAll('.loading-state').forEach(el => el.remove());
@@ -1092,6 +1096,7 @@ document.addEventListener('DOMContentLoaded', () => {
             if (el_cc_total_clusters) el_cc_total_clusters.innerText = `${data.length} Clusters`;
             var savedSort = localStorage.getItem('clusters_sort_by') || 'name';
             if (typeof window.applyClustersSort === 'function') window.applyClustersSort(savedSort);
+            if (typeof window.applyClusterFilters === 'function') window.applyClusterFilters();
 
             const centerText = document.getElementById('cc-donut-center-text');
             if (centerText) {

@@ -116,7 +116,7 @@
             <div style="height: 60px; min-height: 60px; display: flex; justify-content: flex-end; align-items: center; padding: 0 40px; gap: 24px; z-index: 100; border-bottom: 1px solid var(--glass-border);">
                 <div id="app-version-badge" style="display: flex; align-items: center; gap: 6px; font-size: 0.82rem; font-weight: 600; color: #4338ca; background: #e0e7ff; padding: 5px 14px; border-radius: 20px; border: 1px solid #c7d2fe; margin-right: auto; letter-spacing: 0.02em; box-shadow: 0 1px 2px rgba(0,0,0,0.04);">
                     <span style="display: inline-block; width: 7px; height: 7px; border-radius: 50%; background: #4f46e5;"></span>
-                    <span>v1.7.0</span>
+                    <span>v1.7.1</span>
                 </div>
 
 
@@ -1994,7 +1994,8 @@
                 <!-- Left Sidebar (Fixed / Non-scrolling) -->
                 <div style="width: 250px; flex-shrink: 0; border-right: 1px solid #e5e7eb; padding: 32px 24px; display: flex; flex-direction: column; gap: 16px; font-size: 0.9rem; background: #fafafa; position: sticky; top: 0; align-self: flex-start; height: 100%; overflow-y: auto; user-select: none;">
                     <div style="color: #c026d3; font-weight: 600; margin-bottom: 8px;">Release Notes</div>
-                    <a href="#changelog-view" onclick="event.preventDefault(); document.getElementById('v1-7-0').scrollIntoView({behavior:'smooth'}); document.querySelectorAll('#changelog-view .cl-sidebar-link').forEach(e=>e.style.fontWeight='normal'); this.style.fontWeight='bold';" class="cl-sidebar-link" style="color: #4b5563; text-decoration: none; font-weight: bold;">v1.7.0 (Latest)</a>
+                    <a href="#changelog-view" onclick="event.preventDefault(); document.getElementById('v1-7-1').scrollIntoView({behavior:'smooth'}); document.querySelectorAll('#changelog-view .cl-sidebar-link').forEach(e=>e.style.fontWeight='normal'); this.style.fontWeight='bold';" class="cl-sidebar-link" style="color: #4b5563; text-decoration: none; font-weight: bold;">v1.7.1 (Latest)</a>
+                    <a href="#changelog-view" onclick="event.preventDefault(); document.getElementById('v1-7-0').scrollIntoView({behavior:'smooth'}); document.querySelectorAll('#changelog-view .cl-sidebar-link').forEach(e=>e.style.fontWeight='normal'); this.style.fontWeight='bold';" class="cl-sidebar-link" style="color: #4b5563; text-decoration: none;">v1.7.0</a>
                     <a href="#changelog-view" onclick="event.preventDefault(); document.getElementById('v1-6-9').scrollIntoView({behavior:'smooth'}); document.querySelectorAll('#changelog-view .cl-sidebar-link').forEach(e=>e.style.fontWeight='normal'); this.style.fontWeight='bold';" class="cl-sidebar-link" style="color: #4b5563; text-decoration: none;">v1.6.9</a>
                     <a href="#changelog-view" onclick="event.preventDefault(); document.getElementById('v1-6-8').scrollIntoView({behavior:'smooth'}); document.querySelectorAll('#changelog-view .cl-sidebar-link').forEach(e=>e.style.fontWeight='normal'); this.style.fontWeight='bold';" class="cl-sidebar-link" style="color: #4b5563; text-decoration: none;">v1.6.8</a>
                     <a href="#changelog-view" onclick="event.preventDefault(); document.getElementById('v1-6-7').scrollIntoView({behavior:'smooth'}); document.querySelectorAll('#changelog-view .cl-sidebar-link').forEach(e=>e.style.fontWeight='normal'); this.style.fontWeight='bold';" class="cl-sidebar-link" style="color: #4b5563; text-decoration: none;">v1.6.7</a>
@@ -2036,6 +2037,12 @@
                     <h1 style="color: #4b5563; font-weight: 300; font-size: 2.2rem; margin-bottom: 24px;">Release Notes</h1>
                     <p style="color: #4b5563; line-height: 1.6; margin-bottom: 40px; font-size: 1.05rem;">Use this page as your guide to stay up to date on the latest enhancements and changes, ensuring you can make the most of ClusterControl's powerful capabilities.</p>
                     
+                    <h2 id="v1-7-1" style="color: #4b5563; font-weight: 300; font-size: 1.8rem; margin-bottom: 20px; border-top: 1px solid #e5e7eb; padding-top: 32px;">v1.7.1</h2>
+                    <h3 id="whats-new-1-7-1" style="color: #4b5563; font-weight: 400; font-size: 1.4rem; margin-bottom: 16px;">What's New</h3>
+                    <ul style="color: #4b5563; line-height: 1.7; padding-left: 20px; margin-bottom: 40px;">
+                        <li><span style="font-weight: 600;">Fix (Clusters View Real-time Router &amp; Filter Rendering):</span> Fixed direct navigation routing for <code>#clusters-view</code> ensuring that the full cluster inventory, live auto-recovery toggles, and metrics graphs render instantly across all sidebar transitions and filter queries.</li>
+                    </ul>
+
                     <h2 id="v1-7-0" style="color: #4b5563; font-weight: 300; font-size: 1.8rem; margin-bottom: 20px; border-top: 1px solid #e5e7eb; padding-top: 32px;">v1.7.0</h2>
                     <h3 id="whats-new-1-7-0" style="color: #4b5563; font-weight: 400; font-size: 1.4rem; margin-bottom: 16px;">What's New</h3>
                     <ul style="color: #4b5563; line-height: 1.7; padding-left: 20px; margin-bottom: 40px;">
@@ -2261,6 +2268,14 @@
                     
                     <div style="display: flex; flex-direction: column; gap: 16px; color: #4b5563;">
                         
+                        <!-- v1.7.1 -->
+                        <div style="display: flex; flex-direction: column; gap: 6px;">
+                            <a href="#changelog-view" onclick="event.preventDefault(); document.getElementById('v1-7-1').scrollIntoView({behavior:'smooth'});" style="color: #111827; text-decoration: none; font-weight: 600; font-size: 0.88rem;">v1.7.1 Release</a>
+                            <div style="margin-left: 12px; display: flex; flex-direction: column; gap: 4px;">
+                                <a href="#changelog-view" onclick="event.preventDefault(); document.getElementById('whats-new-1-7-1').scrollIntoView({behavior:'smooth'});" style="color: #6b7280; text-decoration: none; font-size: 0.82rem;">What's New</a>
+                            </div>
+                        </div>
+
                         <!-- v1.7.0 -->
                         <div style="display: flex; flex-direction: column; gap: 6px;">
                             <a href="#changelog-view" onclick="event.preventDefault(); document.getElementById('v1-7-0').scrollIntoView({behavior:'smooth'});" style="color: #111827; text-decoration: none; font-weight: 600; font-size: 0.88rem;">v1.7.0 Release</a>
@@ -6528,7 +6543,7 @@
 </div>
 </div>
 
-<script src="/static/main.js?v=143"></script>
+<script src="/static/main.js?v=144"></script>
 
 <!-- Modal: Add an external email -->
 <div id="modal-add-external-email" style="display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 9999; align-items: center; justify-content: center;">
