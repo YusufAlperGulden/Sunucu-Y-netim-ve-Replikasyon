@@ -1042,14 +1042,23 @@ Real OS metrics (CPU, RAM, Disk I/O) cannot be fetched directly from PostgreSQL 
                   <table style="width: 100%; border-collapse: collapse; font-size: 0.9rem;">
                       <thead>
                           <tr style="border-bottom: 1px solid var(--glass-border); color: var(--text-muted); text-align: left;">
-                              <th style="padding: 12px 16px; font-weight: 600;">Name <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align:middle;margin-left:4px;"><polyline points="7 14 12 19 17 14"></polyline><polyline points="7 10 12 5 17 10"></polyline></svg></th>
-                              <th style="padding: 12px 16px; font-weight: 600;">Owner <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align:middle;margin-left:4px;"><polyline points="7 14 12 19 17 14"></polyline><polyline points="7 10 12 5 17 10"></polyline></svg></th>
-                              <th style="padding: 12px 16px; font-weight: 600;">Created <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align:middle;margin-left:4px;"><polyline points="7 14 12 19 17 14"></polyline><polyline points="7 10 12 5 17 10"></polyline></svg></th>
+                              <th id="th-team-name" style="padding: 12px 16px; font-weight: 600; cursor: pointer; user-select: none; position: relative;" onmouseenter="showTeamSortTooltip('name')" onmouseleave="hideTeamSortTooltip('name')" onclick="cycleTeamSort('name')">
+                                  Name <span id="icon-team-sort-name" style="margin-left: 4px; font-size: 0.85rem; color: #9ca3af;">⇅</span>
+                                  <div id="tooltip-team-sort-name" style="display: none; position: absolute; top: -30px; left: 12px; background: #111827; color: white; padding: 4px 10px; border-radius: 4px; font-size: 0.75rem; white-space: nowrap; z-index: 100; pointer-events: none; box-shadow: 0 4px 12px rgba(0,0,0,0.15);">Click to sort ascending</div>
+                              </th>
+                              <th id="th-team-owner" style="padding: 12px 16px; font-weight: 600; cursor: pointer; user-select: none; position: relative;" onmouseenter="showTeamSortTooltip('owner')" onmouseleave="hideTeamSortTooltip('owner')" onclick="cycleTeamSort('owner')">
+                                  Owner <span id="icon-team-sort-owner" style="margin-left: 4px; font-size: 0.85rem; color: #9ca3af;">⇅</span>
+                                  <div id="tooltip-team-sort-owner" style="display: none; position: absolute; top: -30px; left: 12px; background: #111827; color: white; padding: 4px 10px; border-radius: 4px; font-size: 0.75rem; white-space: nowrap; z-index: 100; pointer-events: none; box-shadow: 0 4px 12px rgba(0,0,0,0.15);">Click to sort ascending</div>
+                              </th>
+                              <th id="th-team-created" style="padding: 12px 16px; font-weight: 600; cursor: pointer; user-select: none; position: relative;" onmouseenter="showTeamSortTooltip('created')" onmouseleave="hideTeamSortTooltip('created')" onclick="cycleTeamSort('created')">
+                                  Created <span id="icon-team-sort-created" style="margin-left: 4px; font-size: 0.85rem; color: #9ca3af;">⇅</span>
+                                  <div id="tooltip-team-sort-created" style="display: none; position: absolute; top: -30px; left: 12px; background: #111827; color: white; padding: 4px 10px; border-radius: 4px; font-size: 0.75rem; white-space: nowrap; z-index: 100; pointer-events: none; box-shadow: 0 4px 12px rgba(0,0,0,0.15);">Click to sort ascending</div>
+                              </th>
                               <th style="padding: 12px 16px; font-weight: 600; text-align: right;">Actions</th>
                           </tr>
                       </thead>
                       <tbody id="teams-tbody">
-                          <tr style="border-bottom: 1px solid #f3f4f6;">
+                          <tr style="border-bottom: 1px solid #f3f4f6; cursor: pointer;" onclick="openTeamDetails('admins')">
                               <td style="padding: 14px 16px; font-weight: 500; color: #111827;">admins</td>
                               <td style="padding: 14px 16px; font-size: 0.88rem; color: #6b7280;">system</td>
                               <td style="padding: 14px 16px; font-size: 0.88rem; color: #6b7280;">—</td>
@@ -1200,7 +1209,8 @@ Real OS metrics (CPU, RAM, Disk I/O) cannot be fetched directly from PostgreSQL 
                 <!-- Left Sidebar (Fixed / Non-scrolling) -->
                 <div style="width: 250px; flex-shrink: 0; border-right: 1px solid #e5e7eb; padding: 32px 24px; display: flex; flex-direction: column; gap: 16px; font-size: 0.9rem; background: #fafafa; position: sticky; top: 0; align-self: flex-start; height: 100%; overflow-y: auto; user-select: none;">
                     <div style="color: #c026d3; font-weight: 600; margin-bottom: 8px;">Release Notes</div>
-                    <a href="#changelog-view" onclick="event.preventDefault(); document.getElementById('v1-6-3').scrollIntoView({behavior:'smooth'}); document.querySelectorAll('#changelog-view .cl-sidebar-link').forEach(e=>e.style.fontWeight='normal'); this.style.fontWeight='bold';" class="cl-sidebar-link" style="color: #4b5563; text-decoration: none; font-weight: bold;">v1.6.3 (Latest)</a>
+                    <a href="#changelog-view" onclick="event.preventDefault(); document.getElementById('v1-6-4').scrollIntoView({behavior:'smooth'}); document.querySelectorAll('#changelog-view .cl-sidebar-link').forEach(e=>e.style.fontWeight='normal'); this.style.fontWeight='bold';" class="cl-sidebar-link" style="color: #4b5563; text-decoration: none; font-weight: bold;">v1.6.4 (Latest)</a>
+                    <a href="#changelog-view" onclick="event.preventDefault(); document.getElementById('v1-6-3').scrollIntoView({behavior:'smooth'}); document.querySelectorAll('#changelog-view .cl-sidebar-link').forEach(e=>e.style.fontWeight='normal'); this.style.fontWeight='bold';" class="cl-sidebar-link" style="color: #4b5563; text-decoration: none;">v1.6.3</a>
                     <a href="#changelog-view" onclick="event.preventDefault(); document.getElementById('v1-6-2').scrollIntoView({behavior:'smooth'}); document.querySelectorAll('#changelog-view .cl-sidebar-link').forEach(e=>e.style.fontWeight='normal'); this.style.fontWeight='bold';" class="cl-sidebar-link" style="color: #4b5563; text-decoration: none;">v1.6.2</a>
                     <a href="#changelog-view" onclick="event.preventDefault(); document.getElementById('v1-6-1').scrollIntoView({behavior:'smooth'}); document.querySelectorAll('#changelog-view .cl-sidebar-link').forEach(e=>e.style.fontWeight='normal'); this.style.fontWeight='bold';" class="cl-sidebar-link" style="color: #4b5563; text-decoration: none;">v1.6.1</a>
                     <a href="#changelog-view" onclick="event.preventDefault(); document.getElementById('v1-6-0').scrollIntoView({behavior:'smooth'}); document.querySelectorAll('#changelog-view .cl-sidebar-link').forEach(e=>e.style.fontWeight='normal'); this.style.fontWeight='bold';" class="cl-sidebar-link" style="color: #4b5563; text-decoration: none;">v1.6.0</a>
@@ -1235,7 +1245,15 @@ Real OS metrics (CPU, RAM, Disk I/O) cannot be fetched directly from PostgreSQL 
                     <h1 style="color: #4b5563; font-weight: 300; font-size: 2.2rem; margin-bottom: 24px;">Release Notes</h1>
                     <p style="color: #4b5563; line-height: 1.6; margin-bottom: 40px; font-size: 1.05rem;">Use this page as your guide to stay up to date on the latest enhancements and changes, ensuring you can make the most of ClusterControl's powerful capabilities.</p>
                     
+                    <h2 id="v1-6-4" style="color: #4b5563; font-weight: 300; font-size: 1.8rem; margin-bottom: 20px; border-top: 1px solid #e5e7eb; padding-top: 32px;">v1.6.4</h2>
+                    <h3 style="color: #4b5563; font-weight: 400; font-size: 1.4rem; margin-bottom: 16px;">What's New</h3>
+                    <ul style="color: #4b5563; line-height: 1.7; padding-left: 20px; margin-bottom: 40px;">
+                        <li><span style="font-weight: 600;">ClusterControl Team Details Information Modal:</span> Clicking any team name in the User Management Teams table opens the full Team Details modal with user counts, member avatar badges, group permissions breakdown, and complete cluster permission access levels.</li>
+                        <li><span style="font-weight: 600;">3-State Table Header Sorting:</span> Implemented interactive 3-state sorting (Ascending &rarr; Descending &rarr; Cancel sorting) across table column headers with visual direction arrows (▲, ▼, ⇅) and real-time hover tooltips.</li>
+                    </ul>
+
                     <h2 id="v1-6-3" style="color: #4b5563; font-weight: 300; font-size: 1.8rem; margin-bottom: 20px; border-top: 1px solid #e5e7eb; padding-top: 32px;">v1.6.3</h2>
+
                     <h3 style="color: #4b5563; font-weight: 400; font-size: 1.4rem; margin-bottom: 16px;">What's New</h3>
                     <ul style="color: #4b5563; line-height: 1.7; padding-left: 20px; margin-bottom: 40px;">
                         <li><span style="font-weight: 600;">ClusterControl 4-Step Create Team Wizard:</span> Added the complete interactive team creation wizard with step-by-step navigation (<b>Details</b> configuration, <b>Users</b> multi-select tag and search selector with team migration warnings, <b>Permissions</b> toggles for controller settings & cluster permission levels <code>Manage</code>, <code>View</code>, <code>No access</code>, <code>Custom</code>, and <b>Preview</b> summary).</li>
@@ -1756,7 +1774,7 @@ Real OS metrics (CPU, RAM, Disk I/O) cannot be fetched directly from PostgreSQL 
         </div>
     </div>
 
-    <script src="/static/main.js?v=117"></script>
+    <script src="/static/main.js?v=118"></script>
 
 
 
@@ -2711,8 +2729,68 @@ Real OS metrics (CPU, RAM, Disk I/O) cannot be fetched directly from PostgreSQL 
 
                 </div>
             </div>
+    </div>
+
+    <!-- Modal: Team details (ClusterControl Exact) -->
+    <div id="modal-team-details" class="modal-overlay" style="display: none; align-items: center; justify-content: center; z-index: 1050;">
+        <div style="background: white; border-radius: 12px; width: 780px; max-width: 95vw; max-height: 90vh; overflow-y: auto; padding: 32px 40px; position: relative; box-shadow: 0 25px 70px rgba(0,0,0,0.25);">
+            <!-- Close button -->
+            <button onclick="document.getElementById('modal-team-details').style.display='none'" style="position: absolute; right: 24px; top: 24px; background: none; border: 1px solid #e5e7eb; border-radius: 6px; padding: 4px 8px; cursor: pointer; color: #6b7280; font-size: 1.1rem; line-height: 1;">&times;</button>
+            
+            <div style="font-size: 0.95rem; font-weight: 600; color: #111827; margin-bottom: 12px;">Team details</div>
+
+            <!-- Team Name and User count Header -->
+            <div style="text-align: center; margin-bottom: 28px;">
+                <h2 id="td-title" style="font-size: 1.8rem; font-weight: 600; color: #111827; margin: 0 0 6px 0;">admins</h2>
+                <div id="td-usercount" style="font-size: 0.95rem; color: #6b7280;">4 Users</div>
+            </div>
+
+            <!-- Users Section -->
+            <div id="td-users-section" style="margin-bottom: 28px;">
+                <div style="font-size: 0.9rem; font-weight: 600; color: #111827; margin-bottom: 16px;">Users</div>
+                <div id="td-users-list" style="display: flex; gap: 24px; flex-wrap: wrap; align-items: center;">
+                    <!-- User avatar + username chips injected here -->
+                </div>
+            </div>
+
+            <!-- Permissions Section -->
+            <div style="margin-bottom: 28px;">
+                <div style="font-size: 0.9rem; font-weight: 600; color: #111827; margin-bottom: 16px;">Permissions</div>
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px 32px; font-size: 0.88rem; color: #4b5563;">
+                    <div>Change controller configuration: <span id="td-perm-controller" style="color: #16a34a; font-weight: 500;">Yes</span></div>
+                    <div>Manage users and teams: <span id="td-perm-users" style="color: #16a34a; font-weight: 500;">Yes</span></div>
+                    <div>Change LDAP settings: <span id="td-perm-ldap" style="color: #16a34a; font-weight: 500;">Yes</span></div>
+                    <div>Deploy clusters: <span id="td-perm-deploy" style="color: #16a34a; font-weight: 500;">Yes</span></div>
+                </div>
+            </div>
+
+            <!-- Clusters Section -->
+            <div style="margin-bottom: 28px;">
+                <table style="width: 100%; border-collapse: collapse; font-size: 0.88rem;">
+                    <thead>
+                        <tr style="border-bottom: 1px solid #e5e7eb; color: #111827; text-align: left;">
+                            <th style="padding: 10px 0; font-weight: 600;">Cluster</th>
+                            <th style="padding: 10px 0; font-weight: 600;">More info</th>
+                            <th style="padding: 10px 0; font-weight: 600; text-align: right;">Access level</th>
+                        </tr>
+                    </thead>
+                    <tbody id="td-clusters-tbody">
+                        <!-- Cluster rows injected dynamically -->
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- Footer Section -->
+            <div style="display: flex; justify-content: flex-end; align-items: center; padding-top: 16px; border-top: 1px solid #f3f4f6;">
+                <div style="position: relative; display: inline-block;">
+                    <button id="td-btn-edit" style="background: transparent; border: 1px solid #d1d5db; border-radius: 6px; padding: 6px 16px; color: #6b7280; font-size: 0.88rem; cursor: not-allowed; display: flex; align-items: center; gap: 6px;" title="System groups cannot be edited.">
+                        Edit <span style="font-size: 0.75rem; border: 1px solid #9ca3af; border-radius: 50%; width: 14px; height: 14px; display: inline-flex; align-items: center; justify-content: center; font-weight: bold;">i</span>
+                    </button>
+                </div>
+            </div>
         </div>
     </div>
+
 
 
 
@@ -5160,6 +5238,6 @@ Real OS metrics (CPU, RAM, Disk I/O) cannot be fetched directly from PostgreSQL 
   </div>
 </div>
 
-<script src="/static/main.js?v=117"></script>
+<script src="/static/main.js?v=118"></script>
 </body>
 </html>

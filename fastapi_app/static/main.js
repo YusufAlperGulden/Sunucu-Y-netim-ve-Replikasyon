@@ -4225,6 +4225,191 @@ function renderBackups() {
         }
     };
 
+    // ── Team Details Modal & 3-State Sorting ──────────────────────────────
+    let teamSortState = { col: 'none', dir: 'none' };
+
+    window.showTeamSortTooltip = function(col) {
+        const tip = document.getElementById(`tooltip-team-sort-${col}`);
+        if (!tip) return;
+        if (teamSortState.col !== col || teamSortState.dir === 'none') {
+            tip.textContent = 'Click to sort ascending';
+        } else if (teamSortState.dir === 'asc') {
+            tip.textContent = 'Click to sort descending';
+        } else if (teamSortState.dir === 'desc') {
+            tip.textContent = 'Click to cancel sorting';
+        }
+        tip.style.display = 'block';
+    };
+
+    window.hideTeamSortTooltip = function(col) {
+        const tip = document.getElementById(`tooltip-team-sort-${col}`);
+        if (tip) tip.style.display = 'none';
+    };
+
+    window.cycleTeamSort = function(col) {
+        if (teamSortState.col !== col) {
+            teamSortState.col = col;
+            teamSortState.dir = 'asc';
+        } else {
+            if (teamSortState.dir === 'asc') {
+                teamSortState.dir = 'desc';
+            } else if (teamSortState.dir === 'desc') {
+                teamSortState.dir = 'none';
+                teamSortState.col = 'none';
+            } else {
+                teamSortState.dir = 'asc';
+            }
+        }
+
+        // Update Icons
+        ['name', 'owner', 'created'].forEach(c => {
+            const icon = document.getElementById(`icon-team-sort-${c}`);
+            if (icon) {
+                if (teamSortState.col === c) {
+                    icon.innerHTML = teamSortState.dir === 'asc' ? '&#9650;' : (teamSortState.dir === 'desc' ? '&#9660;' : '&#8645;');
+                    icon.style.color = teamSortState.dir === 'none' ? '#9ca3af' : '#3a1c94';
+                } else {
+                    icon.innerHTML = '&#8645;';
+                    icon.style.color = '#9ca3af';
+                }
+            }
+        });
+
+        // Update active tooltip if hovered
+        showTeamSortTooltip(col);
+
+        // Re-render sorted
+        renderTeams(teamsData);
+    };
+
+    window.openTeamDetails = function(teamName) {
+        const tObj = (teamsData || []).find(t => t.name === teamName) || { name: teamName, owner: 'system' };
+        
+        // Find users in this team
+        let members = (usersData || []).filter(u => (u.team || 'admins') === teamName);
+        
+        // Match default demo experience for standard teams if empty
+        if (teamName === 'admins' && members.length <= 1) {
+            const defaultAdminList = [
+                { username: 'admin' },
+                { username: 'demo' },
+                { username: 'demo@severalnines.com' },
+                { username: 'system' }
+            ];
+            // Merge unique
+            const existingNames = new Set(members.map(m => m.username));
+            defaultAdminList.forEach(da => {
+                if (!existingNames.has(da.username)) members.push(da);
+            });
+        } else if (teamName === 'nobody' && members.length === 0) {
+            members = [{ username: 'nobody' }];
+        }
+
+        // Set Title & Count
+        const tTitle = document.getElementById('td-title'); if (tTitle) tTitle.textContent = teamName;
+        const tCount = document.getElementById('td-usercount');
+        if (tCount) {
+            tCount.textContent = `${members.length} User${members.length === 1 ? '' : 's'}`;
+        }
+
+        // Render Users
+        const usersListEl = document.getElementById('td-users-list');
+        const usersSectionEl = document.getElementById('td-users-section');
+        if (usersListEl) {
+            if (members.length === 0) {
+                if (usersSectionEl) usersSectionEl.style.display = 'none';
+            } else {
+                if (usersSectionEl) usersSectionEl.style.display = 'block';
+                const avatarPalettes = [
+                    { bg: '#fed7aa', color: '#ea580c' },
+                    { bg: '#cffafe', color: '#0891b2' },
+                    { bg: '#fbcfe8', color: '#db2777' },
+                    { bg: '#e9d5ff', color: '#9333ea' },
+                    { bg: '#dcfce7', color: '#16a34a' },
+                    { bg: '#e0e7ff', color: '#4338ca' }
+                ];
+
+                usersListEl.innerHTML = members.map((m, idx) => {
+                    const initials = (m.username || 'U').substring(0, 2).toUpperCase();
+                    const p = avatarPalettes[idx % avatarPalettes.length];
+                    return `
+                        <div style="display: flex; flex-direction: column; align-items: center; gap: 8px; width: 68px;">
+                            <div style="width: 44px; height: 44px; border-radius: 50%; background: ${p.bg}; color: ${p.color}; display: flex; align-items: center; justify-content: center; font-size: 0.95rem; font-weight: 600; flex-shrink: 0;">
+                                ${escapeHTML(initials)}
+                            </div>
+                            <span style="font-size: 0.8rem; color: #111827; text-align: center; word-break: break-all; line-height: 1.2; font-weight: 500;">
+                                ${escapeHTML(m.username)}
+                            </span>
+                        </div>
+                    `;
+                }).join('');
+            }
+        }
+
+        // Permissions
+        let pCtrl = true, pUsers = false, pLdap = true, pDeploy = true, pLevel = 'Manage';
+        if (teamName === 'admins') {
+            pCtrl = true; pUsers = true; pLdap = true; pDeploy = true; pLevel = 'Manage';
+        } else if (teamName === 'nobody') {
+            pCtrl = false; pUsers = false; pLdap = false; pDeploy = false; pLevel = 'No access';
+        } else if (teamName === 'users') {
+            pCtrl = false; pUsers = false; pLdap = false; pDeploy = true; pLevel = 'No access';
+        } else if (tObj.permissions_json) {
+            try {
+                const parsed = JSON.parse(tObj.permissions_json);
+                pCtrl = !!parsed.controller_config;
+                pUsers = !!parsed.manage_users_teams;
+                pLdap = !!parsed.ldap_settings;
+                pDeploy = !!parsed.deploy_clusters;
+                pLevel = parsed.cluster_permission_level || 'Manage';
+            } catch (e) {}
+        }
+
+        const setPermEl = (id, val) => {
+            const el = document.getElementById(id);
+            if (el) {
+                el.textContent = val ? 'Yes' : 'No';
+                el.style.color = val ? '#16a34a' : '#6b7280';
+                el.style.fontWeight = val ? '600' : '400';
+            }
+        };
+        setPermEl('td-perm-controller', pCtrl);
+        setPermEl('td-perm-users', pUsers);
+        setPermEl('td-perm-ldap', pLdap);
+        setPermEl('td-perm-deploy', pDeploy);
+
+        // Clusters table
+        const clustersTbody = document.getElementById('td-clusters-tbody');
+        if (clustersTbody) {
+            const clusterList = [
+                { name: 'MSSQL', info: 'MSSQL (ID:27)', color: '#dc2626' },
+                { name: 'MariaDB', info: 'MariaDB (ID:21)', color: '#0d9488' },
+                { name: 'MongoDB Replicaset', info: 'MongoDB Replicaset (ID:30)', color: '#ea580c' },
+                { name: 'Percona MySQL Replication', info: 'Percona MySQL Replication (ID:28)', color: '#f59e0b' },
+                { name: 'Percona XtraDB Cluster', info: 'Percona XtraDB Cluster (ID:23)', color: '#f59e0b' },
+                { name: 'PostgreSQL', info: 'PostgreSQL (ID:15)', color: '#2563eb' },
+                { name: 'Timescale', info: 'Timescale (ID:29)', color: '#111827' },
+                { name: 'Valkey', info: 'Valkey (ID:25)', color: '#0284c7' }
+            ];
+
+            clustersTbody.innerHTML = clusterList.map(c => `
+                <tr style="border-bottom: 1px solid #f3f4f6;">
+                    <td style="padding: 12px 0; font-weight: 500; color: #111827;">${c.name}</td>
+                    <td style="padding: 12px 0; color: #4b5563;">
+                        <span style="display: inline-flex; align-items: center; gap: 8px;">
+                            <span style="width: 8px; height: 8px; border-radius: 50%; background: ${c.color};"></span>
+                            ${c.info}
+                        </span>
+                    </td>
+                    <td style="padding: 12px 0; text-align: right; color: ${pLevel === 'Manage' ? '#111827' : '#6b7280'}; font-weight: ${pLevel === 'Manage' ? '600' : '400'};">${pLevel}</td>
+                </tr>
+            `).join('');
+        }
+
+        const modal = document.getElementById('modal-team-details');
+        if (modal) modal.style.display = 'flex';
+    };
+
     let teamsData = [];
     async function loadTeamsFromAPI() {
         try {
@@ -4250,13 +4435,24 @@ function renderBackups() {
             ];
         }
 
-        tbody.innerHTML = teams.map(t => `
-            <tr style="border-bottom: 1px solid #f3f4f6;">
+        let displayTeams = [...teams];
+        if (teamSortState.col !== 'none' && teamSortState.dir !== 'none') {
+            const col = teamSortState.col;
+            const dir = teamSortState.dir === 'asc' ? 1 : -1;
+            displayTeams.sort((a, b) => {
+                const valA = (a[col] || a.name || '').toString().toLowerCase();
+                const valB = (b[col] || b.name || '').toString().toLowerCase();
+                return valA.localeCompare(valB) * dir;
+            });
+        }
+
+        tbody.innerHTML = displayTeams.map(t => `
+            <tr style="border-bottom: 1px solid #f3f4f6; cursor: pointer; transition: background 0.12s;" onmouseenter="this.style.background='#f9fafb'" onmouseleave="this.style.background=''" onclick="openTeamDetails('${escapeHTML(t.name)}')">
                 <td style="padding: 14px 16px; font-weight: 500; color: #111827;">${escapeHTML(t.name)}</td>
                 <td style="padding: 14px 16px; font-size: 0.88rem; color: #6b7280;">${escapeHTML(t.owner || 'admin')}</td>
                 <td style="padding: 14px 16px; font-size: 0.88rem; color: #6b7280;">${escapeHTML(t.created_at || 'Just now')}</td>
                 <td style="padding: 14px 16px; text-align: right;">
-                    <button style="background: transparent; border: 1px solid #e5e7eb; border-radius: 4px; padding: 4px 10px; cursor: pointer; color: #6b7280; font-size: 0.82rem;">···</button>
+                    <button onclick="event.stopPropagation();" style="background: transparent; border: 1px solid #e5e7eb; border-radius: 4px; padding: 4px 10px; cursor: pointer; color: #6b7280; font-size: 0.82rem;">···</button>
                 </td>
             </tr>
         `).join('');
@@ -4270,6 +4466,7 @@ function renderBackups() {
         const allNames = Array.from(new Set([...defaultList, ...teams.map(t => t.name)]));
         userTeamSelect.innerHTML = allNames.map(name => `<option value="${escapeHTML(name)}" ${name === currentVal ? 'selected' : ''}>${escapeHTML(name)}</option>`).join('');
     }
+
 
     // Reload whenever user navigates TO users-view (handles hash changes after IIFE runs)
     window.addEventListener('hashchange', function() {
