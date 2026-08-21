@@ -3482,14 +3482,13 @@ function renderBackups() {
     function renderUsers() {
         const tbody = document.getElementById('users-tbody');
         if (!tbody) return;
-        tbody.innerHTML = '';
 
         if (usersData.length === 0) {
-            tbody.innerHTML = `<tr><td colspan="8" style="padding:60px 24px;text-align:center;color:#9ca3af;">
-                <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="#d1d5db" stroke-width="1.5" style="display:block;margin:0 auto 12px;"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
-                No users created yet.</td></tr>`;
+            loadCurrentUserFallback();
             return;
         }
+        tbody.innerHTML = '';
+
 
         let sorted = [...usersData];
         if (currentSort === 'asc') sorted.sort((a, b) => a.username.localeCompare(b.username));

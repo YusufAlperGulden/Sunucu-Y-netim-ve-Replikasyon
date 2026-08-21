@@ -1018,10 +1018,19 @@ Real OS metrics (CPU, RAM, Disk I/O) cannot be fetched directly from PostgreSQL 
                           </tr>
                       </thead>
                       <tbody id="users-tbody">
-                          <tr>
-                              <td colspan="8" style="padding: 40px; text-align: center; color: var(--text-muted);">
-                                  <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="#e5e7eb" stroke-width="2" style="margin: 0 auto 16px auto; display: block;"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M23 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg>
-                                  No users created yet.
+                          <tr style="border-bottom: 1px solid #f3f4f6; cursor: pointer; transition: background 0.12s;" onmouseenter="this.style.background='#f9fafb'" onmouseleave="this.style.background=''" onclick="openUserDetails({username:'admin',email:'admin@localhost',first_name:'Admin',last_name:'',role:'admin',team:'admins',timezone:'UTC',origin:'cmon',status:'Enabled'})">
+                              <td style="padding: 14px 24px; display: flex; align-items: center; gap: 10px; font-weight: 500; color: #111827;">
+                                  <div style="width: 32px; height: 32px; border-radius: 50%; background: #ffe4e6; color: #e11d48; display: flex; align-items: center; justify-content: center; font-size: 0.8rem; font-weight: 700; flex-shrink: 0;">AD</div>
+                                  <span>admin</span>
+                              </td>
+                              <td style="padding: 14px 24px; font-size: 0.88rem; color: #374151;">admin@localhost</td>
+                              <td style="padding: 14px 24px; font-size: 0.88rem; color: #374151;">admins</td>
+                              <td style="padding: 14px 24px; font-size: 0.88rem; color: #374151;">Admin</td>
+                              <td style="padding: 14px 24px; font-size: 0.88rem; color: #374151;"></td>
+                              <td style="padding: 14px 24px; font-size: 0.88rem; font-weight: 600; color: #16a34a;">Enabled</td>
+                              <td style="padding: 14px 24px; font-size: 0.88rem; color: #6b7280;">System</td>
+                              <td style="padding: 14px 24px;">
+                                  <button onclick="event.stopPropagation();" style="background: transparent; border: 1px solid #e5e7eb; border-radius: 4px; padding: 4px 10px; cursor: pointer; color: #6b7280; font-size: 0.82rem;">···</button>
                               </td>
                           </tr>
                       </tbody>
@@ -1726,7 +1735,7 @@ Real OS metrics (CPU, RAM, Disk I/O) cannot be fetched directly from PostgreSQL 
         </div>
     </div>
 
-    <script src="/static/main.js?v=114"></script>
+    <script src="/static/main.js?v=115"></script>
 
 
 
@@ -4703,6 +4712,6 @@ Real OS metrics (CPU, RAM, Disk I/O) cannot be fetched directly from PostgreSQL 
   </div>
 </div>
 
-<script src="/static/main.js?v=114"></script>
+<script src="/static/main.js?v=115"></script>
 </body>
 </html>
