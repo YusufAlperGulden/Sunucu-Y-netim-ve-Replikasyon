@@ -1474,9 +1474,12 @@ def create_backup(payload: BackupWizardCreate, background_tasks: BackgroundTasks
     }
 
 @app.get("/api/backups", dependencies=[Depends(verify_credentials)])
-def get_backups(db: Session = Depends(get_db)):
+def get_backups(project_id: Optional[int] = None, db: Session = Depends(get_db)):
     from models import BackupJob
-    jobs = db.query(BackupJob).order_by(BackupJob.id.desc()).all()
+    query = db.query(BackupJob)
+    if project_id:
+        query = query.filter(BackupJob.project_id == project_id)
+    jobs = query.order_by(BackupJob.id.desc()).all()
     results = []
     for j in jobs:
         is_cloud = bool(j.cloud_credential_id or (j.storage_location and 'cloud' in j.storage_location.lower()))
@@ -1602,9 +1605,12 @@ def create_schedule(payload: ScheduleCreate, db: Session = Depends(get_db)):
     return {"success": True, "message": "Schedule created"}
 
 @app.get("/api/backups/schedules", dependencies=[Depends(verify_credentials)])
-def get_schedules(db: Session = Depends(get_db)):
+def get_schedules(project_id: Optional[int] = None, db: Session = Depends(get_db)):
     from models import BackupSchedule
-    scheds = db.query(BackupSchedule).order_by(BackupSchedule.id.desc()).all()
+    query = db.query(BackupSchedule)
+    if project_id:
+        query = query.filter(BackupSchedule.project_id == project_id)
+    scheds = query.order_by(BackupSchedule.id.desc()).all()
     results = []
     for s in scheds:
         results.append({
