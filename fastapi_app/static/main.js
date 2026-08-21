@@ -3682,50 +3682,7 @@ function renderBackups() {
             const el = document.getElementById('ud-cluster-access');
             if (el) el.textContent = 'Unable to load clusters.';
         });
-    }; and teams', isAdmin)}
-                    ${perm('Change LDAP settings', isAdmin)}
-                    ${perm('Deploy clusters', isAdmin)}
-                </div>
-            </div>
-
-            <!-- Cluster access table -->
-            <div style="margin-bottom:24px;">
-                <div style="font-size:0.9rem;font-weight:600;color:#111827;margin-bottom:10px;">Cluster access</div>
-                <div id="ud-cluster-access" style="font-size:0.84rem;color:#6b7280;">Loading clusters…</div>
-            </div>
-
-            <!-- Footer: Edit + Close -->
-            <div style="display:flex;justify-content:space-between;align-items:center;">
-                <button onclick="window.openEditUserModal(${JSON.stringify(u).replace(/"/g,'&quot;')})"
-                  style="padding:9px 24px;background:#3a1c94;color:white;border:none;border-radius:8px;font-size:0.88rem;font-weight:600;cursor:pointer;"
-                  onmouseover="this.style.background='#2d1570'" onmouseout="this.style.background='#3a1c94'">Edit</button>
-                <button onclick="document.getElementById('modal-user-details').style.display='none'"
-                  style="padding:9px 20px;border:1px solid #d1d5db;background:white;color:#374151;border-radius:8px;font-size:0.88rem;cursor:pointer;">Close</button>
-            </div>
-        </div>`;
-
-        overlay.style.display = 'flex';
-
-        // Load clusters asynchronously
-        apiFetch('/api/projects').then(r => r.ok ? r.json() : []).then(projects => {
-            const el = document.getElementById('ud-cluster-access');
-            if (!el) return;
-            if (!projects.length) { el.textContent = 'No clusters.'; return; }
-            let rows = projects.map(p => `
-                <div style="display:grid;grid-template-columns:1fr 1fr auto;gap:4px 16px;padding:8px 0;border-bottom:1px solid #f3f4f6;align-items:center;">
-                    <span style="color:#374151;font-weight:500;">${escapeHTML(p.name)}</span>
-                    <span style="color:#6b7280;font-size:0.82rem;">ID:${p.id}</span>
-                    <span style="color:#374151;font-size:0.82rem;">Manage</span>
-                </div>`).join('');
-            el.innerHTML = `
-                <div style="display:grid;grid-template-columns:1fr 1fr auto;gap:4px 16px;padding:6px 0;border-bottom:2px solid #e5e7eb;margin-bottom:4px;">
-                    <span style="font-weight:600;font-size:0.82rem;color:#6b7280;text-transform:uppercase;">Cluster</span>
-                    <span style="font-weight:600;font-size:0.82rem;color:#6b7280;text-transform:uppercase;">More info</span>
-                    <span style="font-weight:600;font-size:0.82rem;color:#6b7280;text-transform:uppercase;">Access level</span>
-                </div>
-                ${rows}`;
-        }).catch(() => {});
-    }
+    };
 
     // ── Edit user modal ────────────────────────────────────────────────────
     window.openEditUserModal = function(u) {

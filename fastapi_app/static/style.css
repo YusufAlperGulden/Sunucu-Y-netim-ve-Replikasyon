@@ -304,8 +304,6 @@ body {
     backdrop-filter: blur(4px);
 }
 
-}
-
 @keyframes dataFlowRight {
     0% { left: -20%; opacity: 0; }
     10% { opacity: 1; }
