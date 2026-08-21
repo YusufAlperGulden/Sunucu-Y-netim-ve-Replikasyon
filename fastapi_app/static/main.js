@@ -3222,8 +3222,14 @@ async function loadAlarmAudit() {
 
 // ── ClusterControl Backup Wizard & Table ──────────────────────────────────────
 
-let currentBackupStep = 1;
-let backupIsCloudUpload = false;
+let backupWizardState = {
+    method: 'pgdumpall/pgdump',
+    dumpType: 'Schema And Data',
+    cloudUpload: false,
+    cloudStream: true,
+    currentStepIndex: 1,
+    activeStepKey: 'config'
+};
 let backupIsCompression = true;
 let backupIsRetention = true;
 let allProjectsForBackup = [];
@@ -3293,21 +3299,29 @@ window.openCreateBackupConfigModal = async function() {
     const modal = document.getElementById('modal-create-backup-config');
     if (!modal) return;
 
-    currentBackupStep = 1;
-    setBackupStep(1);
-    backupIsCloudUpload = false;
+    backupWizardState = {
+        method: 'pgdumpall/pgdump',
+        dumpType: 'Schema And Data',
+        cloudUpload: false,
+        cloudStream: true,
+        currentStepIndex: 1,
+        activeStepKey: 'config'
+    };
+    backupIsCompression = true;
+    backupIsRetention = true;
+
     updateCloudToggleUI();
+    updateStreamToggleUI();
+    renderBackupStepperNav();
 
     const selectCluster = document.getElementById('backup-config-cluster');
     const selectHost = document.getElementById('backup-config-host');
     const selectCloudCred = document.getElementById('backup-cloud-cred-select');
+    const selectMethod = document.getElementById('backup-config-method');
 
-    if (selectCluster) {
-        selectCluster.innerHTML = '<option value="">Loading clusters...</option>';
-    }
-    if (selectHost) {
-        selectHost.innerHTML = '<option value="">Select a cluster first...</option>';
-    }
+    if (selectMethod) selectMethod.value = 'pgdumpall/pgdump';
+    if (selectCluster) selectCluster.innerHTML = '<option value="">Loading clusters...</option>';
+    if (selectHost) selectHost.innerHTML = '<option value="">Select a cluster first...</option>';
 
     modal.style.display = 'flex';
 
@@ -3333,14 +3347,26 @@ window.openCreateBackupConfigModal = async function() {
 
             selectCluster.innerHTML = '<option value="">Select a cluster...</option>' +
                 allProjectsForBackup.map(p => `<option value="${p.id}">${(p.db_type === 'mssql' || (p.name||'').toLowerCase().includes('mssql')) ? '🗄️ MSSQL' : '🐘 PostgreSQL'} (${p.name || 'Cluster'} ID:${p.id})</option>`).join('');
+            
+            // Auto-select first cluster if available
+            if (allProjectsForBackup.length > 0) {
+                selectCluster.value = allProjectsForBackup[0].id;
+                onBackupClusterSelect();
+            }
         }
 
-        if (credRes.ok && selectCloudCred) {
-            allCloudCredsForBackup = await credRes.json();
-            if (allCloudCredsForBackup.length) {
-                selectCloudCred.innerHTML = allCloudCredsForBackup.map(c => `<option value="${c.id}">${escapeHTML(c.provider)} - ${escapeHTML(c.label)} (${escapeHTML(c.bucket || 'default')})</option>`).join('');
+        if (selectCloudCred) {
+            if (credRes.ok) {
+                allCloudCredsForBackup = await credRes.json();
+                if (allCloudCredsForBackup.length) {
+                    selectCloudCred.innerHTML = '<option value="">Create new credentials</option>' +
+                        allCloudCredsForBackup.map(c => `<option value="${c.id}">${escapeHTML(c.provider)} - ${escapeHTML(c.label)} (${escapeHTML(c.bucket || 'default')})</option>`).join('');
+                    selectCloudCred.value = allCloudCredsForBackup[0].id;
+                } else {
+                    selectCloudCred.innerHTML = '<option value="">Create new credentials (AWS S3 / Google Cloud / Azure)</option>';
+                }
             } else {
-                selectCloudCred.innerHTML = '<option value="">No Cloud Credentials added yet (Settings &gt; Cloud Storage)</option>';
+                selectCloudCred.innerHTML = '<option value="">Create new credentials</option>';
             }
         }
     } catch(e) {
@@ -3359,6 +3385,7 @@ window.onBackupClusterSelect = function() {
     const methodSelect = document.getElementById('backup-config-method');
     const dumpTypeContainer = document.getElementById('bk-dumptype-container');
     const alertPitr = document.getElementById('bk-alert-pitr');
+    const alertPitrEnabled = document.getElementById('bk-alert-pitr-enabled');
     const alertPartial = document.getElementById('bk-alert-partial');
 
     const pid = parseInt(clusterSelect.value);
@@ -3378,14 +3405,19 @@ window.onBackupClusterSelect = function() {
         `;
         if (dumpTypeContainer) dumpTypeContainer.style.display = 'none';
         if (alertPitr) alertPitr.style.display = 'none';
+        if (alertPitrEnabled) alertPitrEnabled.style.display = 'none';
         if (alertPartial) alertPartial.style.display = 'none';
     } else {
         methodSelect.innerHTML = `
             <option value="pgdumpall/pgdump">pgdumpall/pgdump</option>
             <option value="pg_basebackup">pg_basebackup</option>
+            <option value="pgbackrestfull">pgbackrestfull</option>
+            <option value="pgbackrestdiff">pgbackrestdiff</option>
+            <option value="pgbackrestincr">pgbackrestincr</option>
         `;
         if (dumpTypeContainer) dumpTypeContainer.style.display = 'block';
         if (alertPitr) alertPitr.style.display = 'block';
+        if (alertPitrEnabled) alertPitrEnabled.style.display = 'none';
         if (alertPartial) alertPartial.style.display = 'block';
     }
 
@@ -3399,106 +3431,258 @@ window.onBackupClusterSelect = function() {
     } else {
         hostSelect.innerHTML = `<option value="1">localhost:${isMssql ? 1433 : 5432} (Primary)</option>`;
     }
+
+    onBackupMethodChange();
 };
 
 window.onBackupMethodChange = function() {
-    const method = document.getElementById('backup-config-method')?.value;
+    const methodSelect = document.getElementById('backup-config-method');
+    const method = methodSelect ? methodSelect.value : 'pgdumpall/pgdump';
+    backupWizardState.method = method;
+
     const alertPitr = document.getElementById('bk-alert-pitr');
-    if (alertPitr) {
-        alertPitr.style.display = (method === 'pgdumpall/pgdump') ? 'block' : 'none';
+    const alertPitrEnabled = document.getElementById('bk-alert-pitr-enabled');
+    const alertPartial = document.getElementById('bk-alert-partial');
+    const dumpTypeContainer = document.getElementById('bk-dumptype-container');
+    const wrapStream = document.getElementById('wrap-toggle-bk-stream');
+    const toggleCloud = document.getElementById('toggle-backup-cloud');
+    const labelCloud = document.getElementById('label-toggle-backup-cloud');
+    const thumbCloud = document.getElementById('toggle-thumb-backup-cloud');
+
+    if (method === 'pg_basebackup') {
+        if (alertPitr) alertPitr.style.display = 'none';
+        if (alertPitrEnabled) alertPitrEnabled.style.display = 'block';
+        if (alertPartial) alertPartial.style.display = 'none';
+        if (dumpTypeContainer) dumpTypeContainer.style.display = 'none';
+
+        // In pg_basebackup, Upload to cloud is locked ON and Stream toggle appears
+        backupWizardState.cloudUpload = true;
+        if (toggleCloud && labelCloud && thumbCloud) {
+            toggleCloud.style.background = '#3a1c94';
+            toggleCloud.style.opacity = '0.85';
+            toggleCloud.style.cursor = 'default';
+            labelCloud.textContent = 'On';
+            labelCloud.style.left = '6px';
+            labelCloud.style.right = '';
+            thumbCloud.style.transform = 'translateX(24px)';
+        }
+
+        if (wrapStream) wrapStream.style.display = 'flex';
+        backupWizardState.cloudStream = true;
+        updateStreamToggleUI();
+    } else {
+        if (alertPitr) alertPitr.style.display = 'block';
+        if (alertPitrEnabled) alertPitrEnabled.style.display = 'none';
+        if (alertPartial) alertPartial.style.display = 'block';
+        if (dumpTypeContainer) dumpTypeContainer.style.display = 'block';
+
+        if (wrapStream) wrapStream.style.display = 'none';
+        backupWizardState.cloudStream = false;
+
+        if (toggleCloud) {
+            toggleCloud.style.opacity = '1';
+            toggleCloud.style.cursor = 'pointer';
+        }
+        updateCloudToggleUI();
     }
+
+    renderBackupStepperNav();
 };
 
 window.toggleBackupCloudSwitch = function() {
-    backupIsCloudUpload = !backupIsCloudUpload;
+    if (backupWizardState.method === 'pg_basebackup') return; // Locked in basebackup
+    backupWizardState.cloudUpload = !backupWizardState.cloudUpload;
     updateCloudToggleUI();
+    renderBackupStepperNav();
 };
 
 function updateCloudToggleUI() {
     const sw = document.getElementById('toggle-backup-cloud');
+    const label = document.getElementById('label-toggle-backup-cloud');
     const thumb = document.getElementById('toggle-thumb-backup-cloud');
-    const localPane = document.getElementById('bk-storage-local-pane');
-    const cloudPane = document.getElementById('bk-storage-cloud-pane');
+    if (!sw || !label || !thumb) return;
 
-    if (sw && thumb) {
-        sw.style.background = backupIsCloudUpload ? '#3a1c94' : '#d1d5db';
-        thumb.style.transform = backupIsCloudUpload ? 'translateX(20px)' : 'translateX(0)';
+    if (backupWizardState.cloudUpload) {
+        sw.style.background = '#3a1c94';
+        label.textContent = 'On';
+        label.style.left = '6px';
+        label.style.right = '';
+        thumb.style.transform = 'translateX(24px)';
+    } else {
+        sw.style.background = '#d1d5db';
+        label.textContent = 'Off';
+        label.style.left = '';
+        label.style.right = '6px';
+        thumb.style.transform = 'translateX(0)';
     }
-    if (localPane) localPane.style.display = backupIsCloudUpload ? 'none' : 'block';
-    if (cloudPane) cloudPane.style.display = backupIsCloudUpload ? 'block' : 'none';
+}
+
+window.toggleBackupStreamSwitch = function() {
+    backupWizardState.cloudStream = !backupWizardState.cloudStream;
+    updateStreamToggleUI();
+    renderBackupStepperNav();
+};
+
+function updateStreamToggleUI() {
+    const sw = document.getElementById('toggle-backup-stream');
+    const label = document.getElementById('label-toggle-backup-stream');
+    const thumb = document.getElementById('toggle-thumb-backup-stream');
+    if (!sw || !label || !thumb) return;
+
+    if (backupWizardState.cloudStream) {
+        sw.style.background = '#3a1c94';
+        label.textContent = 'On';
+        label.style.left = '6px';
+        label.style.right = '';
+        thumb.style.transform = 'translateX(24px)';
+    } else {
+        sw.style.background = '#d1d5db';
+        label.textContent = 'Off';
+        label.style.left = '';
+        label.style.right = '6px';
+        thumb.style.transform = 'translateX(0)';
+    }
 }
 
 window.toggleBackupCompSwitch = function() {
     backupIsCompression = !backupIsCompression;
     const sw = document.getElementById('toggle-backup-comp');
+    const label = document.getElementById('label-toggle-backup-comp');
     const thumb = document.getElementById('toggle-thumb-backup-comp');
     if (sw && thumb) {
         sw.style.background = backupIsCompression ? '#3a1c94' : '#d1d5db';
-        thumb.style.transform = backupIsCompression ? 'translateX(18px)' : 'translateX(0)';
+        thumb.style.transform = backupIsCompression ? 'translateX(24px)' : 'translateX(0)';
+        if (label) {
+            label.textContent = backupIsCompression ? 'On' : 'Off';
+            label.style.left = backupIsCompression ? '6px' : '';
+            label.style.right = backupIsCompression ? '' : '6px';
+        }
     }
 };
 
 window.toggleBackupRetentionSwitch = function() {
     backupIsRetention = !backupIsRetention;
     const sw = document.getElementById('toggle-backup-retention');
+    const label = document.getElementById('label-toggle-backup-retention');
     const thumb = document.getElementById('toggle-thumb-backup-retention');
     if (sw && thumb) {
         sw.style.background = backupIsRetention ? '#3a1c94' : '#d1d5db';
-        thumb.style.transform = backupIsRetention ? 'translateX(18px)' : 'translateX(0)';
+        thumb.style.transform = backupIsRetention ? 'translateX(24px)' : 'translateX(0)';
+        if (label) {
+            label.textContent = backupIsRetention ? 'On' : 'Off';
+            label.style.left = backupIsRetention ? '6px' : '';
+            label.style.right = backupIsRetention ? '' : '6px';
+        }
     }
 };
 
-window.toggleGenericSwitch = function(swId, thumbId, defaultOn = false) {
+window.toggleGenericPillSwitch = function(swId, thumbId, labelId, defaultOn = false) {
     const sw = document.getElementById(swId);
     const thumb = document.getElementById(thumbId);
+    const label = document.getElementById(labelId);
     if (!sw || !thumb) return;
-    const isOn = sw.getAttribute('data-on') === 'true';
+    const isOn = sw.getAttribute('data-on') === 'true' || (defaultOn && sw.getAttribute('data-on') === null);
     const newState = !isOn;
     sw.setAttribute('data-on', newState ? 'true' : 'false');
     sw.style.background = newState ? '#3a1c94' : '#d1d5db';
-    thumb.style.transform = newState ? 'translateX(18px)' : 'translateX(0)';
+    thumb.style.transform = newState ? 'translateX(24px)' : 'translateX(0)';
+    if (label) {
+        label.textContent = newState ? 'On' : 'Off';
+        label.style.left = newState ? '6px' : '';
+        label.style.right = newState ? '' : '6px';
+    }
 };
 
-function setBackupStep(step) {
-    currentBackupStep = step;
-    for (let i = 1; i <= 4; i++) {
-        const pane = document.getElementById(`bk-step-pane-${i}`);
-        const nav = document.getElementById(`bk-step-nav-${i}`);
-        const badge = document.getElementById(`bk-step-badge-${i}`);
-
-        if (pane) pane.style.display = (i === step) ? 'block' : 'none';
-        if (nav && badge) {
-            if (i < step) {
-                nav.style.color = '#10b981';
-                badge.style.background = '#10b981';
-                badge.style.color = 'white';
-                badge.style.border = 'none';
-                badge.innerHTML = '✓';
-            } else if (i === step) {
-                nav.style.color = '#3a1c94';
-                badge.style.background = '#3a1c94';
-                badge.style.color = 'white';
-                badge.style.border = 'none';
-                badge.innerHTML = i.toString();
-            } else {
-                nav.style.color = '#9ca3af';
-                badge.style.background = 'transparent';
-                badge.style.color = '#9ca3af';
-                badge.style.border = '2px solid #d1d5db';
-                badge.innerHTML = i.toString();
-            }
+function getBackupStepsList() {
+    if (backupWizardState.method === 'pg_basebackup') {
+        if (backupWizardState.cloudStream) {
+            return [
+                { num: 1, key: 'config', label: 'Configuration' },
+                { num: 2, key: 'advanced', label: 'Advanced settings' },
+                { num: 3, key: 'cloud', label: 'Cloud storage' },
+                { num: 4, key: 'preview', label: 'Preview' }
+            ];
+        } else {
+            return [
+                { num: 1, key: 'config', label: 'Configuration' },
+                { num: 2, key: 'advanced', label: 'Advanced settings' },
+                { num: 3, key: 'local', label: 'Local storage' },
+                { num: 4, key: 'cloud', label: 'Cloud storage' },
+                { num: 5, key: 'preview', label: 'Preview' }
+            ];
+        }
+    } else {
+        if (backupWizardState.cloudUpload) {
+            return [
+                { num: 1, key: 'config', label: 'Configuration' },
+                { num: 2, key: 'advanced', label: 'Advanced settings' },
+                { num: 3, key: 'local', label: 'Local storage' },
+                { num: 4, key: 'cloud', label: 'Cloud storage' },
+                { num: 5, key: 'preview', label: 'Preview' }
+            ];
+        } else {
+            return [
+                { num: 1, key: 'config', label: 'Configuration' },
+                { num: 2, key: 'advanced', label: 'Advanced settings' },
+                { num: 3, key: 'local', label: 'Local storage' },
+                { num: 4, key: 'preview', label: 'Preview' }
+            ];
         }
     }
+}
 
+window.renderBackupStepperNav = function() {
+    const steps = getBackupStepsList();
+    const navContainer = document.getElementById('bk-stepper-nav-items');
+    if (!navContainer) return;
+
+    if (backupWizardState.currentStepIndex > steps.length) {
+        backupWizardState.currentStepIndex = steps.length;
+    }
+    const currentStep = steps[backupWizardState.currentStepIndex - 1] || steps[0];
+    backupWizardState.activeStepKey = currentStep.key;
+
+    navContainer.innerHTML = steps.map((s, idx) => {
+        const stepNum = idx + 1;
+        const isDone = stepNum < backupWizardState.currentStepIndex;
+        const isActive = stepNum === backupWizardState.currentStepIndex;
+        const bg = isDone ? '#10b981' : isActive ? '#3a1c94' : 'transparent';
+        const border = isDone ? 'none' : isActive ? 'none' : '2px solid #d1d5db';
+        const color = (isDone || isActive) ? 'white' : '#9ca3af';
+        const text = isDone ? '✓' : String(stepNum);
+        const labelColor = isActive ? '#3a1c94' : isDone ? '#10b981' : '#9ca3af';
+        const fontW = isActive ? '600' : '500';
+
+        return `
+            <div onclick="jumpToBackupStep(${stepNum})" style="display: flex; align-items: center; gap: 12px; cursor: pointer; color: ${labelColor}; font-weight: ${fontW}; font-size: 0.9rem;">
+                <div style="width: 24px; height: 24px; border-radius: 50%; background: ${bg}; border: ${border}; color: ${color}; display: flex; align-items: center; justify-content: center; font-size: 0.75rem; font-weight: 700; flex-shrink: 0;">${text}</div>
+                ${escapeHTML(s.label)}
+            </div>
+        `;
+    }).join('');
+
+    // Toggle Panes
+    ['config', 'advanced', 'local', 'cloud', 'preview'].forEach(k => {
+        const pane = document.getElementById(`bk-pane-${k}`);
+        if (pane) pane.style.display = (k === currentStep.key) ? 'block' : 'none';
+    });
+
+    // Cloud Pane: Toggle "Delete after upload" visibility
+    const wrapDelAfter = document.getElementById('wrap-del-local-after-upload');
+    if (wrapDelAfter) {
+        wrapDelAfter.style.display = (backupWizardState.method === 'pg_basebackup' && backupWizardState.cloudStream) ? 'none' : 'flex';
+    }
+
+    // Update Footer Buttons
     const btnBack = document.getElementById('btn-bk-back');
     const btnNext = document.getElementById('btn-bk-next');
     if (btnBack) {
-        btnBack.disabled = (step === 1);
-        btnBack.style.color = (step === 1) ? '#9ca3af' : '#374151';
-        btnBack.style.cursor = (step === 1) ? 'not-allowed' : 'pointer';
+        btnBack.disabled = (backupWizardState.currentStepIndex === 1);
+        btnBack.style.color = (backupWizardState.currentStepIndex === 1) ? '#9ca3af' : '#374151';
+        btnBack.style.cursor = (backupWizardState.currentStepIndex === 1) ? 'not-allowed' : 'pointer';
     }
     if (btnNext) {
-        if (step === 4) {
+        if (backupWizardState.currentStepIndex === steps.length) {
             btnNext.innerText = 'Create';
             btnNext.onclick = submitCreateBackup;
             updateBackupPreview();
@@ -3507,24 +3691,39 @@ function setBackupStep(step) {
             btnNext.onclick = nextBackupStep;
         }
     }
-}
+};
 
-window.nextBackupStep = function() {
-    if (currentBackupStep === 1) {
+window.jumpToBackupStep = function(stepNum) {
+    if (stepNum > backupWizardState.currentStepIndex) {
         const clusterVal = document.getElementById('backup-config-cluster')?.value;
         if (!clusterVal) {
             alert('Please select a Cluster first.');
             return;
         }
     }
-    if (currentBackupStep < 4) {
-        setBackupStep(currentBackupStep + 1);
+    backupWizardState.currentStepIndex = stepNum;
+    renderBackupStepperNav();
+};
+
+window.nextBackupStep = function() {
+    const steps = getBackupStepsList();
+    if (backupWizardState.currentStepIndex === 1) {
+        const clusterVal = document.getElementById('backup-config-cluster')?.value;
+        if (!clusterVal) {
+            alert('Please select a Cluster first.');
+            return;
+        }
+    }
+    if (backupWizardState.currentStepIndex < steps.length) {
+        backupWizardState.currentStepIndex++;
+        renderBackupStepperNav();
     }
 };
 
 window.prevBackupStep = function() {
-    if (currentBackupStep > 1) {
-        setBackupStep(currentBackupStep - 1);
+    if (backupWizardState.currentStepIndex > 1) {
+        backupWizardState.currentStepIndex--;
+        renderBackupStepperNav();
     }
 };
 
@@ -3536,7 +3735,8 @@ function updateBackupPreview() {
     const compLevelSelect = document.getElementById('backup-comp-level');
     const retentionDays = document.getElementById('backup-retention-days')?.value || '31';
     const storageDir = document.getElementById('backup-storage-dir')?.value || '/var/lib/backups';
-    const subdir = document.getElementById('backup-subdir')?.value || 'BACKUP-%i';
+    const cloudCredSelect = document.getElementById('backup-cloud-cred-select');
+    const cloudRetDays = document.getElementById('backup-cloud-retention-days')?.value || '180 Days';
 
     const clusterText = clusterSelect?.options[clusterSelect.selectedIndex]?.text || 'PostgreSQL';
     const hostText = hostSelect?.options[hostSelect.selectedIndex]?.text || 'localhost';
@@ -3547,13 +3747,29 @@ function updateBackupPreview() {
     if (el('pv-bk-cluster')) el('pv-bk-cluster').innerText = clusterText;
     if (el('pv-bk-host')) el('pv-bk-host').innerText = hostText;
     if (el('pv-bk-method')) el('pv-bk-method').innerText = methodText;
-    if (el('pv-bk-dumptype')) el('pv-bk-dumptype').innerText = dumpTypeText;
+    if (el('pv-bk-dumptype')) el('pv-bk-dumptype').innerText = (methodText === 'pg_basebackup') ? 'Binary Full' : dumpTypeText;
     if (el('pv-bk-comp')) el('pv-bk-comp').innerText = backupIsCompression ? 'Yes' : 'No';
-    if (el('pv-bk-comp-level')) el('pv-bk-comp-level').innerText = compLevelSelect?.value || '6';
+    if (el('pv-bk-comp-level')) el('pv-bk-comp-level').innerText = compLevelSelect?.value || '6 (System Default)';
     if (el('pv-bk-retention')) el('pv-bk-retention').innerText = `${retentionDays} Days`;
-    if (el('pv-bk-storage-loc')) el('pv-bk-storage-loc').innerText = backupIsCloudUpload ? 'Cloud Storage' : 'Store on controller';
-    if (el('pv-bk-storage-dir')) el('pv-bk-storage-dir').innerText = backupIsCloudUpload ? 'S3/GCS Cloud Bucket' : storageDir;
-    if (el('pv-bk-subdir')) el('pv-bk-subdir').innerText = subdir;
+    
+    // Target and cloud details
+    const isStream = backupWizardState.method === 'pg_basebackup' && backupWizardState.cloudStream;
+    const isCloud = backupWizardState.cloudUpload || isStream;
+    const cloudCredText = cloudCredSelect?.options[cloudCredSelect.selectedIndex]?.text || 'AWS S3';
+
+    if (el('pv-bk-target')) {
+        el('pv-bk-target').innerText = isStream ? 'Direct Cloud Streaming' : isCloud ? 'Local + Cloud Upload' : 'Local Storage';
+    }
+    if (el('pv-bk-local-loc-wrap')) el('pv-bk-local-loc-wrap').style.display = isStream ? 'none' : 'block';
+    if (el('pv-bk-local-dir-wrap')) el('pv-bk-local-dir-wrap').style.display = isStream ? 'none' : 'block';
+    if (el('pv-bk-cloud-cred-wrap')) {
+        el('pv-bk-cloud-cred-wrap').style.display = isCloud ? 'block' : 'none';
+        if (el('pv-bk-cloud-cred')) el('pv-bk-cloud-cred').innerText = cloudCredText;
+    }
+    if (el('pv-bk-cloud-ret-wrap')) {
+        el('pv-bk-cloud-ret-wrap').style.display = isCloud ? 'block' : 'none';
+        if (el('pv-bk-cloud-ret')) el('pv-bk-cloud-ret').innerText = cloudRetDays;
+    }
 }
 
 window.submitCreateBackup = async function() {
@@ -3573,6 +3789,8 @@ window.submitCreateBackup = async function() {
     const pid = parseInt(clusterSelect?.value) || null;
     const proj = allProjectsForBackup.find(p => p.id === pid);
     const dbType = proj && (proj.db_type === 'mssql' || (proj.name||'').toLowerCase().includes('mssql')) ? 'mssql' : 'postgresql';
+    const isStream = backupWizardState.method === 'pg_basebackup' && backupWizardState.cloudStream;
+    const isCloud = backupWizardState.cloudUpload || isStream;
 
     const payload = {
         project_id: pid,
@@ -3586,10 +3804,10 @@ window.submitCreateBackup = async function() {
         compression: backupIsCompression,
         compression_level: parseInt(compLevelSelect?.value || '6'),
         retention_days: retentionDays,
-        storage_location: backupIsCloudUpload ? 'Cloud storage' : 'Store on controller',
+        storage_location: isStream ? 'Direct Cloud Stream' : isCloud ? 'Cloud Storage' : 'Store on controller',
         storage_directory: storageDir,
         backup_subdirectory: subdir,
-        cloud_credential_id: backupIsCloudUpload ? (parseInt(cloudCredSelect?.value) || null) : null
+        cloud_credential_id: isCloud ? (parseInt(cloudCredSelect?.value) || null) : null
     };
 
     try {
