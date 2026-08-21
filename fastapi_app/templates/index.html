@@ -2328,12 +2328,18 @@ Real OS metrics (CPU, RAM, Disk I/O) cannot be fetched directly from PostgreSQL 
                 style="position: absolute; right: 10px; top: 50%; transform: translateY(-50%); pointer-events: none;"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
             </div>
             
-            <!-- Date Range Picker Placeholder -->
-            <div style="display: flex; align-items: center; gap: 6px; padding: 8px 12px; border: 1px solid #e5e7eb; border-radius: 6px; background: #f9fafb; color: #9ca3af; font-size: 0.85rem; user-select: none;">
-              <span>Start date</span>
-              <span>&rarr;</span>
-              <span>End date</span>
-              <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#9ca3af" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-left: 6px;"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>
+            <!-- Date Range Filter -->
+            <div style="display:flex;align-items:center;gap:6px;padding:6px 10px;border:1px solid #e5e7eb;border-radius:6px;background:#f9fafb;font-size:0.85rem;">
+              <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#9ca3af" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>
+              <input type="date" id="audit-date-start" onchange="window.filterAuditLogs()"
+                style="border:none;background:transparent;font-size:0.85rem;color:#374151;outline:none;cursor:pointer;width:120px;"
+                title="Start date">
+              <span style="color:#9ca3af;">→</span>
+              <input type="date" id="audit-date-end" onchange="window.filterAuditLogs()"
+                style="border:none;background:transparent;font-size:0.85rem;color:#374151;outline:none;cursor:pointer;width:120px;"
+                title="End date">
+              <button id="btn-clear-audit-dates" onclick="window.clearAuditDateFilter()" title="Clear date filter"
+                style="display:none;border:none;background:transparent;cursor:pointer;padding:0 2px;color:#9ca3af;line-height:1;font-size:1rem;">✕</button>
             </div>
           </div>
 

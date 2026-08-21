@@ -1397,11 +1397,20 @@ window.filterAuditLogs = function() {
     const input = document.getElementById('audit-search-input');
     const query = input ? input.value.trim().toLowerCase() : '';
 
+    const startInput = document.getElementById('audit-date-start');
+    const endInput = document.getElementById('audit-date-end');
+    const startVal = startInput ? startInput.value : ''; // 'YYYY-MM-DD'
+    const endVal = endInput ? endInput.value : '';
+
+    // Show/hide clear button
+    const clearBtn = document.getElementById('btn-clear-audit-dates');
+    if (clearBtn) clearBtn.style.display = (startVal || endVal) ? 'inline' : 'none';
+
     const logs = window.auditLogsData || [];
     let filtered = logs;
 
     if (query) {
-        filtered = logs.filter(log => {
+        filtered = filtered.filter(log => {
             const action = (log.action || '').toLowerCase();
             const details = (log.details || '').toLowerCase();
             const user = (log.user || log.username || '').toLowerCase();
@@ -1414,9 +1423,20 @@ window.filterAuditLogs = function() {
         });
     }
 
+    // Date range filter — compare YYYY-MM-DD prefix of the timestamp
+    if (startVal || endVal) {
+        filtered = filtered.filter(log => {
+            const ts = (log.timestamp || '').substring(0, 10); // 'YYYY-MM-DD'
+            if (startVal && ts < startVal) return false;
+            if (endVal && ts > endVal) return false;
+            return true;
+        });
+    }
+
+    const hasFilters = query || startVal || endVal;
+
     if (filtered.length === 0) {
-        if (query) {
-            // Empty state when search filters have no match
+        if (hasFilters) {
             tbody.innerHTML = `
             <tr>
               <td colspan="6" style="text-align: center; padding: 60px 20px; background: white;">
@@ -1428,7 +1448,6 @@ window.filterAuditLogs = function() {
               </td>
             </tr>`;
         } else {
-            // Empty state when no audit logs exist at all
             tbody.innerHTML = `<tr><td colspan="6" style="text-align:center; padding: 40px; color: #6b7280;">No audit logs recorded yet.</td></tr>`;
         }
         return;
@@ -1456,10 +1475,20 @@ window.filterAuditLogs = function() {
     }).join('');
 };
 
+window.clearAuditDateFilter = function() {
+    const s = document.getElementById('audit-date-start');
+    const e = document.getElementById('audit-date-end');
+    if (s) s.value = '';
+    if (e) e.value = '';
+    const btn = document.getElementById('btn-clear-audit-dates');
+    if (btn) btn.style.display = 'none';
+    window.filterAuditLogs();
+};
+
 window.clearAuditFilters = function() {
     const input = document.getElementById('audit-search-input');
     if (input) input.value = '';
-    window.filterAuditLogs();
+    window.clearAuditDateFilter();
 };
 
 window.exportAuditLogsCsv = function() {
