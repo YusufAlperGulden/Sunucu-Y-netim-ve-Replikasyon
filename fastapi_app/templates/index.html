@@ -4539,7 +4539,7 @@ Real OS metrics (CPU, RAM, Disk I/O) cannot be fetched directly from PostgreSQL 
 
 
 <!-- ===== CLUSTERCONTROL DEPLOY & IMPORT WIZARD ===== -->
-<div id="modal-deploy-cluster" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.55);z-index:10000;align-items:center;justify-content:center;font-family:'Inter', sans-serif;">
+<div id="modal-deploy-cluster" onclick="if(event.target===this) closeDeployWizard()" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.55);z-index:10000;align-items:center;justify-content:center;font-family:'Inter', sans-serif;">
   <div id="deploy-wizard-container" style="background:white;border-radius:16px;width:780px;max-width:96vw;max-height:92vh;display:flex;flex-direction:column;box-shadow:0 25px 60px rgba(0,0,0,0.25);overflow:hidden;animation:fadeInModal 0.2s ease-out;transition:width 0.2s ease;">
 
     <!-- ===================================================================== -->
@@ -4548,7 +4548,7 @@ Real OS metrics (CPU, RAM, Disk I/O) cannot be fetched directly from PostgreSQL 
     <div id="deploy-stage-0" style="display:flex;flex-direction:column;padding:24px 36px 36px 36px;">
       <!-- Top Close Button -->
       <div style="display:flex;justify-content:flex-end;">
-        <button onclick="closeDeployWizard()" style="background:transparent;border:none;cursor:pointer;color:#9ca3af;padding:4px;display:flex;align-items:center;justify-content:center;border-radius:6px;" onmouseover="this.style.color='#111827'" onmouseout="this.style.color='#9ca3af'">
+        <button type="button" onclick="closeDeployWizard()" style="background:transparent;border:none;cursor:pointer;color:#9ca3af;padding:4px;display:flex;align-items:center;justify-content:center;border-radius:6px;" onmouseover="this.style.color='#111827'" onmouseout="this.style.color='#9ca3af'">
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
         </button>
       </div>
@@ -5618,6 +5618,6 @@ Real OS metrics (CPU, RAM, Disk I/O) cannot be fetched directly from PostgreSQL 
 </div>
 </div>
 
-<script src="/static/main.js?v=125"></script>
+<script src="/static/main.js?v=126"></script>
 </body>
 </html>
