@@ -10580,3 +10580,82 @@ window.submitAddExternalEmail = function() {
     window.renderEmailNotificationState();
     window.closeAddExternalEmailModal();
 };
+
+
+// ═══════════════════════════════════════════════════════════════════════════
+// Cluster Actions Dropdown & Edit Cluster Details Modal JS
+// ═══════════════════════════════════════════════════════════════════════════
+
+window.toggleClusterActionsDropdown = function(e) {
+    if (e) e.stopPropagation();
+    var dd = document.getElementById('cluster-actions-dropdown');
+    if (dd) {
+        dd.style.display = (dd.style.display === 'none' || !dd.style.display) ? 'block' : 'none';
+    }
+};
+
+document.addEventListener('click', function(e) {
+    var dd = document.getElementById('cluster-actions-dropdown');
+    var btn = document.getElementById('btn-cluster-actions');
+    if (dd && !e.target.closest('#btn-cluster-actions') && !e.target.closest('#cluster-actions-dropdown')) {
+        dd.style.display = 'none';
+    }
+});
+
+window.openClusterEditDetailsModal = function() {
+    var dd = document.getElementById('cluster-actions-dropdown');
+    if (dd) dd.style.display = 'none';
+    
+    var pid = window.currentProjectId;
+    var pName = (document.getElementById('detail-proj-name') || {}).textContent || 'PostgreSQL';
+    
+    var nameInp = document.getElementById('edit-proj-name');
+    var idInp = document.getElementById('edit-proj-id');
+    var descInp = document.getElementById('edit-proj-desc');
+    var nameDisplay = document.getElementById('modal-edit-proj-display-name');
+    var idDisplay = document.getElementById('modal-edit-proj-display-id');
+    
+    if (idInp) idInp.value = pid || '';
+    if (nameInp) nameInp.value = pName;
+    if (descInp) descInp.value = '';
+    if (nameDisplay) nameDisplay.textContent = pName;
+    if (idDisplay) idDisplay.textContent = 'ID: ' + (pid || '1') + ' | PostgreSQL Streaming v16';
+    
+    var m = document.getElementById('modal-edit-project');
+    if (m) m.style.display = 'flex';
+};
+
+window.openClusterAddNodeModal = function() {
+    var dd = document.getElementById('cluster-actions-dropdown');
+    if (dd) dd.style.display = 'none';
+    
+    var m = document.getElementById('modal-new-node-template');
+    if (m) m.style.display = 'flex';
+    else {
+        var m2 = document.getElementById('modal-edit-node');
+        if (m2) m2.style.display = 'flex';
+    }
+};
+
+window.removeCurrentCluster = async function() {
+    var dd = document.getElementById('cluster-actions-dropdown');
+    if (dd) dd.style.display = 'none';
+    
+    var pid = window.currentProjectId;
+    var pName = (document.getElementById('detail-proj-name') || {}).textContent || 'Cluster';
+    if (!pid) return;
+    
+    if (!confirm('Are you sure you want to remove cluster "' + pName + '" (ID: ' + pid + ')?')) return;
+    
+    try {
+        var r = await apiFetch('/api/projects/' + pid, { method: 'DELETE' });
+        if (r.ok) {
+            alert('Cluster removed successfully.');
+            window.location.hash = 'clusters-view';
+        } else {
+            alert('Failed to remove cluster: ' + (await r.text()));
+        }
+    } catch(e) {
+        alert('Error: ' + e.message);
+    }
+};
