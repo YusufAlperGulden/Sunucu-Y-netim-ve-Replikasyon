@@ -9932,3 +9932,238 @@ window.loadSchemaAnalyzer = async function() {
         if (seqTbody)   seqTbody.innerHTML='<tr><td colspan="7" style="padding:20px;text-align:center;color:#ef4444;">'+escapeHTML(e.message)+'</td></tr>';
     }
 };
+
+
+// ═══════════════════════════════════════════════════════════════════════════
+// Logs Tab JS
+// ═══════════════════════════════════════════════════════════════════════════
+
+window.switchLogTab = function(tab, btn) {
+    document.querySelectorAll('.log-inner-tab').forEach(function(b){
+        b.style.borderBottomColor='transparent'; b.style.color='#6b7280'; b.style.fontWeight='500';
+    });
+    if (btn) { btn.style.borderBottomColor='#4f46e5'; btn.style.color='#4f46e5'; btn.style.fontWeight='600'; }
+    document.getElementById('log-panel-system').style.display = tab==='system' ? 'block' : 'none';
+    document.getElementById('log-panel-audit').style.display  = tab==='audit'  ? 'block' : 'none';
+    if (tab==='system') window.loadSystemLogs();
+    if (tab==='audit')  window.renderAuditLogTable();
+};
+
+var _systemLogsAll = [];
+window.loadSystemLogs = async function() {
+    var pid = window.currentProjectId;
+    var tbody = document.getElementById('system-logs-tbody');
+    if (!pid || !tbody) return;
+    tbody.innerHTML = '<tr><td colspan="8" style="padding:30px;text-align:center;color:#9ca3af;">Loading...</td></tr>';
+    try {
+        var r = await apiFetch('/api/projects/'+pid+'/active-queries');
+        if (!r.ok) throw new Error(await r.text());
+        var data = await r.json();
+        _systemLogsAll = data.connections || [];
+        window.renderSystemLogs();
+    } catch(e) {
+        tbody.innerHTML = '<tr><td colspan="8" style="padding:30px;text-align:center;color:#ef4444;">'+escapeHTML(e.message)+'</td></tr>';
+    }
+};
+
+window.filterSystemLogs = function() { window.renderSystemLogs(); };
+
+window.renderSystemLogs = function() {
+    var tbody = document.getElementById('system-logs-tbody');
+    if (!tbody) return;
+    var stateFilter = (document.getElementById('log-severity-filter')||{}).value || 'all';
+    var q = ((document.getElementById('log-search')||{}).value || '').toLowerCase();
+    var rows = _systemLogsAll.filter(function(c) {
+        if (stateFilter !== 'all' && (c.state||'').toLowerCase() !== stateFilter) return false;
+        if (q && !(c.usename||'').toLowerCase().includes(q) && !(c.query_text||'').toLowerCase().includes(q)) return false;
+        return true;
+    });
+    tbody.innerHTML = '';
+    if (!rows.length) {
+        tbody.innerHTML = '<tr><td colspan="8" style="padding:40px;text-align:center;color:#9ca3af;">No sessions match the filter.</td></tr>';
+        return;
+    }
+    var stateBadge = function(s){
+        if (!s) return '<span style="color:#9ca3af;">—</span>';
+        if (s==='active') return '<span style="background:#d1fae5;color:#065f46;padding:2px 8px;border-radius:10px;font-size:11px;font-weight:500;">Active</span>';
+        if (s.includes('idle in transaction')) return '<span style="background:#fef3c7;color:#92400e;padding:2px 8px;border-radius:10px;font-size:11px;">Idle in xact</span>';
+        if (s==='idle') return '<span style="color:#9ca3af;font-size:12px;">Idle</span>';
+        return '<span style="font-size:12px;">'+escapeHTML(s)+'</span>';
+    };
+    rows.forEach(function(c) {
+        tbody.insertAdjacentHTML('beforeend', '<tr style="border-bottom:1px solid #f3f4f6;">'
+            + '<td style="padding:9px 14px;font-size:12px;">'+escapeHTML(c.node_name||'—')+'</td>'
+            + '<td style="padding:9px 14px;font-family:monospace;font-size:12px;">'+escapeHTML(String(c.pid||'—'))+'</td>'
+            + '<td style="padding:9px 14px;font-size:12px;">'+escapeHTML(c.usename||'—')+'</td>'
+            + '<td style="padding:9px 14px;font-size:12px;">'+escapeHTML(c.datname||'—')+'</td>'
+            + '<td style="padding:9px 14px;">'+stateBadge(c.state)+'</td>'
+            + '<td style="padding:9px 14px;text-align:right;font-family:monospace;">'+escapeHTML(String(c.duration_s||0))+'</td>'
+            + '<td style="padding:9px 14px;font-size:12px;color:#6b7280;">'+escapeHTML((c.wait_event_type||'')+(c.wait_event?('/'+c.wait_event):''))+'</td>'
+            + '<td style="padding:9px 14px;font-size:11px;font-family:monospace;max-width:220px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:#374151;" title="'+escapeHTML(c.query_text||'')+'">'+escapeHTML((c.query_text||'—').slice(0,70))+'</td>'
+            + '</tr>');
+    });
+};
+
+window.renderAuditLogTable = function() {
+    var tbody = document.getElementById('audit-logs-display-tbody');
+    if (!tbody) return;
+    var logs = window.auditLogsData || [];
+    var q = ((document.getElementById('audit-log-search')||{}).value||'').toLowerCase();
+    var filtered = logs.filter(function(l){ return !q || (l.action||'').toLowerCase().includes(q) || (l.user||'').toLowerCase().includes(q); });
+    tbody.innerHTML = '';
+    if (!filtered.length) {
+        tbody.innerHTML = '<tr><td colspan="6" style="padding:50px;text-align:center;color:#9ca3af;">'
+            + '<svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="#e5e7eb" stroke-width="1.5" style="display:block;margin:0 auto 12px auto;"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>'
+            + 'No audit log entries yet. Actions performed in the app will appear here.</td></tr>';
+        return;
+    }
+    filtered.forEach(function(l) {
+        var statusColor = l.status==='success' ? '#10b981' : '#ef4444';
+        tbody.insertAdjacentHTML('beforeend', '<tr style="border-bottom:1px solid #f3f4f6;">'
+            + '<td style="padding:9px 14px;font-size:12px;white-space:nowrap;">'+escapeHTML(l.time||'—')+'</td>'
+            + '<td style="padding:9px 14px;font-size:12px;">'+escapeHTML(l.user||'—')+'</td>'
+            + '<td style="padding:9px 14px;font-size:12px;font-weight:500;">'+escapeHTML(l.action||'—')+'</td>'
+            + '<td style="padding:9px 14px;font-size:12px;">'+escapeHTML(l.resource||'—')+'</td>'
+            + '<td style="padding:9px 14px;font-size:12px;color:'+statusColor+';font-weight:500;">'+escapeHTML(l.status||'—')+'</td>'
+            + '<td style="padding:9px 14px;font-size:12px;color:#6b7280;">'+escapeHTML(l.details||'—')+'</td>'
+            + '</tr>');
+    });
+};
+
+// Wire up Logs tab — auto-load system logs when Logs tab is opened
+var _origSwitchClusterTab = window.switchTab || window.switchClusterTab;
+(function() {
+    var _origHandler = window.switchClusterTab || window.switchTab;
+    function hookLogsTab() {
+        document.addEventListener('click', function(e) {
+            var el = e.target.closest('.cluster-tab');
+            if (el && el.dataset.tab === 'logs') {
+                setTimeout(function(){ window.loadSystemLogs(); }, 100);
+            }
+        });
+    }
+    if (document.readyState === 'loading') { document.addEventListener('DOMContentLoaded', hookLogsTab); }
+    else { hookLogsTab(); }
+})();
+
+
+// ── System Log file tree ──────────────────────────────────────────────────
+window.loadSysLogTree = async function() {
+    var tree = document.getElementById('syslog-tree');
+    var pid  = window.currentProjectId;
+    if (!tree || !pid) return;
+    tree.innerHTML = '<div style="padding:8px 14px;color:#9ca3af;font-size:12px;">Loading...</div>';
+    try {
+        var r = await apiFetch('/api/projects/'+pid+'/metrics');
+        if (!r.ok) throw new Error('Failed');
+        var nodes = await r.json();
+        tree.innerHTML = '';
+        nodes.forEach(function(node) {
+            var host = escapeHTML(node.name);
+            // Simulate log file names based on current date (Neon has no filesystem access)
+            var today = new Date();
+            var logFiles = [];
+            for (var i = 0; i < 8; i++) {
+                var d = new Date(today); d.setDate(d.getDate()-i);
+                var ds = d.toISOString().slice(0,10).replace(/-/g,'-');
+                var ts = ('0'+d.getHours()).slice(-2)+('0'+d.getMinutes()).slice(-2)+('0'+d.getSeconds()).slice(-2);
+                logFiles.push('postgresql-'+ds+'_'+ts+'.log');
+            }
+            var nodeEl = document.createElement('div');
+            nodeEl.style.cssText = 'margin-bottom:4px;';
+            nodeEl.innerHTML = '<div style="display:flex;align-items:center;gap:5px;padding:6px 14px;cursor:pointer;font-size:12px;font-weight:500;color:#374151;" onclick="this.nextElementSibling.style.display=this.nextElementSibling.style.display===\'none\'?\'block\':\'none\'">'
+                + '<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#6b7280" stroke-width="2"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>'
+                + '<svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="#9ca3af" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg>'
+                + host + '</div>';
+            var fileList = document.createElement('div');
+            fileList.style.cssText = 'display:block;';
+            logFiles.forEach(function(fname) {
+                var item = document.createElement('div');
+                item.className = 'syslog-file-item';
+                item.style.cssText = 'display:flex;align-items:center;gap:5px;padding:5px 14px 5px 28px;cursor:pointer;font-size:11px;color:#6b7280;';
+                item.innerHTML = '<svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#9ca3af" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>'
+                    + escapeHTML(fname);
+                item.addEventListener('click', function() {
+                    document.querySelectorAll('.syslog-file-item').forEach(function(i){ i.style.background=''; i.style.color='#6b7280'; });
+                    item.style.background='#ede9fe'; item.style.color='#4f46e5';
+                    window.showSysLogContent(fname, host);
+                });
+                fileList.appendChild(item);
+            });
+            nodeEl.appendChild(fileList);
+            tree.appendChild(nodeEl);
+        });
+        if (!nodes.length) tree.innerHTML = '<div style="padding:8px 14px;color:#9ca3af;font-size:12px;">No nodes found.</div>';
+    } catch(e) { tree.innerHTML = '<div style="padding:8px 14px;color:#ef4444;font-size:12px;">'+escapeHTML(e.message)+'</div>'; }
+};
+
+window.showSysLogContent = function(fname, host) {
+    var msg  = document.getElementById('syslog-viewer-msg');
+    var pre  = document.getElementById('syslog-viewer-content');
+    if (!msg || !pre) return;
+    msg.style.display  = 'none';
+    msg.previousElementSibling && (msg.previousElementSibling.style.display = 'none');
+    pre.style.display  = 'block';
+    pre.textContent = '# '+host+': '+fname+'\n'
+        + '# Note: Direct log file access is not available for managed cloud databases (Neon).\n'
+        + '# PostgreSQL logs are stored on the managed server filesystem.\n'
+        + '#\n'
+        + '# What you CAN view in real time:\n'
+        + '#   - Live sessions → Query Monitor tab (pg_stat_activity)\n'
+        + '#   - Long-running queries → Performance > Query Monitor\n'
+        + '#   - Slow query history → Performance > Top Queries (pg_stat_statements)\n'
+        + '#\n'
+        + '# To view actual postgresql.log files, SSH access to the\n'
+        + '# database server is required — not available with Neon managed DBs.';
+};
+
+// Override filterAuditLogs and renderAuditLogTable to match ClusterControl columns
+window.filterAuditLogs = function() {
+    window.renderAuditLogTable();
+};
+
+window.renderAuditLogTable = function() {
+    var tbody = document.getElementById('audit-logs-display-tbody');
+    if (!tbody) return;
+    var logs = window.auditLogsData || [];
+    var q    = ((document.getElementById('audit-log-search')||{}).value||'').toLowerCase();
+    var ds   = (document.getElementById('audit-date-start')||{}).value||'';
+    var de   = (document.getElementById('audit-date-end')||{}).value||'';
+    var filtered = logs.filter(function(l){
+        if (q && !(l.activity||l.action||'').toLowerCase().includes(q) && !(l.user||'').toLowerCase().includes(q)) return false;
+        if (ds && (l.when||l.time||'') < ds) return false;
+        if (de && (l.when||l.time||'') > de+'T23:59:59') return false;
+        return true;
+    });
+    tbody.innerHTML = '';
+    if (!filtered.length) {
+        tbody.innerHTML = '<tr><td colspan="6" style="padding:60px;text-align:center;color:#9ca3af;">'
+            + '<svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="#e5e7eb" stroke-width="1.5" style="display:block;margin:0 auto 14px auto;"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>'
+            + 'No data</td></tr>';
+        return;
+    }
+    filtered.forEach(function(l) {
+        tbody.insertAdjacentHTML('beforeend', '<tr style="border-bottom:1px solid #f3f4f6;">'
+            + '<td style="padding:10px 14px;font-size:12px;white-space:nowrap;">'+escapeHTML(l.when||l.time||'—')+'</td>'
+            + '<td style="padding:10px 14px;font-size:12px;font-weight:500;">'+escapeHTML(l.activity||l.action||'—')+'</td>'
+            + '<td style="padding:10px 14px;font-size:12px;">'+escapeHTML(l.type||'—')+'</td>'
+            + '<td style="padding:10px 14px;font-size:12px;">'+escapeHTML(l.user||'—')+'</td>'
+            + '<td style="padding:10px 14px;font-size:12px;">'+escapeHTML(l.hostname||l.resource||'—')+'</td>'
+            + '<td style="padding:10px 14px;font-size:12px;">'+escapeHTML(l.cluster_name||l.details||'—')+'</td>'
+            + '</tr>');
+    });
+};
+
+// Auto-load when Logs tab is clicked
+(function() {
+    function hookLogs() {
+        document.addEventListener('click', function(e) {
+            var el = e.target.closest('.cluster-tab');
+            if (el && el.dataset.tab === 'logs') {
+                setTimeout(function(){ window.loadSysLogTree(); window.loadSystemLogs(); }, 150);
+            }
+        });
+    }
+    if (document.readyState==='loading') document.addEventListener('DOMContentLoaded', hookLogs);
+    else hookLogs();
+})();
