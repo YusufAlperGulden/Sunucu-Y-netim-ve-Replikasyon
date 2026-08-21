@@ -3928,10 +3928,27 @@ window.fetchNodesPage = async function() {
         }
         const projects = await res.json();
 
+        if (projects.length === 0) {
+            window.nodesPageLoading = false;
+            if (tbody) tbody.innerHTML = '<tr><td colspan="10" style="text-align:center;padding:40px;color:#9ca3af;">No clusters found. Add a cluster first.</td></tr>';
+            return;
+        }
+
+        // Fetch full details for every cluster in parallel so nodes are always loaded
+        const detailResults = await Promise.allSettled(
+            projects.map(p => apiFetch('/api/projects/' + p.id).then(r => r.ok ? r.json() : null))
+        );
+
+        // Merge full node data back into projects
+        const fullProjects = projects.map((p, i) => {
+            const detail = detailResults[i].status === 'fulfilled' ? detailResults[i].value : null;
+            return detail ? { ...p, nodes: detail.nodes || [] } : p;
+        });
+
         window.nodesPageData = [];
         let nodeIndex = 0;
 
-        for (const proj of projects) {
+        for (const proj of fullProjects) {
             for (const node of (proj.nodes || [])) {
                 nodeIndex++;
                 const isPrimary = (node.role || '').toLowerCase() === 'primary';
@@ -3958,7 +3975,7 @@ window.fetchNodesPage = async function() {
         window.renderNodesPage();
 
         // Fetch live metrics in background to resolve versions and actual statuses
-        for (const proj of projects) {
+        for (const proj of fullProjects) {
             if (!proj.nodes || proj.nodes.length === 0) continue;
             try {
                 const mr = await apiFetch('/api/projects/' + proj.id + '/metrics');
