@@ -319,3 +319,16 @@ class KubeCluster(Base):
     operator_installed   = Column(String(100), default='CloudNativePG')
     last_synced_at       = Column(DateTime, default=datetime.datetime.utcnow)
     created_at           = Column(DateTime, default=datetime.datetime.utcnow)
+
+
+class WatchList(Base):
+    """User-defined watchlists that group clusters and metric topics for monitoring."""
+    __tablename__ = 'watchlists'
+    id           = Column(Integer, primary_key=True, index=True)
+    name         = Column(String(150), nullable=False)
+    topics       = Column(Text, nullable=False, default='[]')   # JSON array of topic strings
+    cluster_ids  = Column(Text, nullable=False, default='[]')   # JSON array of project IDs
+    page_by      = Column(String(20), default='Topic')          # 'Topic' | 'Cluster'
+    grid         = Column(String(10), default='2x2')            # '2x1','3x1','2x2','2x3','3x2','3x3'
+    page_speed   = Column(Integer, default=5)                   # seconds between page switches
+    created_at   = Column(DateTime, default=datetime.datetime.utcnow)

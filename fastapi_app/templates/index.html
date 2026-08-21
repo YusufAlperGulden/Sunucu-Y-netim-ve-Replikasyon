@@ -1660,7 +1660,7 @@ Real OS metrics (CPU, RAM, Disk I/O) cannot be fetched directly from PostgreSQL 
         </div>
     </div>
 
-    <script src="/static/main.js?v=101"></script>
+    <script src="/static/main.js?v=102"></script>
 
 
 
@@ -2269,6 +2269,12 @@ Real OS metrics (CPU, RAM, Disk I/O) cannot be fetched directly from PostgreSQL 
           style="padding: 16px 20px; border: none; background: none; cursor: pointer; font-size: 0.9rem; font-weight: 500; color: #6b7280; border-bottom: 2px solid transparent; margin-bottom: -1px; display: flex; align-items: center; gap: 6px;">
           Watchlists
           <span style="background: #7c3aed; color: white; font-size: 0.65rem; padding: 2px 6px; border-radius: 4px; font-weight: 600;">Beta</span>
+          <span class="wl-tooltip-wrap" style="position:relative;display:inline-flex;align-items:center;">
+            <span style="color:#9ca3af;font-size:0.8rem;cursor:help;">ⓘ</span>
+            <span class="wl-tooltip-box" style="display:none;position:absolute;top:calc(100% + 8px);left:50%;transform:translateX(-50%);background:#1f2937;color:white;font-size:0.8rem;line-height:1.5;padding:10px 14px;border-radius:8px;width:260px;z-index:9999;box-shadow:0 4px 16px rgba(0,0,0,0.3);font-weight:400;pointer-events:none;">
+              A watchlist is a personalized collection of clusters and topics that a user wants to monitor together. It allows grouping related metrics across environments or projects for quick access and visualization.
+            </span>
+          </span>
         </button>
       </div>
 
@@ -2378,10 +2384,135 @@ Real OS metrics (CPU, RAM, Disk I/O) cannot be fetched directly from PostgreSQL 
       </div>
 
       <!-- WATCHLISTS Tab -->
-      <div id="ac-content-watchlists" style="display: none; padding: 60px 20px; text-align: center;">
-        <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="#d1d5db" stroke-width="1.5" style="display: block; margin: 0 auto 16px;"><path d="M2.036 12.322a1.012 1.012 0 010-.639C3.423 7.51 7.36 4.5 12 4.5c4.638 0 8.573 3.007 9.963 7.178.07.207.07.431 0 .639C20.577 16.49 16.64 19.5 12 19.5c-4.638 0-8.573-3.007-9.963-7.178z"></path><path d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path></svg>
-        <p style="color: #9ca3af; font-size: 0.9rem; margin-bottom: 8px;">Watchlists is a Beta feature.</p>
-        <p style="color: #d1d5db; font-size: 0.8rem;">Monitor specific metrics and get notified when thresholds are exceeded.</p>
+      <div id="ac-content-watchlists" style="display: none; padding: 0;">
+
+        <!-- Control Bar -->
+        <div style="display:flex;align-items:center;justify-content:space-between;padding:16px 20px;border-bottom:1px solid #e5e7eb;">
+          <div></div>
+          <button onclick="window.openCreateWatchlistModal()"
+            style="display:flex;align-items:center;gap:7px;padding:9px 20px;background:#4338ca;color:white;border:none;border-radius:8px;font-size:0.88rem;font-weight:600;cursor:pointer;"
+            onmouseover="this.style.background='#3730a3'" onmouseout="this.style.background='#4338ca'">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+            Create watchlist
+          </button>
+        </div>
+
+        <!-- Table -->
+        <table style="width:100%;border-collapse:collapse;">
+          <thead style="background:#f9fafb;border-bottom:1px solid #e5e7eb;">
+            <tr>
+              <th style="padding:12px 20px;text-align:left;font-size:0.85rem;font-weight:600;color:#374151;">Name</th>
+              <th style="padding:12px 20px;text-align:left;font-size:0.85rem;font-weight:600;color:#374151;">Topics</th>
+              <th style="padding:12px 20px;text-align:left;font-size:0.85rem;font-weight:600;color:#374151;">Page by</th>
+              <th style="padding:12px 20px;text-align:left;font-size:0.85rem;font-weight:600;color:#374151;">Grid</th>
+              <th style="padding:12px 20px;text-align:left;font-size:0.85rem;font-weight:600;color:#374151;">Clusters</th>
+              <th style="padding:12px 20px;text-align:left;font-size:0.85rem;font-weight:600;color:#374151;">Actions</th>
+            </tr>
+          </thead>
+          <tbody id="watchlists-tbody">
+            <tr class="cc-loading-row"><td colspan="6"><div class="cc-loading-container"><div class="cc-spinner cc-spinner-lg"></div><span style="color:#9ca3af;font-size:0.85rem;">Loading watchlists...</span></div></td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <!-- CREATE WATCHLIST MODAL -->
+      <div id="modal-create-watchlist" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.45);z-index:9000;align-items:center;justify-content:center;">
+        <div style="background:white;border-radius:12px;width:520px;max-width:95vw;max-height:90vh;overflow-y:auto;box-shadow:0 20px 60px rgba(0,0,0,0.25);">
+          <!-- Header -->
+          <div style="display:flex;align-items:center;justify-content:space-between;padding:20px 24px;border-bottom:1px solid #e5e7eb;">
+            <h2 style="margin:0;font-size:1.1rem;font-weight:700;color:#111827;">Add watchlist</h2>
+            <button onclick="window.closeCreateWatchlistModal()" style="border:none;background:none;cursor:pointer;color:#6b7280;font-size:1.3rem;line-height:1;">✕</button>
+          </div>
+          <!-- Body -->
+          <div style="padding:24px;">
+            <!-- Name -->
+            <div style="margin-bottom:20px;">
+              <label style="font-size:0.85rem;font-weight:600;color:#374151;display:block;margin-bottom:6px;"><span style="color:#ef4444;">*</span> Name</label>
+              <input id="wl-name" type="text" placeholder="Enter watchlist name"
+                style="width:100%;padding:9px 12px;border:1px solid #d1d5db;border-radius:6px;font-size:0.88rem;box-sizing:border-box;outline:none;"
+                onfocus="this.style.borderColor='#4338ca'" onblur="this.style.borderColor='#d1d5db'">
+            </div>
+            <!-- Topics -->
+            <div style="margin-bottom:20px;">
+              <label style="font-size:0.85rem;font-weight:600;color:#374151;display:block;margin-bottom:6px;">
+                <span style="color:#ef4444;">*</span> Topics
+                <span title="Topics are metric categories to display on the watchlist dashboard." style="cursor:help;color:#9ca3af;font-weight:400;font-size:0.8rem;margin-left:4px;">ⓘ</span>
+              </label>
+              <!-- Selected topics badges -->
+              <div id="wl-topics-selected" style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:8px;min-height:0;"></div>
+              <!-- Dropdown -->
+              <div style="position:relative;">
+                <button type="button" onclick="window.toggleWlTopicsDropdown()" id="wl-topics-btn"
+                  style="width:100%;padding:9px 12px;border:1px solid #d1d5db;border-radius:6px;font-size:0.88rem;background:white;text-align:left;cursor:pointer;display:flex;justify-content:space-between;align-items:center;">
+                  <span style="color:#9ca3af;">Select topics</span>
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#9ca3af" stroke-width="2"><polyline points="6 9 12 15 18 9"></polyline></svg>
+                </button>
+                <div id="wl-topics-dropdown" style="display:none;position:absolute;top:calc(100% + 4px);left:0;right:0;background:white;border:1px solid #e5e7eb;border-radius:8px;box-shadow:0 8px 24px rgba(0,0,0,0.12);z-index:100;max-height:220px;overflow-y:auto;">
+                  <!-- Items rendered by JS -->
+                </div>
+              </div>
+            </div>
+            <!-- Clusters -->
+            <div style="margin-bottom:20px;">
+              <label style="font-size:0.85rem;font-weight:600;color:#374151;display:block;margin-bottom:6px;">Clusters</label>
+              <div id="wl-clusters-selected" style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:8px;min-height:0;"></div>
+              <div style="position:relative;">
+                <button type="button" onclick="window.toggleWlClustersDropdown()" id="wl-clusters-btn"
+                  style="width:100%;padding:9px 12px;border:1px solid #d1d5db;border-radius:6px;font-size:0.88rem;background:white;text-align:left;cursor:pointer;display:flex;justify-content:space-between;align-items:center;">
+                  <span style="color:#9ca3af;">Choose one or more clusters to track</span>
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#9ca3af" stroke-width="2"><polyline points="6 9 12 15 18 9"></polyline></svg>
+                </button>
+                <div id="wl-clusters-dropdown" style="display:none;position:absolute;top:calc(100% + 4px);left:0;right:0;background:white;border:1px solid #e5e7eb;border-radius:8px;box-shadow:0 8px 24px rgba(0,0,0,0.12);z-index:100;max-height:220px;overflow-y:auto;"></div>
+              </div>
+            </div>
+            <!-- Page by -->
+            <div style="margin-bottom:20px;">
+              <label style="font-size:0.85rem;font-weight:600;color:#374151;display:block;margin-bottom:8px;">Page by</label>
+              <div style="display:flex;gap:8px;" id="wl-pageby-group">
+                <button type="button" onclick="window.setWlPageBy('Topic', this)" id="wl-pageby-topic"
+                  style="padding:7px 18px;border:1px solid #4338ca;border-radius:6px;background:white;color:#4338ca;font-size:0.85rem;font-weight:600;cursor:pointer;">Topic</button>
+                <button type="button" onclick="window.setWlPageBy('Cluster', this)" id="wl-pageby-cluster"
+                  style="padding:7px 18px;border:1px solid #d1d5db;border-radius:6px;background:white;color:#6b7280;font-size:0.85rem;cursor:pointer;">Cluster</button>
+              </div>
+            </div>
+            <!-- Grid layout -->
+            <div style="margin-bottom:20px;">
+              <label style="font-size:0.85rem;font-weight:600;color:#374151;display:block;margin-bottom:8px;">Grid layout</label>
+              <div style="display:flex;gap:8px;flex-wrap:wrap;" id="wl-grid-group">
+                <button type="button" onclick="window.setWlGrid('2x1', this)" style="padding:7px 14px;border:1px solid #d1d5db;border-radius:6px;background:white;color:#6b7280;font-size:0.85rem;cursor:pointer;">2x1</button>
+                <button type="button" onclick="window.setWlGrid('3x1', this)" style="padding:7px 14px;border:1px solid #d1d5db;border-radius:6px;background:white;color:#6b7280;font-size:0.85rem;cursor:pointer;">3x1</button>
+                <button type="button" onclick="window.setWlGrid('2x2', this)" id="wl-grid-default" style="padding:7px 14px;border:1px solid #4338ca;border-radius:6px;background:white;color:#4338ca;font-size:0.85rem;font-weight:600;cursor:pointer;">2x2</button>
+                <button type="button" onclick="window.setWlGrid('2x3', this)" style="padding:7px 14px;border:1px solid #d1d5db;border-radius:6px;background:white;color:#6b7280;font-size:0.85rem;cursor:pointer;">2x3</button>
+                <button type="button" onclick="window.setWlGrid('3x2', this)" style="padding:7px 14px;border:1px solid #d1d5db;border-radius:6px;background:white;color:#6b7280;font-size:0.85rem;cursor:pointer;">3x2</button>
+                <button type="button" onclick="window.setWlGrid('3x3', this)" style="padding:7px 14px;border:1px solid #d1d5db;border-radius:6px;background:white;color:#6b7280;font-size:0.85rem;cursor:pointer;">3x3</button>
+              </div>
+            </div>
+            <!-- Advanced options toggle -->
+            <div style="margin-bottom:16px;">
+              <button type="button" onclick="window.toggleWlAdvanced()" style="border:none;background:none;cursor:pointer;font-size:0.85rem;color:#4338ca;font-weight:500;padding:0;display:flex;align-items:center;gap:4px;">
+                <span id="wl-advanced-arrow">▶</span> Advanced options
+              </button>
+              <div id="wl-advanced-section" style="display:none;margin-top:12px;padding:14px;background:#f9fafb;border-radius:8px;border:1px solid #e5e7eb;">
+                <label style="font-size:0.85rem;font-weight:600;color:#374151;display:block;margin-bottom:6px;">Page switch speed (3 to 180 seconds)</label>
+                <div style="display:flex;align-items:center;gap:8px;">
+                  <input id="wl-page-speed" type="number" value="5" min="3" max="180"
+                    style="width:80px;padding:8px 10px;border:1px solid #d1d5db;border-radius:6px;font-size:0.88rem;">
+                  <span style="font-size:0.85rem;color:#6b7280;">s</span>
+                </div>
+              </div>
+            </div>
+            <!-- Error -->
+            <div id="wl-error" style="display:none;color:#ef4444;font-size:0.85rem;margin-bottom:12px;"></div>
+          </div>
+          <!-- Footer -->
+          <div style="display:flex;justify-content:flex-end;gap:10px;padding:16px 24px;border-top:1px solid #e5e7eb;">
+            <button onclick="window.closeCreateWatchlistModal()"
+              style="padding:9px 20px;border:1px solid #d1d5db;background:white;color:#374151;border-radius:8px;font-size:0.88rem;cursor:pointer;">Cancel</button>
+            <button onclick="window.submitCreateWatchlist()" id="btn-wl-create"
+              style="padding:9px 24px;background:#4338ca;color:white;border:none;border-radius:8px;font-size:0.88rem;font-weight:600;cursor:pointer;"
+              onmouseover="this.style.background='#3730a3'" onmouseout="this.style.background='#4338ca'">Create</button>
+          </div>
+        </div>
       </div>
     </div>
   </div>
@@ -4214,6 +4345,6 @@ Real OS metrics (CPU, RAM, Disk I/O) cannot be fetched directly from PostgreSQL 
   </div>
 </div>
 
-<script src="/static/main.js?v=100"></script>
+<script src="/static/main.js?v=102"></script>
 </body>
 </html>

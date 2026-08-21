@@ -1541,6 +1541,312 @@ window.exportAuditLogsCsv = function() {
 };
 
 
+// ══════════════════════════════════════════════════════════════
+// WATCHLISTS
+// ══════════════════════════════════════════════════════════════
+const WL_TOPICS = ['Alarms', 'DB Growth', 'DB Processes', 'Load', 'Load average', 'Status', 'Top queries'];
+
+const wlState = {
+    topics: [],      // selected topic strings
+    clusters: [],    // selected { id, name } objects
+    pageBy: 'Topic',
+    grid: '2x2',
+    allClusters: [] // loaded from /api/projects
+};
+
+// ─── Tooltip hover ─────────────────────────────────────────────
+document.addEventListener('mouseover', e => {
+    const wrap = e.target.closest('.wl-tooltip-wrap');
+    if (wrap) wrap.querySelector('.wl-tooltip-box').style.display = 'block';
+});
+document.addEventListener('mouseout', e => {
+    const wrap = e.target.closest('.wl-tooltip-wrap');
+    if (wrap) wrap.querySelector('.wl-tooltip-box').style.display = 'none';
+});
+
+// ─── Load & render watchlists table ────────────────────────────
+window.fetchWatchlists = async function() {
+    const tbody = document.getElementById('watchlists-tbody');
+    if (tbody) tbody.innerHTML = '<tr class="cc-loading-row"><td colspan="6"><div class="cc-loading-container"><div class="cc-spinner cc-spinner-lg"></div><span style="color:#9ca3af;font-size:0.85rem;">Loading watchlists...</span></div></td></tr>';
+    try {
+        const res = await apiFetch('/api/watchlists');
+        if (!res.ok) { if (tbody) tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;padding:40px;color:#ef4444;">Failed to load watchlists.</td></tr>'; return; }
+        const data = await res.json();
+        renderWatchlists(data);
+    } catch(e) {
+        if (tbody) tbody.innerHTML = `<tr><td colspan="6" style="text-align:center;padding:40px;color:#ef4444;">Error: ${escapeHTML(String(e))}</td></tr>`;
+    }
+};
+
+function renderWatchlists(list) {
+    const tbody = document.getElementById('watchlists-tbody');
+    if (!tbody) return;
+    if (list.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="6" style="text-align:center;padding:60px 20px;color:#9ca3af;">
+            <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="#d1d5db" stroke-width="1.5" style="display:block;margin:0 auto 12px;"><path d="M2.036 12.322a1.012 1.012 0 010-.639C3.423 7.51 7.36 4.5 12 4.5c4.638 0 8.573 3.007 9.963 7.178.07.207.07.431 0 .639C20.577 16.49 16.64 19.5 12 19.5c-4.638 0-8.573-3.007-9.963-7.178z"></path><path d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path></svg>
+            No watchlists yet. Click <strong>Create watchlist</strong> to add one.
+        </td></tr>`;
+        return;
+    }
+    tbody.innerHTML = list.map(wl => {
+        const topicBadges = (wl.topics || []).map(t =>
+            `<span style="background:#ede9fe;color:#5b21b6;border-radius:4px;padding:2px 8px;font-size:0.78rem;font-weight:500;">${escapeHTML(t)}</span>`
+        ).join(' ');
+        const clusterBadges = (wl.clusters || []).length === 0
+            ? '<span style="color:#9ca3af;font-size:0.82rem;">All clusters</span>'
+            : wl.clusters.map(c => `<span style="font-size:0.82rem;color:#374151;">${escapeHTML(c.name)} (ID:${c.id})</span>`).join(', ');
+        return `<tr style="border-bottom:1px solid #f3f4f6;transition:background 0.15s;" onmouseenter="this.style.background='#fafafa'" onmouseleave="this.style.background='white'">
+            <td style="padding:14px 20px;font-size:0.85rem;font-weight:600;color:#111827;">${escapeHTML(wl.name)}</td>
+            <td style="padding:14px 20px;">${topicBadges}</td>
+            <td style="padding:14px 20px;font-size:0.85rem;color:#374151;">${escapeHTML(wl.page_by)}</td>
+            <td style="padding:14px 20px;font-size:0.85rem;color:#374151;">${escapeHTML(wl.grid)}</td>
+            <td style="padding:14px 20px;font-size:0.85rem;">${clusterBadges}</td>
+            <td style="padding:14px 20px;">
+                <button onclick="window.deleteWatchlist(${wl.id})"
+                  style="border:none;background:none;cursor:pointer;color:#ef4444;font-size:0.82rem;padding:4px 8px;border-radius:4px;"
+                  onmouseover="this.style.background='#fef2f2'" onmouseout="this.style.background='none'"
+                  title="Delete watchlist">🗑 Delete</button>
+            </td>
+        </tr>`;
+    }).join('');
+}
+
+window.deleteWatchlist = async function(id) {
+    if (!confirm('Delete this watchlist?')) return;
+    const res = await apiFetch(`/api/watchlists/${id}`, { method: 'DELETE' });
+    if (res.ok) window.fetchWatchlists();
+    else alert('Failed to delete watchlist.');
+};
+
+// ─── Modal open/close ──────────────────────────────────────────
+window.openCreateWatchlistModal = async function() {
+    // Reset state
+    wlState.topics = [];
+    wlState.clusters = [];
+    wlState.pageBy = 'Topic';
+    wlState.grid = '2x2';
+
+    const nameEl = document.getElementById('wl-name');
+    if (nameEl) nameEl.value = '';
+    const errEl = document.getElementById('wl-error');
+    if (errEl) { errEl.style.display = 'none'; errEl.textContent = ''; }
+
+    // Reset page-by buttons
+    ['topic','cluster'].forEach(k => {
+        const b = document.getElementById(`wl-pageby-${k}`);
+        if (b) { b.style.borderColor = k === 'topic' ? '#4338ca' : '#d1d5db'; b.style.color = k === 'topic' ? '#4338ca' : '#6b7280'; b.style.fontWeight = k === 'topic' ? '600' : '400'; }
+    });
+    // Reset grid buttons
+    document.querySelectorAll('#wl-grid-group button').forEach(b => {
+        const isDefault = b.textContent.trim() === '2x2';
+        b.style.borderColor = isDefault ? '#4338ca' : '#d1d5db';
+        b.style.color = isDefault ? '#4338ca' : '#6b7280';
+        b.style.fontWeight = isDefault ? '600' : '400';
+    });
+    // Reset advanced
+    const adv = document.getElementById('wl-advanced-section');
+    if (adv) adv.style.display = 'none';
+    const arr = document.getElementById('wl-advanced-arrow');
+    if (arr) arr.textContent = '▶';
+    const speedEl = document.getElementById('wl-page-speed');
+    if (speedEl) speedEl.value = 5;
+
+    renderWlTopicsSelected();
+    renderWlClustersSelected();
+
+    // Load clusters for dropdown
+    try {
+        const res = await apiFetch('/api/projects');
+        const projs = res.ok ? await res.json() : [];
+        wlState.allClusters = projs.map(p => ({ id: p.id, name: p.name }));
+    } catch(e) { wlState.allClusters = []; }
+
+    buildWlTopicsDropdown();
+    buildWlClustersDropdown();
+
+    const modal = document.getElementById('modal-create-watchlist');
+    if (modal) modal.style.display = 'flex';
+};
+
+window.closeCreateWatchlistModal = function() {
+    const modal = document.getElementById('modal-create-watchlist');
+    if (modal) modal.style.display = 'none';
+    // Close any open dropdowns
+    document.getElementById('wl-topics-dropdown')?.style && (document.getElementById('wl-topics-dropdown').style.display = 'none');
+    document.getElementById('wl-clusters-dropdown')?.style && (document.getElementById('wl-clusters-dropdown').style.display = 'none');
+};
+
+// ─── Topics multi-select ───────────────────────────────────────
+function buildWlTopicsDropdown() {
+    const dd = document.getElementById('wl-topics-dropdown');
+    if (!dd) return;
+    dd.innerHTML = WL_TOPICS.map(t => {
+        const sel = wlState.topics.includes(t);
+        return `<div onclick="window.toggleWlTopic('${t}')" style="display:flex;align-items:center;justify-content:space-between;padding:10px 14px;cursor:pointer;font-size:0.88rem;color:#374151;"
+            onmouseover="this.style.background='#f5f3ff'" onmouseout="this.style.background='white'">
+            <span>${escapeHTML(t)}</span>
+            ${sel ? '<span style="color:#4338ca;">✓</span>' : ''}
+        </div>`;
+    }).join('');
+}
+
+window.toggleWlTopicsDropdown = function() {
+    const dd = document.getElementById('wl-topics-dropdown');
+    if (dd) dd.style.display = dd.style.display === 'none' ? 'block' : 'none';
+    document.getElementById('wl-clusters-dropdown').style.display = 'none';
+};
+
+window.toggleWlTopic = function(topic) {
+    if (wlState.topics.includes(topic)) {
+        wlState.topics = wlState.topics.filter(t => t !== topic);
+    } else {
+        wlState.topics.push(topic);
+    }
+    buildWlTopicsDropdown();
+    renderWlTopicsSelected();
+};
+
+function renderWlTopicsSelected() {
+    const el = document.getElementById('wl-topics-selected');
+    if (!el) return;
+    el.innerHTML = wlState.topics.map(t =>
+        `<span style="display:inline-flex;align-items:center;gap:4px;background:#ede9fe;color:#5b21b6;border-radius:4px;padding:3px 8px;font-size:0.8rem;font-weight:500;">
+            ${escapeHTML(t)}
+            <span onclick="window.toggleWlTopic('${t}')" style="cursor:pointer;font-size:0.9rem;line-height:1;color:#7c3aed;" title="Remove">×</span>
+        </span>`
+    ).join('');
+}
+
+// ─── Clusters multi-select ─────────────────────────────────────
+function buildWlClustersDropdown() {
+    const dd = document.getElementById('wl-clusters-dropdown');
+    if (!dd) return;
+    if (wlState.allClusters.length === 0) {
+        dd.innerHTML = '<div style="padding:12px 14px;font-size:0.85rem;color:#9ca3af;">No clusters available.</div>';
+        return;
+    }
+    dd.innerHTML = wlState.allClusters.map(c => {
+        const sel = wlState.clusters.some(x => x.id === c.id);
+        return `<div onclick="window.toggleWlCluster(${c.id}, '${escapeHTML(c.name).replace(/'/g,"\\'")}'")" style="display:flex;align-items:center;justify-content:space-between;padding:10px 14px;cursor:pointer;font-size:0.88rem;color:#374151;"
+            onmouseover="this.style.background='#f5f3ff'" onmouseout="this.style.background='white'">
+            <span>🐘 ${escapeHTML(c.name)} (ID:${c.id})</span>
+            ${sel ? '<span style="color:#4338ca;">✓</span>' : ''}
+        </div>`;
+    }).join('');
+}
+
+window.toggleWlClustersDropdown = function() {
+    const dd = document.getElementById('wl-clusters-dropdown');
+    if (dd) dd.style.display = dd.style.display === 'none' ? 'block' : 'none';
+    document.getElementById('wl-topics-dropdown').style.display = 'none';
+};
+
+window.toggleWlCluster = function(id, name) {
+    if (wlState.clusters.some(c => c.id === id)) {
+        wlState.clusters = wlState.clusters.filter(c => c.id !== id);
+    } else {
+        wlState.clusters.push({ id, name });
+    }
+    buildWlClustersDropdown();
+    renderWlClustersSelected();
+};
+
+function renderWlClustersSelected() {
+    const el = document.getElementById('wl-clusters-selected');
+    if (!el) return;
+    el.innerHTML = wlState.clusters.map(c =>
+        `<span style="display:inline-flex;align-items:center;gap:4px;background:#dbeafe;color:#1d4ed8;border-radius:4px;padding:3px 8px;font-size:0.8rem;font-weight:500;">
+            ${escapeHTML(c.name)}
+            <span onclick="window.toggleWlCluster(${c.id}, '')" style="cursor:pointer;font-size:0.9rem;line-height:1;" title="Remove">×</span>
+        </span>`
+    ).join('');
+}
+
+// ─── Page-by toggle ────────────────────────────────────────────
+window.setWlPageBy = function(val, btn) {
+    wlState.pageBy = val;
+    ['topic','cluster'].forEach(k => {
+        const b = document.getElementById(`wl-pageby-${k}`);
+        if (!b) return;
+        const active = (k === val.toLowerCase());
+        b.style.borderColor = active ? '#4338ca' : '#d1d5db';
+        b.style.color = active ? '#4338ca' : '#6b7280';
+        b.style.fontWeight = active ? '600' : '400';
+    });
+};
+
+// ─── Grid toggle ───────────────────────────────────────────────
+window.setWlGrid = function(val, btn) {
+    wlState.grid = val;
+    document.querySelectorAll('#wl-grid-group button').forEach(b => {
+        const active = b.textContent.trim() === val;
+        b.style.borderColor = active ? '#4338ca' : '#d1d5db';
+        b.style.color = active ? '#4338ca' : '#6b7280';
+        b.style.fontWeight = active ? '600' : '400';
+    });
+};
+
+// ─── Advanced toggle ───────────────────────────────────────────
+window.toggleWlAdvanced = function() {
+    const sec = document.getElementById('wl-advanced-section');
+    const arr = document.getElementById('wl-advanced-arrow');
+    const open = sec.style.display === 'none';
+    sec.style.display = open ? 'block' : 'none';
+    arr.textContent = open ? '▼' : '▶';
+};
+
+// ─── Submit create ─────────────────────────────────────────────
+window.submitCreateWatchlist = async function() {
+    const errEl = document.getElementById('wl-error');
+    const name = document.getElementById('wl-name')?.value.trim();
+    if (!name) { errEl.textContent = 'Name is required.'; errEl.style.display = 'block'; return; }
+    if (wlState.topics.length === 0) { errEl.textContent = 'Please select at least one topic.'; errEl.style.display = 'block'; return; }
+    errEl.style.display = 'none';
+
+    const btn = document.getElementById('btn-wl-create');
+    if (btn) { btn.disabled = true; btn.textContent = 'Creating...'; }
+    try {
+        const pageSpeed = parseInt(document.getElementById('wl-page-speed')?.value) || 5;
+        const res = await apiFetch('/api/watchlists', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                name,
+                topics: wlState.topics,
+                cluster_ids: wlState.clusters.map(c => c.id),
+                page_by: wlState.pageBy,
+                grid: wlState.grid,
+                page_speed: pageSpeed
+            })
+        });
+        const data = await res.json();
+        if (res.ok && data.success) {
+            window.closeCreateWatchlistModal();
+            window.fetchWatchlists();
+        } else {
+            errEl.textContent = data.detail || 'Failed to create watchlist.';
+            errEl.style.display = 'block';
+        }
+    } catch(e) {
+        errEl.textContent = 'Error: ' + String(e);
+        errEl.style.display = 'block';
+    } finally {
+        if (btn) { btn.disabled = false; btn.textContent = 'Create'; }
+    }
+};
+
+// Close dropdowns when clicking outside the modal
+document.addEventListener('click', e => {
+    if (!e.target.closest('#wl-topics-btn') && !e.target.closest('#wl-topics-dropdown')) {
+        const dd = document.getElementById('wl-topics-dropdown');
+        if (dd) dd.style.display = 'none';
+    }
+    if (!e.target.closest('#wl-clusters-btn') && !e.target.closest('#wl-clusters-dropdown')) {
+        const dd = document.getElementById('wl-clusters-dropdown');
+        if (dd) dd.style.display = 'none';
+    }
+});
+
     async function fetchDashboardMetrics() {
         try {
             const container = document.getElementById('dashboard-metrics-container');
@@ -4539,6 +4845,7 @@ window.switchActivityTab = function(tab, btnEl) {
     if (tab === 'audit') { if (typeof window.fetchAuditLogs === 'function') window.fetchAuditLogs(); }
     else if (tab === 'jobs') { fetchActivityJobs(); }
     else if (tab === 'alarms') { fetchActivityAlarms(); }
+    else if (tab === 'watchlists') { if (typeof window.fetchWatchlists === 'function') window.fetchWatchlists(); }
 };
 
 async function fetchActivityAlarms() {

@@ -631,6 +631,80 @@ def get_audit_logs(db: Session = Depends(get_db)):
     logs = db.query(AuditLog).order_by(AuditLog.timestamp.desc()).limit(100).all()
     return [{'id': l.id, 'project_id': l.project_id, 'timestamp': l.timestamp.strftime("%Y-%m-%d %H:%M:%S") if l.timestamp else "-", 'action': l.action, 'details': l.details, 'user': l.username or "System"} for l in logs]
 
+# ─── Watchlists ────────────────────────────────────────────────────────────────
+
+class WatchListCreate(BaseModel):
+    name: str
+    topics: list = []
+    cluster_ids: list = []
+    page_by: str = 'Topic'
+    grid: str = '2x2'
+    page_speed: int = 5
+
+@app.get('/api/watchlists', dependencies=[Depends(verify_credentials)])
+def get_watchlists(db: Session = Depends(get_db)):
+    import json
+    from models import WatchList, Project
+    wls = db.query(WatchList).order_by(WatchList.created_at.desc()).all()
+    result = []
+    for w in wls:
+        try:
+            topics = json.loads(w.topics or '[]')
+        except Exception:
+            topics = []
+        try:
+            cids = json.loads(w.cluster_ids or '[]')
+        except Exception:
+            cids = []
+        # Resolve cluster names
+        clusters = []
+        for cid in cids:
+            proj = db.query(Project).filter(Project.id == cid).first()
+            if proj:
+                clusters.append({'id': proj.id, 'name': proj.name})
+        result.append({
+            'id': w.id,
+            'name': w.name,
+            'topics': topics,
+            'clusters': clusters,
+            'page_by': w.page_by,
+            'grid': w.grid,
+            'page_speed': w.page_speed,
+            'created_at': w.created_at.strftime('%Y-%m-%d %H:%M:%S') if w.created_at else ''
+        })
+    return result
+
+@app.post('/api/watchlists', dependencies=[Depends(verify_credentials)])
+def create_watchlist(data: WatchListCreate, db: Session = Depends(get_db)):
+    import json
+    from models import WatchList
+    if not data.name.strip():
+        return JSONResponse(status_code=400, content={'detail': 'Name is required.'})
+    if not data.topics:
+        return JSONResponse(status_code=400, content={'detail': 'At least one topic is required.'})
+    wl = WatchList(
+        name=data.name.strip(),
+        topics=json.dumps(data.topics),
+        cluster_ids=json.dumps([int(c) for c in data.cluster_ids]),
+        page_by=data.page_by,
+        grid=data.grid,
+        page_speed=max(3, min(180, data.page_speed))
+    )
+    db.add(wl)
+    db.commit()
+    db.refresh(wl)
+    return {'success': True, 'id': wl.id}
+
+@app.delete('/api/watchlists/{wl_id}', dependencies=[Depends(verify_credentials)])
+def delete_watchlist(wl_id: int, db: Session = Depends(get_db)):
+    from models import WatchList
+    wl = db.query(WatchList).filter(WatchList.id == wl_id).first()
+    if not wl:
+        return JSONResponse(status_code=404, content={'detail': 'Watchlist not found.'})
+    db.delete(wl)
+    db.commit()
+    return {'success': True}
+
 class SettingsUpdate(BaseModel):
     max_wal_lag_mb: int
     metric_table: str = None
