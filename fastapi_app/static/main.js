@@ -163,7 +163,11 @@ document.addEventListener('DOMContentLoaded', () => {
     const btnDeployCluster = document.getElementById('btn-deploy-cluster-global');
     if (btnDeployCluster) {
         btnDeployCluster.addEventListener('click', () => {
-            modalAddProj.style.display = 'flex';
+            if (typeof openDeployWizard === 'function') {
+                openDeployWizard();
+            } else {
+                modalAddProj.style.display = 'flex';
+            }
         });
     }
 
@@ -1883,6 +1887,11 @@ window.exportAuditLogsCsv = function() {
         e.preventDefault();
         const name = document.getElementById('proj-name').value.trim();
         const desc = document.getElementById('proj-desc').value.trim();
+        const initUrl = (document.getElementById('proj-init-db-url')?.value || '').trim();
+        const initSshHost = (document.getElementById('proj-init-ssh-host')?.value || '').trim();
+        const initSshPort = parseInt(document.getElementById('proj-init-ssh-port')?.value || '22') || 22;
+        const initSshUser = (document.getElementById('proj-init-ssh-user')?.value || 'root').trim();
+        const initSshPass = (document.getElementById('proj-init-ssh-pass')?.value || '').trim();
 
         if (!name) {
             alert('Cluster adı boş bırakılamaz. Lütfen bir isim giriniz.');
@@ -1890,15 +1899,28 @@ window.exportAuditLogsCsv = function() {
         }
 
         try {
+            const payload = { name, description: desc };
+            if (initUrl || initSshHost) {
+                payload.initial_node = {
+                    url: initUrl,
+                    ssh_host: initSshHost,
+                    ssh_port: initSshPort,
+                    ssh_username: initSshUser,
+                    ssh_password: initSshPass
+                };
+            }
+
             const response = await apiFetch('/api/projects', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ name, description: desc })
+                body: JSON.stringify(payload)
             });
             const res = await response.json();
             if (response.ok && res.success) {
                 modalAddProj.style.display = 'none';
                 formAddProj.reset();
+                const initWrap = document.getElementById('proj-initial-node-wrap');
+                if (initWrap) initWrap.style.display = 'none';
                 fetchProjects();
                 fetchRecentAlarms();
             } else {
@@ -5671,6 +5693,65 @@ function initDeployNodes() {
     if (userEl) userEl.value = dbInfo.defaultUser;
 }
 
+window.onDeployConnUrlInput = function(rawUrl) {
+    if (!rawUrl || !rawUrl.trim()) {
+        const msgEl = document.getElementById('deploy-conn-url-parsed-msg');
+        if (msgEl) msgEl.style.display = 'none';
+        return;
+    }
+    rawUrl = rawUrl.trim();
+    try {
+        let normalized = rawUrl;
+        if (normalized.startsWith('mssql://')) {
+            normalized = normalized.replace('mssql://', 'http://');
+        } else if (normalized.startsWith('postgres://')) {
+            normalized = normalized.replace('postgres://', 'http://');
+        } else if (normalized.startsWith('postgresql://')) {
+            normalized = normalized.replace('postgresql://', 'http://');
+        } else if (!normalized.includes('://')) {
+            normalized = 'http://' + normalized;
+        } else {
+            normalized = normalized.replace(/^[a-z0-9_\+]+:\/\//i, 'http://');
+        }
+
+        const parsed = new URL(normalized);
+        const user = decodeURIComponent(parsed.username || '');
+        const pass = decodeURIComponent(parsed.password || '');
+        const host = parsed.hostname || '';
+        const port = parsed.port || '';
+
+        if (user) {
+            const userEl = document.getElementById('deploy-db-user');
+            if (userEl) userEl.value = user;
+        }
+        if (pass) {
+            const passEl = document.getElementById('deploy-db-pass');
+            if (passEl) passEl.value = pass;
+        }
+        if (port) {
+            const portEl = document.getElementById('deploy-db-port');
+            if (portEl) portEl.value = port;
+        }
+        if (host) {
+            const sshTestHost = document.getElementById('deploy-ssh-test-host');
+            if (sshTestHost && !sshTestHost.value) sshTestHost.value = host;
+
+            const firstNodeIp = document.querySelector('#deploy-nodes-list .deploy-node-ip');
+            if (firstNodeIp && (!firstNodeIp.value || firstNodeIp.value.startsWith('127.0.0.1') || firstNodeIp.value.startsWith('192.168.'))) {
+                firstNodeIp.value = host;
+            }
+        }
+
+        const msgEl = document.getElementById('deploy-conn-url-parsed-msg');
+        if (msgEl) {
+            msgEl.style.display = 'block';
+            msgEl.innerHTML = `✓ Parsed: <strong>${user || 'user'}@${host || 'host'}:${port || 'port'}</strong>`;
+        }
+    } catch (e) {
+        // Incomplete URL while typing
+    }
+};
+
 window.addDeployNode = function(role = 'replica') {
     const container = document.getElementById('deploy-nodes-list');
     if (!container) return;
@@ -5685,7 +5766,7 @@ window.addDeployNode = function(role = 'replica') {
             <option value="primary" ${nodeRole === 'primary' ? 'selected' : ''}>Primary</option>
             <option value="replica" ${nodeRole === 'replica' ? 'selected' : ''}>Replica</option>
         </select>
-        <input class="deploy-node-ip" type="text" placeholder="IP Address (e.g. 192.168.1.${idx + 10})" style="flex:1;padding:9px 14px;border:1px solid #d1d5db;border-radius:8px;font-size:0.88rem;">
+        <input class="deploy-node-ip" type="text" placeholder="IP Address or Connection URL (e.g. 192.168.1.${idx + 10})" style="flex:1;padding:9px 14px;border:1px solid #d1d5db;border-radius:8px;font-size:0.88rem;">
         ${!isFirst ? `<button type="button" onclick="this.parentElement.remove()" style="background:none;border:none;cursor:pointer;color:#ef4444;padding:4px;display:flex;align-items:center;"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg></button>` : `<div style="width:26px;"></div>`}
     `;
     container.appendChild(row);
@@ -5693,10 +5774,24 @@ window.addDeployNode = function(role = 'replica') {
 
 function collectDeployNodes() {
     const rows = document.querySelectorAll('#deploy-nodes-list > div');
-    return Array.from(rows).map(row => ({
-        role: row.querySelector('.deploy-node-role')?.value || 'replica',
-        ip: row.querySelector('.deploy-node-ip')?.value.trim() || ''
-    }));
+    return Array.from(rows).map(row => {
+        const role = row.querySelector('.deploy-node-role')?.value || 'replica';
+        const rawVal = row.querySelector('.deploy-node-ip')?.value.trim() || '';
+        let ip = rawVal;
+        let url = '';
+
+        if (rawVal.includes('://')) {
+            url = rawVal;
+            try {
+                const norm = rawVal.replace(/^[a-z0-9_\+]+:\/\//i, 'http://');
+                const parsed = new URL(norm);
+                ip = parsed.hostname || rawVal;
+            } catch(e) {
+                ip = rawVal;
+            }
+        }
+        return { role, ip, url };
+    });
 }
 
 function renderDeployPreview() {
@@ -5706,11 +5801,12 @@ function renderDeployPreview() {
     const isImport = deployWizard.mode === 'import';
     const clusterName = document.getElementById('deploy-cluster-name')?.value.trim() || `${dbInfo.name} Cluster`;
     const tags = document.getElementById('deploy-cluster-tags')?.value.trim() || 'production, auto-deploy';
+    const connUrl = document.getElementById('deploy-conn-url')?.value.trim();
     const sshUser = document.getElementById('deploy-ssh-user')?.value.trim() || 'root';
     const sshPort = document.getElementById('deploy-ssh-port')?.value || '22';
     const dbPort = document.getElementById('deploy-db-port')?.value || dbInfo.defaultPort;
     const dbUser = document.getElementById('deploy-db-user')?.value || dbInfo.defaultUser;
-    const nodes = collectDeployNodes().filter(n => n.ip);
+    const nodes = collectDeployNodes().filter(n => n.ip || n.url);
 
     const items = [
         ['Mode', isImport ? 'Import Existing Database Cluster' : 'Provision & Deploy New Cluster'],
@@ -5718,9 +5814,10 @@ function renderDeployPreview() {
         ['Vendor & Version', `${deployWizard.selectedVendor} (${deployWizard.selectedVersion})`],
         ['Cluster Name', clusterName],
         ['Tags', tags],
+        ['Connection URL', connUrl ? '•••••••• (Encrypted AES-256)' : `${dbUser}@*:${dbPort}`],
         ['SSH Configuration', `${sshUser}@* (port ${sshPort})`],
         ['DB Port / Admin', `${dbUser} on port ${dbPort}`],
-        ['Cluster Nodes', nodes.length > 0 ? nodes.map((n, i) => `${n.ip} (${n.role})`).join(', ') : '127.0.0.1 (primary)']
+        ['Cluster Nodes', nodes.length > 0 ? nodes.map((n) => `${n.ip} (${n.role})`).join(', ') : '127.0.0.1 (primary)']
     ];
 
     if (isImport) {
@@ -5830,7 +5927,7 @@ window.submitDeployWizard = async function() {
     const dbInfo = DB_CATALOG[deployWizard.selectedDbKey] || DB_CATALOG['postgresql_logical'];
     const isImport = deployWizard.mode === 'import';
     const clusterName = document.getElementById('deploy-cluster-name')?.value.trim() || `${dbInfo.name} ${isImport ? 'Import' : 'Cluster'}`;
-    const validNodes = collectDeployNodes().filter(n => n.ip && n.ip.trim());
+    const validNodes = collectDeployNodes().filter(n => (n.ip && n.ip.trim()) || (n.url && n.url.trim()));
     if (validNodes.length === 0) {
         validNodes.push({ role: 'primary', ip: '127.0.0.1' });
     }
@@ -5847,6 +5944,7 @@ window.submitDeployWizard = async function() {
     const payload = {
         db_type: deployWizard.selectedDbKey.includes('mssql') ? 'mssql' : 'postgresql',
         cluster_name: clusterName,
+        connection_url: document.getElementById('deploy-conn-url')?.value.trim() || '',
         ssh_user: document.getElementById('deploy-ssh-user')?.value.trim() || 'root',
         ssh_port: parseInt(document.getElementById('deploy-ssh-port')?.value) || 22,
         ssh_credential: cred || '',

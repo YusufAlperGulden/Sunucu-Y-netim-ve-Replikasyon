@@ -277,9 +277,17 @@ def get_db():
 def verify_auth():
     return {"status": "ok"}
 
+class InitialNodeCreate(BaseModel):
+    url: str | None = None
+    ssh_host: str | None = None
+    ssh_port: int = 22
+    ssh_username: str = "root"
+    ssh_password: str | None = None
+
 class ProjectCreate(BaseModel):
     name: str
     description: str
+    initial_node: InitialNodeCreate | None = None
 
 class NodeCreate(BaseModel):
     role: str
@@ -315,6 +323,28 @@ def add_project(project: ProjectCreate, db: Session = Depends(get_db)):
     try:
         db_proj = Project(name=name, description=desc)
         db.add(db_proj)
+        db.flush()
+
+        # Handle initial node if provided (URL or SSH)
+        if project.initial_node:
+            init_url = (project.initial_node.url or "").strip()
+            init_ssh_host = (project.initial_node.ssh_host or "").strip()
+            if init_url or init_ssh_host:
+                final_url = init_url if init_url else f"postgresql://root@{init_ssh_host}:5432/{name}"
+                db_node = DatabaseNode(
+                    project_id=db_proj.id,
+                    role="primary",
+                    name=f"{name} Primary",
+                    ssh_host=init_ssh_host if init_ssh_host else None,
+                    ssh_port=project.initial_node.ssh_port or 22,
+                    ssh_username=project.initial_node.ssh_username or "root"
+                )
+                db_node.set_url(final_url)
+                if project.initial_node.ssh_password and project.initial_node.ssh_password.strip():
+                    from vault import encrypt as _enc
+                    db_node.encrypted_ssh_credential = _enc(project.initial_node.ssh_password.strip())
+                db.add(db_node)
+        
         db.commit()
         db.refresh(db_proj)
         
@@ -2720,20 +2750,31 @@ def deploy_start(background_tasks: BackgroundTasks, body: dict = Body(...), db: 
     # Create DatabaseNode rows for each node
     db_port_default = 5432 if db_type == "postgresql" else 1433
     db_port = int(body.get("db_port", db_port_default))
+    root_conn_url = body.get("connection_url", "").strip()
 
     for node_entry in nodes_list:
-        ip   = node_entry.get("ip", "").strip()
+        ip = node_entry.get("ip", "").strip()
         role = node_entry.get("role", "replica")
-        if not ip:
+        raw_url = node_entry.get("url", "").strip()
+        if not ip and not raw_url:
             continue
-        conn_url = f"postgresql://{body.get('db_admin_user','postgres')}@{ip}:{db_port}/{cluster_name}" \
-                   if db_type == "postgresql" \
-                   else f"mssql+pyodbc://sa@{ip}:{db_port}/{cluster_name}"
+
+        if raw_url:
+            conn_url = raw_url
+        elif root_conn_url and role == "primary":
+            conn_url = root_conn_url
+        else:
+            db_pass = body.get('db_admin_pass', '')
+            user_auth = f"{body.get('db_admin_user','postgres')}:{db_pass}" if db_pass else f"{body.get('db_admin_user','postgres')}"
+            conn_url = f"postgresql://{user_auth}@{ip}:{db_port}/{cluster_name}" \
+                       if db_type == "postgresql" \
+                       else f"mssql+pyodbc://{user_auth}@{ip}:{db_port}/{cluster_name}"
+
         node = DatabaseNode(
             project_id=proj.id,
             role=role,
-            name=f"{ip}",
-            ssh_host=ip,
+            name=f"{ip or 'Node'}",
+            ssh_host=ip if ip else None,
             ssh_port=int(body.get("ssh_port", 22)),
             ssh_username=body.get("ssh_user", "root"),
             encrypted_ssh_credential=encrypt(ssh_cred_raw) if ssh_cred_raw else None,

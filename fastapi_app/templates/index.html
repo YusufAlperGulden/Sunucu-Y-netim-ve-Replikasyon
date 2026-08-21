@@ -1346,7 +1346,7 @@ Real OS metrics (CPU, RAM, Disk I/O) cannot be fetched directly from PostgreSQL 
 
     <!-- Add Project Modal -->
     <div class="modal-overlay" id="modal-add-project" style="display: none;">
-        <div class="modal glass-panel">
+        <div class="modal glass-panel" style="max-width: 520px; width: 95%;">
             <div class="modal-header">
                 <h3>Add New Project (Cluster)</h3>
                 <button class="btn-close" id="btn-close-modal">×</button>
@@ -1354,14 +1354,53 @@ Real OS metrics (CPU, RAM, Disk I/O) cannot be fetched directly from PostgreSQL 
             <div class="modal-body">
                 <form id="form-add-project">
                     <div class="input-group">
-                        <label>Project Name</label>
+                        <label>Project Name *</label>
                         <input type="text" id="proj-name" required placeholder="e.g. Finance DB Cluster">
                     </div>
                     <div class="input-group">
                         <label>Description</label>
                         <input type="text" id="proj-desc" placeholder="Brief description of the cluster">
                     </div>
-                    <button type="submit" class="btn-primary w-100">Create Project</button>
+
+                    <!-- Optional Connect Server Section (Connection URL & SSH) -->
+                    <div style="border:1px solid #e2e8f0;border-radius:8px;overflow:hidden;margin-top:14px;background:#f8fafc;">
+                        <button type="button" onclick="var el=document.getElementById('proj-initial-node-wrap');el.style.display=(el.style.display==='none'?'block':'none');" style="width:100%;display:flex;align-items:center;justify-content:space-between;padding:10px 14px;background:#f1f5f9;border:none;cursor:pointer;font-size:0.85rem;font-weight:600;color:#334155;">
+                            <span style="display:flex;align-items:center;gap:6px;">
+                                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#4f46e5" stroke-width="2"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"></path><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"></path></svg>
+                                Connect Primary Server Now (Optional)
+                            </span>
+                            <span style="font-size:0.75rem;color:#64748b;">+ URL & SSH</span>
+                        </button>
+                        <div id="proj-initial-node-wrap" style="display:none;padding:14px;flex-direction:column;gap:12px;">
+                            <div class="input-group" style="margin-bottom:10px;">
+                                <label style="font-size:0.8rem;color:#475569;font-weight:600;">Database Connection URL</label>
+                                <input type="text" id="proj-init-db-url" placeholder="postgres://user:pass@host:5432/dbname" style="font-size:0.85rem;">
+                                <span style="font-size:0.72rem;color:#64748b;margin-top:2px;display:block;">PostgreSQL or MSSQL URL. Will be encrypted with AES-256.</span>
+                            </div>
+                            <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
+                                <div>
+                                    <label style="font-size:0.78rem;color:#475569;">SSH Host</label>
+                                    <input type="text" id="proj-init-ssh-host" placeholder="192.168.1.10" style="padding:7px 10px;font-size:0.85rem;">
+                                </div>
+                                <div>
+                                    <label style="font-size:0.78rem;color:#475569;">SSH Port</label>
+                                    <input type="number" id="proj-init-ssh-port" value="22" style="padding:7px 10px;font-size:0.85rem;">
+                                </div>
+                            </div>
+                            <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:8px;">
+                                <div>
+                                    <label style="font-size:0.78rem;color:#475569;">SSH User</label>
+                                    <input type="text" id="proj-init-ssh-user" value="root" style="padding:7px 10px;font-size:0.85rem;">
+                                </div>
+                                <div>
+                                    <label style="font-size:0.78rem;color:#475569;">SSH Password / Key</label>
+                                    <input type="password" id="proj-init-ssh-pass" placeholder="••••••••" style="padding:7px 10px;font-size:0.85rem;">
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <button type="submit" class="btn-primary w-100" style="margin-top:16px;">Create Project</button>
                 </form>
             </div>
         </div>
@@ -3271,10 +3310,26 @@ Real OS metrics (CPU, RAM, Disk I/O) cannot be fetched directly from PostgreSQL 
             </div>
           </div>
 
-          <!-- Step 3: Node / DB Configuration -->
+          <!-- Step 3: Node / DB Configuration & Connection URL -->
           <div id="wizard-pane-3" class="wizard-pane" style="display:none;">
             <h3 id="pane3-title" style="margin:0 0 6px;font-size:1.15rem;font-weight:700;color:#111827;">Node configuration</h3>
-            <p id="pane3-desc" style="margin:0 0 20px;font-size:0.85rem;color:#6b7280;">Specify administrative credentials and database listening port.</p>
+            <p id="pane3-desc" style="margin:0 0 16px;font-size:0.85rem;color:#6b7280;">Specify administrative credentials and database connection parameters.</p>
+
+            <!-- Database Connection URL (Auto-fills parameters) -->
+            <div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;padding:12px 14px;margin-bottom:18px;">
+              <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">
+                <label style="font-size:0.82rem;font-weight:600;color:#334155;display:flex;align-items:center;gap:6px;">
+                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#4f46e5" stroke-width="2"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"></path><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"></path></svg>
+                  Database Connection URL (Optional Quick-Fill)
+                </label>
+                <span style="font-size:0.75rem;color:#64748b;">Auto-fills User, Password, Port &amp; Host</span>
+              </div>
+              <div style="position:relative;display:flex;align-items:center;">
+                <input id="deploy-conn-url" type="text" placeholder="postgresql://user:password@192.168.1.50:5432/dbname" oninput="onDeployConnUrlInput(this.value)" style="width:100%;padding:9px 12px;border:1px solid #cbd5e1;border-radius:6px;font-size:0.85rem;box-sizing:border-box;background:white;">
+              </div>
+              <div id="deploy-conn-url-parsed-msg" style="font-size:0.75rem;color:#16a34a;margin-top:4px;display:none;font-weight:500;">✓ Parsed host, port, user and password successfully</div>
+            </div>
+
             <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;">
               <div>
                 <label style="font-size:0.85rem;font-weight:500;color:#374151;display:block;margin-bottom:5px;"><span style="color:#ef4444;">*</span> DB Port</label>
@@ -3957,6 +4012,6 @@ Real OS metrics (CPU, RAM, Disk I/O) cannot be fetched directly from PostgreSQL 
   </div>
 </div>
 
-<script src="/static/main.js?v=97"></script>
+<script src="/static/main.js?v=98"></script>
 </body>
 </html>
