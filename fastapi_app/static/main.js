@@ -3431,25 +3431,40 @@ function renderBackups() {
         }
     }
 
-    // Fallback: build a single-row table from /api/users/me
+    // Fallback: build a single-row table using cached profile data (from Settings page)
+    // or fetch from /api/users/me — whichever is available first
     async function loadCurrentUserFallback() {
         try {
-            const res = await apiFetch('/api/users/me');
-            if (!res.ok) return;
-            const u = await res.json();
+            // Use the already-fetched profile data (same source as Settings page)
+            let profile = window.cachedProfileData;
+            if (!profile) {
+                // Profile not loaded yet — fetch it now
+                const res = await apiFetch('/api/users/me');
+                if (!res.ok) return;
+                profile = await res.json();
+                // Cache it so Settings page also stays in sync
+                if (typeof applyProfileData === 'function') applyProfileData(profile);
+            }
+            const username = profile.username || 'admin';
+            const email    = profile.email    || `${username}@localhost`;
+            const firstName = profile.first_name || username.charAt(0).toUpperCase() + username.slice(1);
+            const lastName  = profile.last_name  || '';
+            const team      = profile.team     || 'admins';
+            const timezone  = profile.timezone || 'UTC';
+
             usersData = [{
                 id: 0,
-                username: u.username || 'admin',
-                email: u.email || `${u.username}@localhost`,
-                first_name: u.first_name || (u.username || 'admin').charAt(0).toUpperCase() + (u.username || 'admin').slice(1),
-                last_name: u.last_name || '',
-                role: u.role || 'admin',
-                team: u.team || 'admins',
-                timezone: u.timezone || 'UTC',
+                username,
+                email,
+                first_name: firstName,
+                last_name:  lastName,
+                role: profile.role || 'admin',
+                team,
+                timezone,
                 origin: 'cmon',
                 status: 'Enabled',
                 created_at: '',
-                ...avatarStyle(u.username || 'admin', 0),
+                ...avatarStyle(username, 0),
             }];
             renderUsers();
         } catch (e) {
