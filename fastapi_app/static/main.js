@@ -3373,56 +3373,88 @@ function renderBackups() {
     fetchSchedules();
 }
 
+}); // close DOMContentLoaded (--- USERS MANAGEMENT ---)
 
-const usersData = [
-        { initial: 'DU', bg: '#fef3c7', color: '#d97706', user: 'admin', email: '', team: 'admins', fname: 'Default', lname: 'User', status: 'Enabled', created: '4 months ago' },
-        { isIcon: true, user: 'demo', email: 'demo@severalnines.com', team: 'admins', fname: '', lname: '', status: 'Enabled', created: '3 months ago' },
-        { initial: 'DC', bg: '#ffe4e6', color: '#e11d48', user: 'demo@severalnines.com', email: 'demo@severalnines.com', team: 'admins', fname: 'Demo', lname: 'ClusterControl', status: 'Enabled', created: '3 months ago' },
-        { initial: 'DU', bg: '#e0f2fe', color: '#0284c7', user: 'nobody', email: '', team: 'nobody', fname: 'Default', lname: 'User', status: 'Enabled', created: '4 months ago' },
-        { initial: 'SU', bg: '#f3e8ff', color: '#9333ea', user: 'system', email: '', team: 'admins', fname: 'System', lname: 'User', status: 'Enabled', created: '4 months ago' }
+
+// ── User Management – live data ────────────────────────────────────────────
+(function initUserManagement() {
+    let usersData = [];
+    let currentSort = 'none';
+
+    // Colour palette for avatars
+    const AVATAR_COLORS = [
+        { bg: '#fef3c7', color: '#d97706' },
+        { bg: '#ffe4e6', color: '#e11d48' },
+        { bg: '#e0f2fe', color: '#0284c7' },
+        { bg: '#f3e8ff', color: '#9333ea' },
+        { bg: '#dcfce7', color: '#16a34a' },
+        { bg: '#fff7ed', color: '#ea580c' },
     ];
+    function avatarStyle(username, idx) {
+        const p = AVATAR_COLORS[idx % AVATAR_COLORS.length];
+        const init = (username || '?').slice(0, 2).toUpperCase();
+        return { initial: init, bg: p.bg, color: p.color };
+    }
 
-    let currentSort = 'none'; // 'none', 'asc', 'desc'
+    // ── Fetch users from API ───────────────────────────────────────────────
+    async function loadUsersFromAPI() {
+        try {
+            const res = await apiFetch('/api/users');
+            if (!res.ok) return;
+            const data = await res.json();
+            usersData = data.map((u, i) => ({
+                ...u,
+                ...avatarStyle(u.username, i),
+                status: u.status || 'Enabled',
+            }));
+            renderUsers();
+        } catch (e) {
+            console.error('Failed to load users:', e);
+        }
+    }
 
+    // ── Render table ──────────────────────────────────────────────────────
     function renderUsers() {
         const tbody = document.getElementById('users-tbody');
-        if(!tbody) return;
+        if (!tbody) return;
         tbody.innerHTML = '';
-        
-        let sortedData = [...usersData];
-        if (currentSort === 'asc') {
-            sortedData.sort((a, b) => a.user.localeCompare(b.user));
-        } else if (currentSort === 'desc') {
-            sortedData.sort((a, b) => b.user.localeCompare(a.user));
+
+        if (usersData.length === 0) {
+            tbody.innerHTML = `<tr><td colspan="8" style="padding:60px 24px;text-align:center;color:#9ca3af;">
+                <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="#d1d5db" stroke-width="1.5" style="display:block;margin:0 auto 12px;"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+                No users created yet.</td></tr>`;
+            return;
         }
 
-        sortedData.forEach(u => {
+        let sorted = [...usersData];
+        if (currentSort === 'asc') sorted.sort((a, b) => a.username.localeCompare(b.username));
+        else if (currentSort === 'desc') sorted.sort((a, b) => b.username.localeCompare(a.username));
+
+        sorted.forEach((u, i) => {
             const tr = document.createElement('tr');
-            tr.style.borderBottom = '1px solid var(--glass-border)';
-            
-            let avatar = '';
-            if (u.isIcon) {
-                avatar = `<div style="width: 32px; height: 32px; border-radius: 50%; border: 1px solid #14b8a6; display: flex; align-items: center; justify-content: center; color: #14b8a6; font-size: 14px;"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg></div>`;
-            } else {
-                avatar = `<div style="width: 32px; height: 32px; border-radius: 50%; background: ${u.bg}; color: ${u.color}; display: flex; align-items: center; justify-content: center; font-size: 0.8rem; font-weight: 600;">${u.initial}</div>`;
-            }
-            
+            tr.style.cssText = 'border-bottom:1px solid #f3f4f6;cursor:pointer;transition:background 0.12s;';
+            tr.onmouseenter = () => tr.style.background = '#f9fafb';
+            tr.onmouseleave = () => tr.style.background = '';
+            tr.onclick = () => openUserDetails(u);
+
+            const avatar = `<div style="width:32px;height:32px;border-radius:50%;background:${u.bg};color:${u.color};display:flex;align-items:center;justify-content:center;font-size:0.8rem;font-weight:700;flex-shrink:0;">${u.initial}</div>`;
+            const statusColor = u.status === 'Enabled' ? '#16a34a' : '#9ca3af';
+            const createdLabel = u.created_at ? u.created_at : (u.id === 0 ? 'System' : '—');
+
             tr.innerHTML = `
-                <td style="padding: 16px 24px; display: flex; align-items: center; gap: 12px; font-weight: 500; color: var(--text-main);">${avatar} ${u.user}</td>
-                <td style="padding: 16px 24px; font-size: 0.9rem; color: var(--text-main);">${u.email}</td>
-                <td style="padding: 16px 24px; font-size: 0.9rem; color: var(--text-main);">${u.team}</td>
-                <td style="padding: 16px 24px; font-size: 0.9rem; color: var(--text-main);">${u.fname}</td>
-                <td style="padding: 16px 24px; font-size: 0.9rem; color: var(--text-main);">${u.lname}</td>
-                <td style="padding: 16px 24px; font-size: 0.9rem; color: var(--success);">${u.status}</td>
-                <td style="padding: 16px 24px; font-size: 0.9rem; color: var(--text-main);">${u.created}</td>
-                <td style="padding: 16px 24px;">
-                    <button style="background: transparent; border: 1px solid var(--border); border-radius: 4px; padding: 4px 8px; cursor: pointer; color: #6b7280;">...</button>
-                </td>
-            `;
-            if (tbody) { tbody.appendChild(tr); }
+                <td style="padding:14px 24px;display:flex;align-items:center;gap:10px;font-weight:500;color:#111827;">${avatar}<span>${escapeHTML(u.username)}</span></td>
+                <td style="padding:14px 24px;font-size:0.88rem;color:#374151;">${escapeHTML(u.email || '')}</td>
+                <td style="padding:14px 24px;font-size:0.88rem;color:#374151;">${escapeHTML(u.team || '')}</td>
+                <td style="padding:14px 24px;font-size:0.88rem;color:#374151;">${escapeHTML(u.first_name || '')}</td>
+                <td style="padding:14px 24px;font-size:0.88rem;color:#374151;">${escapeHTML(u.last_name || '')}</td>
+                <td style="padding:14px 24px;font-size:0.88rem;font-weight:600;color:${statusColor};">${escapeHTML(u.status || 'Enabled')}</td>
+                <td style="padding:14px 24px;font-size:0.88rem;color:#6b7280;">${escapeHTML(createdLabel)}</td>
+                <td style="padding:14px 24px;">
+                    <button onclick="event.stopPropagation();" style="background:transparent;border:1px solid #e5e7eb;border-radius:4px;padding:4px 10px;cursor:pointer;color:#6b7280;font-size:0.82rem;">···</button>
+                </td>`;
+            tbody.appendChild(tr);
         });
-        
-        // Update Sort Arrows
+
         const arrows = document.getElementById('user-sort-arrows');
         if (arrows) {
             if (currentSort === 'asc') arrows.innerHTML = '&#9650;';
@@ -3431,71 +3463,233 @@ const usersData = [
         }
     }
 
+    // ── User details panel ─────────────────────────────────────────────────
+    function openUserDetails(u) {
+        let overlay = document.getElementById('modal-user-details');
+        if (!overlay) {
+            overlay = document.createElement('div');
+            overlay.id = 'modal-user-details';
+            overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:9000;display:flex;align-items:center;justify-content:center;';
+            overlay.onclick = (e) => { if (e.target === overlay) overlay.style.display = 'none'; };
+            document.body.appendChild(overlay);
+        }
+
+        const isAdmin = u.role === 'admin';
+        const fullName = [u.first_name, u.last_name].filter(Boolean).join(' ') || u.username;
+
+        overlay.innerHTML = `
+        <div style="background:white;border-radius:12px;width:600px;max-width:94vw;max-height:90vh;overflow-y:auto;box-shadow:0 20px 60px rgba(0,0,0,0.25);padding:32px 36px;position:relative;">
+            <button onclick="document.getElementById('modal-user-details').style.display='none'"
+              style="position:absolute;top:16px;right:18px;border:none;background:none;font-size:1.4rem;cursor:pointer;color:#6b7280;line-height:1;">✕</button>
+
+            <!-- Name header -->
+            <div style="text-align:center;margin-bottom:20px;">
+                <div style="width:64px;height:64px;border-radius:50%;background:${u.bg};color:${u.color};display:flex;align-items:center;justify-content:center;font-size:1.4rem;font-weight:700;margin:0 auto 12px;">${u.initial}</div>
+                <div style="font-size:1.25rem;font-weight:700;color:#111827;">${escapeHTML(fullName)}</div>
+                <div style="font-size:0.88rem;color:#6b7280;margin-top:2px;">${escapeHTML(u.email || '')}</div>
+            </div>
+
+            <!-- Profile fields -->
+            <div style="display:grid;grid-template-columns:auto 1fr;gap:7px 16px;font-size:0.88rem;margin-bottom:20px;padding:16px;background:#f9fafb;border-radius:8px;">
+                <span style="color:#6b7280;">Time zone:</span>  <span style="color:#111827;">${escapeHTML(u.timezone || 'UTC')}</span>
+                <span style="color:#6b7280;">Username:</span>   <span style="color:#111827;font-weight:500;">${escapeHTML(u.username)}</span>
+                <span style="color:#6b7280;">Team:</span>       <span style="color:#111827;">${escapeHTML(u.team || 'admins')}</span>
+                <span style="color:#6b7280;">Origin:</span>     <span style="color:#111827;">${escapeHTML(u.origin || 'cmon')}</span>
+            </div>
+
+            <!-- Permissions -->
+            <div style="margin-bottom:20px;">
+                <div style="font-size:0.9rem;font-weight:600;color:#111827;margin-bottom:10px;">Permissions</div>
+                <div style="display:grid;grid-template-columns:1fr 1fr;gap:7px 24px;font-size:0.85rem;">
+                    ${perm('Change controller configuration', isAdmin)}
+                    ${perm('Manage users and teams', isAdmin)}
+                    ${perm('Change LDAP settings', isAdmin)}
+                    ${perm('Deploy clusters', isAdmin)}
+                </div>
+            </div>
+
+            <!-- Cluster access table -->
+            <div style="margin-bottom:24px;">
+                <div style="font-size:0.9rem;font-weight:600;color:#111827;margin-bottom:10px;">Cluster access</div>
+                <div id="ud-cluster-access" style="font-size:0.84rem;color:#6b7280;">Loading clusters…</div>
+            </div>
+
+            <!-- Footer: Edit + Close -->
+            <div style="display:flex;justify-content:space-between;align-items:center;">
+                <button onclick="window.openEditUserModal(${JSON.stringify(u).replace(/"/g,'&quot;')})"
+                  style="padding:9px 24px;background:#3a1c94;color:white;border:none;border-radius:8px;font-size:0.88rem;font-weight:600;cursor:pointer;"
+                  onmouseover="this.style.background='#2d1570'" onmouseout="this.style.background='#3a1c94'">Edit</button>
+                <button onclick="document.getElementById('modal-user-details').style.display='none'"
+                  style="padding:9px 20px;border:1px solid #d1d5db;background:white;color:#374151;border-radius:8px;font-size:0.88rem;cursor:pointer;">Close</button>
+            </div>
+        </div>`;
+
+        overlay.style.display = 'flex';
+
+        // Load clusters asynchronously
+        apiFetch('/api/projects').then(r => r.ok ? r.json() : []).then(projects => {
+            const el = document.getElementById('ud-cluster-access');
+            if (!el) return;
+            if (!projects.length) { el.textContent = 'No clusters.'; return; }
+            let rows = projects.map(p => `
+                <div style="display:grid;grid-template-columns:1fr 1fr auto;gap:4px 16px;padding:8px 0;border-bottom:1px solid #f3f4f6;align-items:center;">
+                    <span style="color:#374151;font-weight:500;">${escapeHTML(p.name)}</span>
+                    <span style="color:#6b7280;font-size:0.82rem;">ID:${p.id}</span>
+                    <span style="color:#374151;font-size:0.82rem;">Manage</span>
+                </div>`).join('');
+            el.innerHTML = `
+                <div style="display:grid;grid-template-columns:1fr 1fr auto;gap:4px 16px;padding:6px 0;border-bottom:2px solid #e5e7eb;margin-bottom:4px;">
+                    <span style="font-weight:600;font-size:0.82rem;color:#6b7280;text-transform:uppercase;">Cluster</span>
+                    <span style="font-weight:600;font-size:0.82rem;color:#6b7280;text-transform:uppercase;">More info</span>
+                    <span style="font-weight:600;font-size:0.82rem;color:#6b7280;text-transform:uppercase;">Access level</span>
+                </div>
+                ${rows}`;
+        }).catch(() => {});
+    }
+
+    // ── Edit user modal ────────────────────────────────────────────────────
+    window.openEditUserModal = function(u) {
+        // Close details first
+        const det = document.getElementById('modal-user-details');
+        if (det) det.style.display = 'none';
+
+        let overlay = document.getElementById('modal-edit-user');
+        if (!overlay) {
+            overlay = document.createElement('div');
+            overlay.id = 'modal-edit-user';
+            overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:9100;display:flex;align-items:center;justify-content:center;';
+            overlay.onclick = (e) => { if (e.target === overlay) overlay.style.display = 'none'; };
+            document.body.appendChild(overlay);
+        }
+
+        const fld = (label, id, val, required=true) => `
+            <div style="margin-bottom:16px;">
+                <label style="display:block;font-size:0.84rem;font-weight:500;color:#374151;margin-bottom:6px;">
+                    ${required ? '<span style="color:#ef4444;">*</span> ' : ''}${escapeHTML(label)}
+                </label>
+                <input id="${id}" type="text" value="${escapeHTML(val || '')}"
+                  style="width:100%;padding:9px 12px;border:1px solid #d1d5db;border-radius:6px;font-size:0.88rem;outline:none;box-sizing:border-box;">
+            </div>`;
+
+        overlay.innerHTML = `
+        <div style="background:white;border-radius:12px;width:520px;max-width:94vw;max-height:90vh;overflow-y:auto;box-shadow:0 20px 60px rgba(0,0,0,0.25);padding:28px 32px;position:relative;">
+            <button onclick="document.getElementById('modal-edit-user').style.display='none'"
+              style="position:absolute;top:14px;right:16px;border:none;background:none;font-size:1.3rem;cursor:pointer;color:#6b7280;line-height:1;">✕</button>
+            <h3 style="margin:0 0 20px;font-size:1.05rem;font-weight:600;color:#111827;">Edit user ${escapeHTML(u.username)}</h3>
+
+            ${fld('First name',  'eu-fname',    u.first_name)}
+            ${fld('Last name',   'eu-lname',    u.last_name)}
+            ${fld('Email',       'eu-email',    u.email)}
+
+            <!-- Timezone -->
+            <div style="margin-bottom:16px;">
+                <label style="display:block;font-size:0.84rem;font-weight:500;color:#374151;margin-bottom:6px;">Timezone</label>
+                <select id="eu-timezone" style="width:100%;padding:9px 12px;border:1px solid #d1d5db;border-radius:6px;font-size:0.88rem;background:white;outline:none;">
+                    ${['UTC','Europe/Istanbul','Europe/London','Europe/Berlin','America/New_York','America/Chicago','America/Los_Angeles','Asia/Tokyo','Asia/Singapore']
+                        .map(tz => `<option value="${tz}" ${(u.timezone||'UTC')===tz?'selected':''}>${tz}</option>`).join('')}
+                </select>
+            </div>
+
+            <!-- Force change password toggle -->
+            <div style="margin-bottom:20px;display:flex;align-items:center;justify-content:space-between;">
+                <label style="font-size:0.84rem;font-weight:500;color:#374151;">Force change password</label>
+                <button id="eu-force-pwd-btn" onclick="this.classList.toggle('eu-pwd-on');this.textContent=this.classList.contains('eu-pwd-on')?'On':'Off';this.style.background=this.classList.contains('eu-pwd-on')?'#4338ca':'#d1d5db';"
+                  style="padding:5px 18px;border:none;border-radius:20px;background:#d1d5db;color:white;font-size:0.8rem;font-weight:600;cursor:pointer;transition:background 0.2s;">Off</button>
+            </div>
+
+            <!-- Choose a team -->
+            <div style="margin-bottom:20px;">
+                <label style="display:block;font-size:0.84rem;font-weight:500;color:#374151;margin-bottom:6px;"><span style="color:#ef4444;">*</span> Choose a team</label>
+                <select id="eu-team" style="width:100%;padding:9px 12px;border:1px solid #d1d5db;border-radius:6px;font-size:0.88rem;background:white;outline:none;">
+                    <option value="admins" ${(u.team||'admins')==='admins'?'selected':''}>admins</option>
+                    <option value="nobody" ${(u.team)==='nobody'?'selected':''}>nobody</option>
+                    <option value="users"  ${(u.team)==='users'?'selected':''}>users</option>
+                </select>
+            </div>
+
+            <!-- Error -->
+            <div id="eu-error" style="display:none;color:#ef4444;font-size:0.84rem;margin-bottom:12px;"></div>
+
+            <!-- Footer -->
+            <div style="display:flex;justify-content:flex-end;gap:10px;">
+                <button onclick="document.getElementById('modal-edit-user').style.display='none'"
+                  style="padding:9px 20px;border:1px solid #d1d5db;background:white;color:#374151;border-radius:8px;font-size:0.88rem;cursor:pointer;">Cancel</button>
+                <button onclick="window.submitEditUser(${u.id})"
+                  style="padding:9px 24px;background:#3a1c94;color:white;border:none;border-radius:8px;font-size:0.88rem;font-weight:600;cursor:pointer;"
+                  onmouseover="this.style.background='#2d1570'" onmouseout="this.style.background='#3a1c94'">Save</button>
+            </div>
+        </div>`;
+
+        overlay.style.display = 'flex';
+    };
+
+    window.submitEditUser = async function(userId) {
+        const errEl = document.getElementById('eu-error');
+        if (errEl) errEl.style.display = 'none';
+
+        const email = document.getElementById('eu-email')?.value?.trim();
+        if (!email) { if (errEl) { errEl.textContent = 'Email is required.'; errEl.style.display = 'block'; } return; }
+
+        const payload = {
+            email,
+            first_name: document.getElementById('eu-fname')?.value?.trim() || '',
+            last_name: document.getElementById('eu-lname')?.value?.trim() || '',
+            timezone: document.getElementById('eu-timezone')?.value || 'UTC',
+        };
+
+        try {
+            const res = await apiFetch('/api/users/profile', { method: 'PUT', headers: {'Content-Type':'application/json'}, body: JSON.stringify(payload) });
+            if (res.ok) {
+                document.getElementById('modal-edit-user').style.display = 'none';
+                showToast && showToast('User updated successfully.', 'success');
+                loadUsersFromAPI(); // refresh table
+            } else {
+                const data = await res.json().catch(() => ({}));
+                if (errEl) { errEl.textContent = data.message || 'Failed to save.'; errEl.style.display = 'block'; }
+            }
+        } catch (e) {
+            if (errEl) { errEl.textContent = 'Connection error.'; errEl.style.display = 'block'; }
+        }
+    };
+
+    // ── Sort header ────────────────────────────────────────────────────────
     const thUser = document.getElementById('th-user-col');
     const userTooltip = document.getElementById('user-sort-tooltip');
-    
     if (thUser) {
-        thUser.onmouseenter = () => {
-            userTooltip.style.display = 'block';
-            if (currentSort === 'none') userTooltip.childNodes[0].nodeValue = 'Click to sort ascending';
-            else if (currentSort === 'asc') userTooltip.childNodes[0].nodeValue = 'Click to sort descending';
-            else userTooltip.childNodes[0].nodeValue = 'Click to cancel sorting';
-        };
-        thUser.onmouseleave = () => {
-            userTooltip.style.display = 'none';
-        };
+        thUser.onmouseenter = () => { if (userTooltip) userTooltip.style.display = 'block'; };
+        thUser.onmouseleave = () => { if (userTooltip) userTooltip.style.display = 'none'; };
         thUser.onclick = () => {
             if (currentSort === 'none') currentSort = 'asc';
             else if (currentSort === 'asc') currentSort = 'desc';
             else currentSort = 'none';
-            
-            if (currentSort === 'none') userTooltip.childNodes[0].nodeValue = 'Click to sort ascending';
-            else if (currentSort === 'asc') userTooltip.childNodes[0].nodeValue = 'Click to sort descending';
-            else userTooltip.childNodes[0].nodeValue = 'Click to cancel sorting';
-            
             renderUsers();
         };
     }
-    
-    // Switch Users Tabs
+
+    // ── Tab switching ──────────────────────────────────────────────────────
     const btnTabUsers = document.getElementById('tab-btn-users');
     const btnTabTeams = document.getElementById('tab-btn-teams');
-    const btnTabLdap = document.getElementById('tab-btn-ldap');
+    const btnTabLdap  = document.getElementById('tab-btn-ldap');
     const contentUsers = document.getElementById('content-users');
     const contentTeams = document.getElementById('content-teams');
-    const contentLdap = document.getElementById('content-ldap');
-    
+    const contentLdap  = document.getElementById('content-ldap');
+
     function switchUsersTab(tab) {
         [btnTabUsers, btnTabTeams, btnTabLdap].forEach(btn => {
-            if(btn) {
-                btn.classList.remove('active');
-                btn.style.color = '#4b5563';
-                btn.style.borderBottom = '2px solid transparent';
-            }
+            if (btn) { btn.classList.remove('active'); btn.style.color = '#4b5563'; btn.style.borderBottom = '2px solid transparent'; }
         });
-        [contentUsers, contentTeams, contentLdap].forEach(content => {
-            if(content) content.style.display = 'none';
-        });
-        
-        if (tab === 'users') {
-            if(btnTabUsers) { btnTabUsers.style.color = 'var(--primary)'; btnTabUsers.style.borderBottom = '2px solid var(--primary)'; }
-            if(contentUsers) contentUsers.style.display = 'block';
-        } else if (tab === 'teams') {
-            if(btnTabTeams) { btnTabTeams.style.color = 'var(--primary)'; btnTabTeams.style.borderBottom = '2px solid var(--primary)'; }
-            if(contentTeams) contentTeams.style.display = 'block';
-        } else if (tab === 'ldap') {
-            if(btnTabLdap) { btnTabLdap.style.color = 'var(--primary)'; btnTabLdap.style.borderBottom = '2px solid var(--primary)'; }
-            if(contentLdap) contentLdap.style.display = 'block';
-        }
+        [contentUsers, contentTeams, contentLdap].forEach(c => { if (c) c.style.display = 'none'; });
+        if (tab === 'users')  { if (btnTabUsers) { btnTabUsers.style.color = 'var(--primary)'; btnTabUsers.style.borderBottom = '2px solid var(--primary)'; } if (contentUsers) contentUsers.style.display = 'block'; }
+        else if (tab === 'teams') { if (btnTabTeams) { btnTabTeams.style.color = 'var(--primary)'; btnTabTeams.style.borderBottom = '2px solid var(--primary)'; } if (contentTeams) contentTeams.style.display = 'block'; }
+        else if (tab === 'ldap')  { if (btnTabLdap)  { btnTabLdap.style.color  = 'var(--primary)'; btnTabLdap.style.borderBottom  = '2px solid var(--primary)'; } if (contentLdap)  contentLdap.style.display  = 'block'; }
     }
-    
-    if(btnTabUsers) btnTabUsers.addEventListener('click', () => switchUsersTab('users'));
-    if(btnTabTeams) btnTabTeams.addEventListener('click', () => switchUsersTab('teams'));
-    if(btnTabLdap) btnTabLdap.addEventListener('click', () => switchUsersTab('ldap'));
+    if (btnTabUsers) btnTabUsers.addEventListener('click', () => switchUsersTab('users'));
+    if (btnTabTeams) btnTabTeams.addEventListener('click', () => switchUsersTab('teams'));
+    if (btnTabLdap)  btnTabLdap.addEventListener('click',  () => switchUsersTab('ldap'));
 
-    // Render initially
-    renderUsers();
-});
+    // Initial load
+    loadUsersFromAPI();
+})();
 
 
 // --- NODES PAGE MANAGEMENT ---

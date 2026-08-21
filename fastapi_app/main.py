@@ -1332,8 +1332,43 @@ class UserCreate(BaseModel):
 @app.get("/api/users", dependencies=[Depends(verify_credentials)])
 def get_users(db: Session = Depends(get_db)):
     from models import User
-    users = db.query(User).order_by(User.id.asc()).all()
-    return [{"id": u.id, "username": u.username, "role": u.role, "created_at": u.created_at.strftime("%Y-%m-%d %H:%M:%S") if u.created_at else ""} for u in users]
+    db_users = db.query(User).order_by(User.id.asc()).all()
+
+    result = []
+    admin_username = ADMIN_USER or ""
+    admin_in_db = any(u.username == admin_username for u in db_users)
+
+    # Always include the env-var admin user first (even if not in DB)
+    if not admin_in_db and admin_username:
+        result.append({
+            "id": 0,
+            "username": admin_username,
+            "email": f"{admin_username}@localhost",
+            "first_name": admin_username.capitalize(),
+            "last_name": "",
+            "role": "admin",
+            "team": "admins",
+            "timezone": "UTC",
+            "origin": "cmon",
+            "status": "Enabled",
+            "created_at": ""
+        })
+
+    for u in db_users:
+        result.append({
+            "id": u.id,
+            "username": u.username,
+            "email": u.email or f"{u.username}@localhost",
+            "first_name": u.first_name or u.username.capitalize(),
+            "last_name": u.last_name or "",
+            "role": u.role,
+            "team": "admins" if u.role == "admin" else "viewers",
+            "timezone": u.timezone or "UTC",
+            "origin": "cmon",
+            "status": "Enabled",
+            "created_at": u.created_at.strftime("%Y-%m-%d %H:%M:%S") if u.created_at else ""
+        })
+    return result
 
 @app.post("/api/users", dependencies=[Depends(verify_credentials)])
 def create_user(payload: UserCreate, db: Session = Depends(get_db)):
