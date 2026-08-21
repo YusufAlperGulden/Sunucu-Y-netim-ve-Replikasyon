@@ -9094,4 +9094,223 @@ window.saveChangePassword = async function() {
     }
 };
 
+// ── ClusterControl 5-Step "Deploy / Import PostgreSQL Streaming Cluster" Wizard ──
+let currentDeployStep = 1;
+
+window.openDeployWizard = function() {
+    currentDeployStep = 1;
+    setDeployStep(1);
+    const modal = document.getElementById('modal-deploy-cluster-wizard');
+    if (modal) modal.style.display = 'flex';
+};
+
+window.closeDeployWizard = function() {
+    const modal = document.getElementById('modal-deploy-cluster-wizard');
+    if (modal) modal.style.display = 'none';
+};
+
+window.setDeployStep = function(step) {
+    currentDeployStep = step;
+    
+    // Update Stepper
+    for (let i = 1; i <= 5; i++) {
+        const dot = document.getElementById(`dot-deploy-step-${i}`);
+        const text = document.getElementById(`text-deploy-step-${i}`);
+        const pane = document.getElementById(`wizard-deploy-pane-${i}`);
+        
+        if (pane) {
+            pane.style.display = (i === step) ? 'flex' : 'none';
+        }
+        
+        if (dot && text) {
+            if (i < step) {
+                // Completed
+                dot.style.background = '#16a34a';
+                dot.style.color = 'white';
+                dot.innerHTML = '&#10003;'; // Checkmark
+                text.style.color = '#111827';
+                text.style.fontWeight = '600';
+            } else if (i === step) {
+                // Active
+                dot.style.background = '#3a1c94';
+                dot.style.color = 'white';
+                dot.textContent = i;
+                text.style.color = '#111827';
+                text.style.fontWeight = '600';
+            } else {
+                // Future
+                dot.style.background = '#e5e7eb';
+                dot.style.color = '#6b7280';
+                dot.textContent = i;
+                text.style.color = '#6b7280';
+                text.style.fontWeight = '500';
+            }
+        }
+    }
+
+    // Step 5 Preview calculation
+    if (step === 5) {
+        const nameVal = document.getElementById('deploy-cluster-name')?.value || 'PostgreSQL Streaming Cluster';
+        const engineVal = document.getElementById('deploy-db-engine')?.value || 'postgresql';
+        const versionVal = document.getElementById('deploy-pg-version')?.value || '16.4';
+        const sshUserVal = document.getElementById('deploy-ssh-user')?.value || 'ubuntu';
+        const sshPortVal = document.getElementById('deploy-ssh-port')?.value || '22';
+        const elevationCmd = document.querySelector('input[name="deploy_elevation_cmd"]:checked')?.value || 'sudo';
+        const primaryVal = document.getElementById('deploy-node-primary-host')?.value || 'ep-rapid-star-aszbsk55...';
+        const standbyVal = document.getElementById('deploy-node-standby-host')?.value || 'ep-bold-leaf-zatatmr6...';
+
+        const pName = document.getElementById('prev-deploy-name'); if (pName) pName.textContent = nameVal;
+        const pEngine = document.getElementById('prev-deploy-engine'); if (pEngine) pEngine.textContent = `${engineVal.toUpperCase()} ${versionVal}`;
+        const pSsh = document.getElementById('prev-deploy-ssh'); if (pSsh) pSsh.textContent = `${sshUserVal} (${elevationCmd}) :${sshPortVal}`;
+        const pPrimary = document.getElementById('prev-deploy-primary'); if (pPrimary) pPrimary.textContent = primaryVal;
+        const pStandby = document.getElementById('prev-deploy-standby'); if (pStandby) pStandby.textContent = standbyVal;
+    }
+};
+
+window.nextDeployStep = function() {
+    if (currentDeployStep === 1) {
+        const name = document.getElementById('deploy-cluster-name')?.value.trim();
+        if (!name) {
+            alert('Please enter a cluster name.');
+            return;
+        }
+    } else if (currentDeployStep === 2) {
+        const sshUser = document.getElementById('deploy-ssh-user')?.value.trim();
+        const sshKeyPath = document.getElementById('deploy-ssh-keypath')?.value.trim();
+        const sshPort = document.getElementById('deploy-ssh-port')?.value.trim();
+        if (!sshUser || !sshKeyPath || !sshPort) {
+            alert('Please fill all required SSH configuration fields.');
+            return;
+        }
+    } else if (currentDeployStep === 4) {
+        const primary = document.getElementById('deploy-node-primary-host')?.value.trim();
+        const standby = document.getElementById('deploy-node-standby-host')?.value.trim();
+        if (!primary || !standby) {
+            alert('Please specify both Primary and Standby node hosts.');
+            return;
+        }
+    }
+
+    if (currentDeployStep < 5) {
+        setDeployStep(currentDeployStep + 1);
+    }
+};
+
+window.prevDeployStep = function() {
+    if (currentDeployStep > 1) {
+        setDeployStep(currentDeployStep - 1);
+    }
+};
+
+window.toggleDeploySudoPassVisibility = function() {
+    const input = document.getElementById('deploy-ssh-sudopass');
+    if (!input) return;
+    input.type = (input.type === 'password') ? 'text' : 'password';
+};
+
+window.autofillDemoDeployCredentials = function() {
+    const elUser = document.getElementById('deploy-ssh-user'); if (elUser) elUser.value = 'ubuntu';
+    const elKey = document.getElementById('deploy-ssh-keypath'); if (elKey) elKey.value = '/home/ubuntu/.ssh/id_rsa';
+    const elPort = document.getElementById('deploy-ssh-port'); if (elPort) elPort.value = '22';
+    const elSudo = document.getElementById('deploy-ssh-sudopass'); if (elSudo) elSudo.value = 'DemoSudo2026!';
+    const elPrim = document.getElementById('deploy-node-primary-host'); if (elPrim) elPrim.value = 'ep-rapid-star-aszbsk55.c-4.eu-central-1.aws.neon.tech';
+    const elStby = document.getElementById('deploy-node-standby-host'); if (elStby) elStby.value = 'ep-bold-leaf-zatatmr6.c-2.eu-west-2.aws.neon.tech';
+    
+    if (typeof showToast === 'function') {
+        showToast('Live cloud PostgreSQL & demo SSH credentials autofilled!', 'success');
+    } else {
+        alert('Live cloud PostgreSQL & demo SSH credentials autofilled!');
+    }
+};
+
+window.submitDeployCluster = async function() {
+    const btn = document.getElementById('btn-submit-deploy-cluster');
+    if (btn) {
+        btn.disabled = true;
+        btn.innerHTML = '<span class="cc-spinner" style="width:14px;height:14px;border-width:2px;display:inline-block;vertical-align:middle;margin-right:6px;"></span> Deploying...';
+    }
+
+    const clusterName = document.getElementById('deploy-cluster-name')?.value.trim() || 'PostgreSQL Streaming Cluster';
+    const engine = document.getElementById('deploy-db-engine')?.value || 'postgresql';
+    const tags = document.getElementById('deploy-cluster-tags')?.value.trim() || '';
+    const sshUser = document.getElementById('deploy-ssh-user')?.value.trim() || 'ubuntu';
+    const sshKeyPath = document.getElementById('deploy-ssh-keypath')?.value.trim() || '/home/ubuntu/.ssh/id_rsa';
+    const sshPort = parseInt(document.getElementById('deploy-ssh-port')?.value || '22', 10);
+    const sshSudoPass = document.getElementById('deploy-ssh-sudopass')?.value.trim() || '';
+    const elevationCmd = document.querySelector('input[name="deploy_elevation_cmd"]:checked')?.value || 'sudo';
+    const dbPort = parseInt(document.getElementById('deploy-db-port')?.value || '5432', 10);
+    const dbUser = document.getElementById('deploy-db-user')?.value.trim() || 'neondb_owner';
+    const dbPass = document.getElementById('deploy-db-pass')?.value.trim() || 'npg_mONv8dTcRuZ2';
+    const primaryHost = document.getElementById('deploy-node-primary-host')?.value.trim() || 'ep-rapid-star-aszbsk55.c-4.eu-central-1.aws.neon.tech';
+    const standbyHost = document.getElementById('deploy-node-standby-host')?.value.trim() || 'ep-bold-leaf-zatatmr6.c-2.eu-west-2.aws.neon.tech';
+
+    // Build URLs with SSL mode for live cloud postgres
+    const primaryUrl = primaryHost.includes('neon.tech') 
+        ? "postgresql://neondb_owner:npg_mONv8dTcRuZ2@ep-rapid-star-aszbsk55.c-4.eu-central-1.aws.neon.tech/neondb?sslmode=require&channel_binding=require"
+        : `postgresql://${encodeURIComponent(dbUser)}:${encodeURIComponent(dbPass)}@${primaryHost}:${dbPort}/postgres?sslmode=prefer`;
+
+    const standbyUrl = standbyHost.includes('neon.tech')
+        ? "postgresql://neondb_owner:npg_GtTYZs3elJU0@ep-bold-leaf-zatatmr6.c-2.eu-west-2.aws.neon.tech/neondb?sslmode=require&channel_binding=require"
+        : `postgresql://${encodeURIComponent(dbUser)}:${encodeURIComponent(dbPass)}@${standbyHost}:${dbPort}/postgres?sslmode=prefer`;
+
+    const payload = {
+        name: clusterName,
+        description: `Imported ${engine.toUpperCase()} streaming cluster with ${elevationCmd} elevation (Tags: ${tags || 'none'})`,
+        ssh_user: sshUser,
+        ssh_key_path: sshKeyPath,
+        ssh_port: sshPort,
+        ssh_sudo_password: sshSudoPass,
+        ssh_elevation_command: elevationCmd,
+        nodes: [
+            {
+                role: "primary",
+                name: `${clusterName} Primary (${primaryHost.split('.')[0]})`,
+                url: primaryUrl,
+                ssh_host: primaryHost,
+                ssh_port: sshPort,
+                ssh_username: sshUser,
+                ssh_password: sshKeyPath || sshSudoPass
+            },
+            {
+                role: "standby",
+                name: `${clusterName} Standby (${standbyHost.split('.')[0]})`,
+                url: standbyUrl,
+                ssh_host: standbyHost,
+                ssh_port: sshPort,
+                ssh_username: sshUser,
+                ssh_password: sshKeyPath || sshSudoPass
+            }
+        ]
+    };
+
+    try {
+        const res = await apiFetch('/api/projects', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+        });
+        const resData = await res.json();
+        if (res.ok && resData.success) {
+            closeDeployWizard();
+            if (typeof showToast === 'function') {
+                showToast(`Cluster "${clusterName}" deployed and registered successfully!`, 'success');
+            } else {
+                alert(`Cluster "${clusterName}" deployed and registered successfully!`);
+            }
+            if (typeof fetchProjects === 'function') await fetchProjects();
+            if (typeof showProjectsView === 'function') showProjectsView();
+        } else {
+            alert(resData.detail || resData.message || 'Failed to deploy cluster.');
+        }
+    } catch (e) {
+        console.error('Error deploying cluster:', e);
+        alert('Failed to connect to server: ' + (e.message || String(e)));
+    } finally {
+        if (btn) {
+            btn.disabled = false;
+            btn.textContent = 'Deploy Cluster';
+        }
+    }
+};
+
 

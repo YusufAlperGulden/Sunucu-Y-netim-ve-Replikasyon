@@ -299,8 +299,14 @@ class InitialNodeCreate(BaseModel):
 
 class ProjectCreate(BaseModel):
     name: str
-    description: str
+    description: str | None = ""
     initial_node: InitialNodeCreate | None = None
+    nodes: list[NodeCreate] | None = None
+    ssh_user: str | None = None
+    ssh_key_path: str | None = None
+    ssh_port: int | None = 22
+    ssh_sudo_password: str | None = None
+    ssh_elevation_command: str | None = "sudo"
 
 class NodeCreate(BaseModel):
     role: str
@@ -338,8 +344,25 @@ def add_project(project: ProjectCreate, db: Session = Depends(get_db)):
         db.add(db_proj)
         db.flush()
 
+        # Handle nodes list from Deploy Cluster Wizard
+        if project.nodes and len(project.nodes) > 0:
+            for n_data in project.nodes:
+                db_node = DatabaseNode(
+                    project_id=db_proj.id,
+                    role=n_data.role or "primary",
+                    name=n_data.name or f"{name} Node",
+                    ssh_host=n_data.ssh_host or None,
+                    ssh_port=n_data.ssh_port or project.ssh_port or 22,
+                    ssh_username=n_data.ssh_username or project.ssh_user or "root"
+                )
+                db_node.set_url(n_data.url or f"postgresql://postgres@{n_data.ssh_host or 'localhost'}:5432/{name}")
+                cred_val = n_data.ssh_password or project.ssh_sudo_password or project.ssh_key_path
+                if cred_val and cred_val.strip():
+                    from vault import encrypt as _enc
+                    db_node.encrypted_ssh_credential = _enc(cred_val.strip())
+                db.add(db_node)
         # Handle initial node if provided (URL or SSH)
-        if project.initial_node:
+        elif project.initial_node:
             init_url = (project.initial_node.url or "").strip()
             init_ssh_host = (project.initial_node.ssh_host or "").strip()
             if init_url or init_ssh_host:
