@@ -9609,3 +9609,326 @@ window.compileScript = function() {
 window.openCreateDbUserModal = function() { alert('Create DB User — coming soon!'); };
 window.openCreateRoleModal   = function() { alert('Create Role — coming soon!'); };
 window.showChangeParamsModal = function() { alert('Change Parameters — coming soon!'); };
+
+
+// ═══════════════════════════════════════════════════════════════════════════
+// Performance Tab JS
+// ═══════════════════════════════════════════════════════════════════════════
+
+var _origSwitchPerfSubtab = window.switchPerfSubtab;
+window.switchPerfSubtab = function(evt, name) {
+    if (_origSwitchPerfSubtab) _origSwitchPerfSubtab(evt, name);
+    if (name === 'db-growth')      window.loadDbGrowth();
+    if (name === 'db-vars')        window.loadDbVars();
+    if (name === 'query-monitor')  { window.loadActiveQueries(); window.startQmAutoRefresh(); }
+    if (name === 'schema-analyzer') window.loadSchemaAnalyzer();
+    if (name !== 'query-monitor')  window.stopQmAutoRefresh();
+};
+
+window.switchQmTab = function(tab, btn) {
+    document.querySelectorAll('.qm-inner-tab').forEach(function(b){
+        b.style.borderBottomColor='transparent'; b.style.color='#6b7280'; b.style.fontWeight='500';
+    });
+    if (btn) { btn.style.borderBottomColor='#4f46e5'; btn.style.color='#4f46e5'; btn.style.fontWeight='600'; }
+    ['connections','top-queries','outliers'].forEach(function(p){
+        var el = document.getElementById('qm-panel-'+p);
+        if (el) el.style.display = (p===tab)?'block':'none';
+    });
+    if (tab==='connections')  window.loadActiveQueries();
+    if (tab==='top-queries')  window.loadTopQueries();
+    if (tab==='outliers')     window.loadQueryOutliers();
+};
+
+var _qmAutoRefreshTimer = null;
+window.startQmAutoRefresh = function() {
+    window.stopQmAutoRefresh();
+    _qmAutoRefreshTimer = setInterval(function(){
+        var conn = document.getElementById('qm-panel-connections');
+        if (conn && conn.style.display !== 'none') window.loadActiveQueries();
+    }, 4000);
+};
+window.stopQmAutoRefresh = function() {
+    if (_qmAutoRefreshTimer) { clearInterval(_qmAutoRefreshTimer); _qmAutoRefreshTimer = null; }
+};
+
+var _dbGrowthChart = null;
+window.loadDbGrowth = async function() {
+    var pid = window.currentProjectId;
+    if (!pid) return;
+    var dbTbody = document.getElementById('growth-db-tbody');
+    if (dbTbody) dbTbody.innerHTML = '<tr><td colspan="7" style="padding:20px;text-align:center;color:#9ca3af;">Loading...</td></tr>';
+    try {
+        var r = await apiFetch('/api/projects/'+pid+'/db-growth');
+        if (!r.ok) throw new Error(await r.text());
+        var data = await r.json();
+        if (data.message) throw new Error(data.message);
+        var dbs = data.databases || [];
+        var tables = data.tables || [];
+        // Update date label
+        var dateEl = document.getElementById('growth-table-date');
+        if (dateEl) dateEl.textContent = 'Top largest databases — ' + new Date().toLocaleDateString('en-US',{weekday:'long',year:'numeric',month:'long',day:'numeric'});
+        // Draw chart
+        var canvas = document.getElementById('chart-db-growth');
+        if (canvas && tables.length) {
+            if (_dbGrowthChart) { _dbGrowthChart.destroy(); _dbGrowthChart = null; }
+            var labels = tables.map(function(t){ return t.table_name; });
+            var dataData  = tables.map(function(t){ return +(t.data_bytes/1048576).toFixed(3); });
+            var indexData = tables.map(function(t){ return +(t.index_bytes/1048576).toFixed(3); });
+            _dbGrowthChart = new Chart(canvas.getContext('2d'), {
+                type: 'bar',
+                data: {
+                    labels: labels,
+                    datasets: [
+                        {label:'Index size (MB)', data: indexData, backgroundColor:'#ec4899cc', borderRadius:4},
+                        {label:'Data size (MB)',  data: dataData,  backgroundColor:'#7c3aedcc', borderRadius:4}
+                    ]
+                },
+                options: {
+                    responsive: true, maintainAspectRatio: false,
+                    plugins: { legend: { display: false }, tooltip: { callbacks: { label: function(ctx){ return ctx.dataset.label+': '+ctx.raw+' MB'; } } } },
+                    scales: { x: { ticks:{font:{size:10},color:'#9ca3af'}, grid:{color:'#f3f4f6'} }, y: { beginAtZero:true, ticks:{font:{size:10},color:'#9ca3af'}, grid:{color:'#f3f4f6'}, title:{display:true,text:'MB',font:{size:10},color:'#9ca3af'} } }
+                }
+            });
+        }
+        // Populate databases table
+        if (dbTbody) {
+            dbTbody.innerHTML = '';
+            if (!dbs.length) { dbTbody.innerHTML = '<tr><td colspan="7" style="padding:20px;text-align:center;color:#9ca3af;">No databases found.</td></tr>'; return; }
+            dbs.forEach(function(db){
+                var matchTbl = (data.tables||[]).filter(function(t){ return true; });
+                dbTbody.insertAdjacentHTML('beforeend','<tr style="border-bottom:1px solid #f3f4f6;">'
+                    +'<td style="padding:10px 16px;font-weight:500;">'+escapeHTML(db.name)+'</td>'
+                    +'<td style="padding:10px 16px;text-align:right;color:#6b7280;">—</td>'
+                    +'<td style="padding:10px 16px;text-align:right;color:#6b7280;">—</td>'
+                    +'<td style="padding:10px 16px;text-align:right;">—</td>'
+                    +'<td style="padding:10px 16px;text-align:right;">—</td>'
+                    +'<td style="padding:10px 16px;text-align:right;font-weight:500;color:#7c3aed;">'+escapeHTML(db.db_size)+'</td>'
+                    +'<td style="padding:10px 16px;text-align:center;"><button style="padding:4px 10px;background:white;border:1px solid #e5e7eb;border-radius:4px;font-size:11px;cursor:pointer;">...</button></td>'
+                    +'</tr>');
+            });
+        }
+    } catch(e) {
+        if (dbTbody) dbTbody.innerHTML='<tr><td colspan="7" style="padding:20px;text-align:center;color:#ef4444;">'+escapeHTML(e.message)+'</td></tr>';
+    }
+};
+
+var _dbVarsAllRows = [];
+var _dbVarsFilter  = 'all';
+window.loadDbVars = async function() {
+    var pid = window.currentProjectId;
+    if (!pid) return;
+    var tbody = document.getElementById('perf-vars-tbody');
+    if (tbody) tbody.innerHTML = '<tr><td colspan="10" style="padding:20px;text-align:center;color:#9ca3af;">Loading...</td></tr>';
+    try {
+        var r = await apiFetch('/api/projects/'+pid+'/db-vars');
+        if (!r.ok) throw new Error(await r.text());
+        var data = await r.json();
+        var nodes = data.nodes || [];
+        // Update header column names
+        var col1 = document.getElementById('vars-col-node1');
+        var col2 = document.getElementById('vars-col-node2');
+        if (col1) col1.textContent = nodes[0] ? nodes[0].node+' ('+nodes[0].role+')' : 'Node 1';
+        if (col2) col2.textContent = nodes[1] ? nodes[1].node+' ('+nodes[1].role+')' : 'Node 2';
+        // Build merged map
+        var map = {};
+        nodes.forEach(function(n,ni){
+            (n.settings||[]).forEach(function(s){
+                if (!map[s.name]) map[s.name] = {name:s.name, category:s.category, desc:s.short_desc, vals:[]};
+                map[s.name].vals[ni] = s.setting + (s.unit?(' '+s.unit):'');
+            });
+        });
+        _dbVarsAllRows = Object.values(map);
+        window.renderVarsTable();
+    } catch(e) {
+        var tbody2 = document.getElementById('perf-vars-tbody');
+        if (tbody2) tbody2.innerHTML='<tr><td colspan="10" style="padding:20px;text-align:center;color:#ef4444;">'+escapeHTML(e.message)+'</td></tr>';
+    }
+};
+window.setVarsFilter = function(f, btn) {
+    _dbVarsFilter = f;
+    document.querySelectorAll('#vars-filter-all,#vars-filter-diff').forEach(function(b){
+        b.style.background='transparent'; b.style.color='#6b7280';
+    });
+    if (btn) { btn.style.background='#4f46e5'; btn.style.color='white'; }
+    window.renderVarsTable();
+};
+window.renderVarsTable = function() {
+    var tbody = document.getElementById('perf-vars-tbody');
+    if (!tbody) return;
+    var q = ((document.getElementById('perf-vars-search')||{}).value||'').toLowerCase();
+    var rows = _dbVarsAllRows.filter(function(r){
+        if (q && !r.name.toLowerCase().includes(q)) return false;
+        if (_dbVarsFilter==='diff') {
+            var v0=r.vals[0]||'', v1=r.vals[1]||'';
+            return v0!==v1;
+        }
+        return true;
+    });
+    tbody.innerHTML = '';
+    if (!rows.length) { tbody.innerHTML='<tr><td colspan="3" style="padding:20px;text-align:center;color:#9ca3af;">No variables match.</td></tr>'; return; }
+    var lastCat='';
+    rows.forEach(function(r){
+        if (r.category && r.category !== lastCat) {
+            lastCat = r.category;
+            tbody.insertAdjacentHTML('beforeend','<tr style="background:#f9fafb;"><td colspan="3" style="padding:6px 16px;font-size:11px;font-weight:600;color:#9ca3af;text-transform:uppercase;letter-spacing:0.05em;">'+escapeHTML(r.category)+'</td></tr>');
+        }
+        var v0=r.vals[0]||'—', v1=r.vals[1]||'—';
+        var diff = v0!==v1;
+        var rowStyle = diff ? 'background:#fffbeb;' : '';
+        tbody.insertAdjacentHTML('beforeend','<tr style="border-bottom:1px solid #f3f4f6;'+rowStyle+'">'
+            +'<td style="padding:8px 16px;font-family:monospace;font-size:12px;">'+escapeHTML(r.name)+'</td>'
+            +'<td style="padding:8px 16px;font-family:monospace;font-size:12px;color:'+(diff?'#ea580c':'#374151')+';">'+escapeHTML(v0)+'</td>'
+            +'<td style="padding:8px 16px;font-family:monospace;font-size:12px;color:'+(diff?'#ea580c':'#374151')+';">'+escapeHTML(v1)+'</td>'
+            +'</tr>');
+    });
+};
+window.filterPerfVarsTable = function() { window.renderVarsTable(); };
+
+var _qmAllConns = [];
+window.loadActiveQueries = async function() {
+    var pid = window.currentProjectId;
+    if (!pid) return;
+    var tbody = document.getElementById('perf-query-tbody');
+    try {
+        var r = await apiFetch('/api/projects/'+pid+'/active-queries');
+        if (!r.ok) throw new Error(await r.text());
+        var data = await r.json();
+        _qmAllConns = data.connections || [];
+        window.renderQmConnections();
+    } catch(e) {
+        if (tbody) tbody.innerHTML='<tr><td colspan="9" style="padding:20px;text-align:center;color:#ef4444;">'+escapeHTML(e.message)+'</td></tr>';
+    }
+};
+window.filterQmConnections = function() { window.renderQmConnections(); };
+window.renderQmConnections = function() {
+    var tbody = document.getElementById('perf-query-tbody');
+    if (!tbody) return;
+    var filter = (document.getElementById('qm-conn-filter')||{}).value||'all';
+    var conns = _qmAllConns.filter(function(c){ return filter==='all' || (c.state||'').toLowerCase()===filter.toLowerCase(); });
+    tbody.innerHTML = '';
+    if (!conns.length) { tbody.innerHTML='<tr><td colspan="9" style="padding:40px;text-align:center;color:#9ca3af;"><svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="#e5e7eb" stroke-width="1.5" style="display:block;margin:0 auto 10px auto;"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>No connections match the filter.</td></tr>'; return; }
+    var stateBadge = function(s){
+        if (!s) return '<span style="color:#9ca3af;">—</span>';
+        if (s==='active') return '<span style="color:#10b981;font-weight:500;">Active</span>';
+        if (s.includes('idle in transaction')) return '<span style="color:#f59e0b;">Idle in xact</span>';
+        if (s==='idle') return '<span style="color:#9ca3af;">Idle</span>';
+        return '<span>'+escapeHTML(s)+'</span>';
+    };
+    conns.forEach(function(c){
+        tbody.insertAdjacentHTML('beforeend','<tr style="border-bottom:1px solid #f3f4f6;">'
+            +'<td style="padding:9px 12px;font-size:12px;">'+escapeHTML(c.node_name||'—')+'</td>'
+            +'<td style="padding:9px 12px;font-family:monospace;font-size:12px;">'+escapeHTML(String(c.pid||'—'))+'</td>'
+            +'<td style="padding:9px 12px;font-size:12px;">'+escapeHTML(c.datname||'—')+'</td>'
+            +'<td style="padding:9px 12px;font-size:12px;">'+escapeHTML(c.usename||'—')+'</td>'
+            +'<td style="padding:9px 12px;text-align:right;font-family:monospace;">'+escapeHTML(String(c.duration_s||0))+'</td>'
+            +'<td style="padding:9px 12px;font-size:12px;">'+escapeHTML(c.client_addr||'local')+'</td>'
+            +'<td style="padding:9px 12px;font-size:11px;max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:#6b7280;" title="'+escapeHTML(c.query_text||'')+'">'+escapeHTML((c.query_text||'').slice(0,60))+'</td>'
+            +'<td style="padding:9px 12px;">'+stateBadge(c.state)+'</td>'
+            +'<td style="padding:9px 12px;"><button style="padding:3px 8px;background:white;border:1px solid #e5e7eb;border-radius:4px;font-size:11px;color:#374151;cursor:pointer;">...</button></td>'
+            +'</tr>');
+    });
+};
+
+window.loadTopQueries = async function() {
+    var pid = window.currentProjectId;
+    var tbody = document.getElementById('top-queries-tbody');
+    if (!pid || !tbody) return;
+    tbody.innerHTML = '<tr><td colspan="5" style="padding:20px;text-align:center;color:#9ca3af;">Loading...</td></tr>';
+    try {
+        var r = await apiFetch('/api/projects/'+pid+'/top-queries?kind=top');
+        if (!r.ok) throw new Error(await r.text());
+        var data = await r.json();
+        if (!data.available) { tbody.innerHTML='<tr><td colspan="5" style="padding:30px;text-align:center;color:#9ca3af;">'+escapeHTML(data.message||'pg_stat_statements not available.')+'</td></tr>'; return; }
+        var qs = data.queries||[];
+        tbody.innerHTML='';
+        if (!qs.length){tbody.innerHTML='<tr><td colspan="5" style="padding:30px;text-align:center;color:#9ca3af;">No queries found.</td></tr>';return;}
+        qs.forEach(function(q){
+            tbody.insertAdjacentHTML('beforeend','<tr style="border-bottom:1px solid #f3f4f6;">'
+                +'<td style="padding:9px 16px;font-family:monospace;font-size:11px;max-width:300px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="'+escapeHTML(q.query)+'">'+escapeHTML(q.query)+'</td>'
+                +'<td style="padding:9px 16px;text-align:right;">'+escapeHTML(String(q.calls||0))+'</td>'
+                +'<td style="padding:9px 16px;text-align:right;font-weight:500;color:#ef4444;">'+escapeHTML(String(q.total_exec_time||0))+'</td>'
+                +'<td style="padding:9px 16px;text-align:right;">'+escapeHTML(String(q.mean_exec_time||0))+'</td>'
+                +'<td style="padding:9px 16px;text-align:right;">'+escapeHTML(String(q.rows||0))+'</td>'
+                +'</tr>');
+        });
+    } catch(e) { tbody.innerHTML='<tr><td colspan="5" style="padding:20px;text-align:center;color:#ef4444;">'+escapeHTML(e.message)+'</td></tr>'; }
+};
+
+window.loadQueryOutliers = async function() {
+    var pid = window.currentProjectId;
+    var tbody = document.getElementById('outliers-tbody');
+    if (!pid || !tbody) return;
+    tbody.innerHTML = '<tr><td colspan="5" style="padding:20px;text-align:center;color:#9ca3af;">Loading...</td></tr>';
+    try {
+        var r = await apiFetch('/api/projects/'+pid+'/top-queries?kind=outliers');
+        if (!r.ok) throw new Error(await r.text());
+        var data = await r.json();
+        if (!data.available) { tbody.innerHTML='<tr><td colspan="5" style="padding:30px;text-align:center;color:#9ca3af;">'+escapeHTML(data.message||'pg_stat_statements not available.')+'</td></tr>'; return; }
+        var qs = data.queries||[];
+        tbody.innerHTML='';
+        if (!qs.length){tbody.innerHTML='<tr><td colspan="5" style="padding:30px;text-align:center;color:#9ca3af;">No outliers found.</td></tr>';return;}
+        qs.forEach(function(q){
+            var v=parseFloat(q.variability_pct||0);
+            var vColor=v>50?'#ef4444':v>20?'#f59e0b':'#10b981';
+            tbody.insertAdjacentHTML('beforeend','<tr style="border-bottom:1px solid #f3f4f6;">'
+                +'<td style="padding:9px 16px;font-family:monospace;font-size:11px;max-width:300px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="'+escapeHTML(q.query)+'">'+escapeHTML(q.query)+'</td>'
+                +'<td style="padding:9px 16px;text-align:right;">'+escapeHTML(String(q.calls||0))+'</td>'
+                +'<td style="padding:9px 16px;text-align:right;">'+escapeHTML(String(q.mean_exec_time||0))+'</td>'
+                +'<td style="padding:9px 16px;text-align:right;">'+escapeHTML(String(q.stddev_exec_time||0))+'</td>'
+                +'<td style="padding:9px 16px;text-align:right;font-weight:600;color:'+vColor+';">'+v.toFixed(1)+'%</td>'
+                +'</tr>');
+        });
+    } catch(e) { tbody.innerHTML='<tr><td colspan="5" style="padding:20px;text-align:center;color:#ef4444;">'+escapeHTML(e.message)+'</td></tr>'; }
+};
+
+window.loadSchemaAnalyzer = async function() {
+    var pid = window.currentProjectId;
+    var unusedTbody  = document.getElementById('schema-unused-tbody');
+    var seqTbody     = document.getElementById('schema-seqscan-tbody');
+    if (!pid) return;
+    if (unusedTbody) unusedTbody.innerHTML='<tr><td colspan="5" style="padding:20px;text-align:center;color:#9ca3af;">Analyzing...</td></tr>';
+    if (seqTbody)   seqTbody.innerHTML='<tr><td colspan="7" style="padding:20px;text-align:center;color:#9ca3af;">Analyzing...</td></tr>';
+    try {
+        var r = await apiFetch('/api/projects/'+pid+'/schema-analyzer');
+        if (!r.ok) throw new Error(await r.text());
+        var data = await r.json();
+        if (data.message) throw new Error(data.message);
+        // Unused indexes
+        var unused = data.unused_indexes||[];
+        if (unusedTbody) {
+            unusedTbody.innerHTML='';
+            if (!unused.length) { unusedTbody.innerHTML='<tr><td colspan="5" style="padding:20px;text-align:center;color:#10b981;">&#10003; No unused indexes found — great!</td></tr>'; }
+            else { unused.forEach(function(i){
+                unusedTbody.insertAdjacentHTML('beforeend','<tr style="border-bottom:1px solid #f3f4f6;">'
+                    +'<td style="padding:9px 16px;font-size:12px;">'+escapeHTML(i.schemaname)+'</td>'
+                    +'<td style="padding:9px 16px;font-size:12px;">'+escapeHTML(i.tablename)+'</td>'
+                    +'<td style="padding:9px 16px;font-family:monospace;font-size:12px;color:#7c3aed;">'+escapeHTML(i.indexname)+'</td>'
+                    +'<td style="padding:9px 16px;text-align:right;">'+escapeHTML(String(i.idx_scan||0))+'</td>'
+                    +'<td style="padding:9px 16px;text-align:right;color:#ef4444;">'+escapeHTML(i.index_size||'?')+'</td>'
+                    +'</tr>');
+            }); }
+        }
+        // Sequential scan tables
+        var seqs = data.seq_scan_tables||[];
+        if (seqTbody) {
+            seqTbody.innerHTML='';
+            if (!seqs.length) { seqTbody.innerHTML='<tr><td colspan="7" style="padding:20px;text-align:center;color:#10b981;">&#10003; No high seq-scan tables found.</td></tr>'; }
+            else { seqs.forEach(function(t){
+                var pct=parseFloat(t.seq_pct||0);
+                var pctColor=pct>80?'#ef4444':pct>50?'#f59e0b':'#6b7280';
+                seqTbody.insertAdjacentHTML('beforeend','<tr style="border-bottom:1px solid #f3f4f6;">'
+                    +'<td style="padding:9px 16px;font-weight:500;">'+escapeHTML(t.table_name)+'</td>'
+                    +'<td style="padding:9px 16px;text-align:right;">'+escapeHTML(String(t.seq_scan||0))+'</td>'
+                    +'<td style="padding:9px 16px;text-align:right;">'+escapeHTML(String(t.idx_scan||0))+'</td>'
+                    +'<td style="padding:9px 16px;text-align:right;font-weight:600;color:'+pctColor+';">'+pct+'%</td>'
+                    +'<td style="padding:9px 16px;text-align:right;">'+escapeHTML(String(t.n_live_tup||0))+'</td>'
+                    +'<td style="padding:9px 16px;text-align:right;color:#ef4444;">'+escapeHTML(String(t.n_dead_tup||0))+'</td>'
+                    +'<td style="padding:9px 16px;text-align:right;">'+escapeHTML(t.table_size||'?')+'</td>'
+                    +'</tr>');
+            }); }
+        }
+    } catch(e) {
+        if (unusedTbody) unusedTbody.innerHTML='<tr><td colspan="5" style="padding:20px;text-align:center;color:#ef4444;">'+escapeHTML(e.message)+'</td></tr>';
+        if (seqTbody)   seqTbody.innerHTML='<tr><td colspan="7" style="padding:20px;text-align:center;color:#ef4444;">'+escapeHTML(e.message)+'</td></tr>';
+    }
+};

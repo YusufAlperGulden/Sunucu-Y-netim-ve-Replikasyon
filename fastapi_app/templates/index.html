@@ -828,42 +828,76 @@
 
                 <!-- SUBTAB 2: DB GROWTH -->
                 <div id="perf-subtab-db-growth" class="perf-subtab-content" style="display: none;">
-                    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 20px; margin-bottom: 24px;">
-                        <div class="glass-panel" style="padding: 20px; border: 1px solid var(--border); border-radius: 8px; background: white;">
-                            <div style="color: #6b7280; font-size: 0.85rem; margin-bottom: 6px;">Toplam Veritabanı Boyutu (Primary)</div>
-                            <div id="perf-growth-storage-master" style="font-size: 1.8rem; font-weight: 600; color: #10b981;">9.0 MB</div>
-                            <div style="color: #9ca3af; font-size: 0.78rem; margin-top: 4px;">PostgreSQL Frankfurt Instance</div>
+                    <!-- Action bar -->
+                    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;gap:10px;flex-wrap:wrap;">
+                        <div style="display:flex;align-items:center;gap:8px;">
+                            <span style="font-size:13px;font-weight:600;color:#374151;">Top largest tables</span>
                         </div>
-                        <div class="glass-panel" style="padding: 20px; border: 1px solid var(--border); border-radius: 8px; background: white;">
-                            <div style="color: #6b7280; font-size: 0.85rem; margin-bottom: 6px;">Toplam Veritabanı Boyutu (Standby)</div>
-                            <div id="perf-growth-storage-standby" style="font-size: 1.8rem; font-weight: 600; color: #6366f1;">9.6 MB</div>
-                            <div style="color: #9ca3af; font-size: 0.78rem; margin-top: 4px;">PostgreSQL London Instance</div>
+                        <div style="display:flex;gap:8px;">
+                            <button onclick="window.loadDbGrowth()" style="padding:7px 14px;background:white;border:1px solid var(--border);border-radius:6px;font-size:13px;cursor:pointer;display:flex;align-items:center;gap:6px;"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21.5 2v6h-6M2.5 22v-6h6M2 11.5a10 10 0 0 1 18.8-4.3M22 12.5a10 10 0 0 1-18.8 4.2"/></svg>Refresh</button>
                         </div>
-                        <div class="glass-panel" style="padding: 20px; border: 1px solid var(--border); border-radius: 8px; background: white;">
-                            <div style="color: #6b7280; font-size: 0.85rem; margin-bottom: 6px;">Takip Edilen Tablo Kayıt Hacmi</div>
-                            <div id="perf-growth-table-count" style="font-size: 1.8rem; font-weight: 600; color: #f59e0b;">Aktif</div>
-                            <div id="perf-growth-table-sub" style="color: #9ca3af; font-size: 0.78rem; margin-top: 4px;">Canlı Kayıt</div>
+                    </div>
+                    <!-- Bar chart -->
+                    <div style="border:1px solid var(--border);border-radius:8px;padding:20px;background:white;margin-bottom:20px;">
+                        <div style="display:flex;align-items:center;gap:16px;margin-bottom:12px;font-size:12px;color:#6b7280;">
+                            <span style="display:flex;align-items:center;gap:5px;"><span style="width:10px;height:10px;border-radius:2px;background:#ec4899;display:inline-block;"></span>Index size</span>
+                            <span style="display:flex;align-items:center;gap:5px;"><span style="width:10px;height:10px;border-radius:2px;background:#7c3aed;display:inline-block;"></span>Data size</span>
+                        </div>
+                        <div style="height:200px;position:relative;">
+                            <canvas id="chart-db-growth" style="width:100%;height:100%;"></canvas>
+                        </div>
+                    </div>
+                    <!-- Table: Top largest databases -->
+                    <div>
+                        <div style="display:flex;align-items:center;gap:6px;margin-bottom:10px;">
+                            <span id="growth-table-date" style="font-size:13px;font-weight:600;color:#374151;">Top largest databases</span>
+                            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#9ca3af" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
+                        </div>
+                        <div style="border:1px solid var(--border);border-radius:8px;overflow:hidden;background:white;">
+                            <table style="width:100%;border-collapse:collapse;font-size:13px;">
+                                <thead style="background:#f9fafb;border-bottom:1px solid var(--border);">
+                                    <tr>
+                                        <th style="padding:10px 16px;text-align:left;font-weight:600;color:#374151;">Name</th>
+                                        <th style="padding:10px 16px;text-align:right;font-weight:600;color:#374151;">Table count</th>
+                                        <th style="padding:10px 16px;text-align:right;font-weight:600;color:#374151;">Rows</th>
+                                        <th style="padding:10px 16px;text-align:right;font-weight:600;color:#374151;">Data size</th>
+                                        <th style="padding:10px 16px;text-align:right;font-weight:600;color:#374151;">Index size</th>
+                                        <th style="padding:10px 16px;text-align:right;font-weight:600;color:#374151;">Database size</th>
+                                        <th style="padding:10px 16px;text-align:center;font-weight:600;color:#374151;">Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="growth-db-tbody">
+                                    <tr><td colspan="7" style="padding:30px;text-align:center;color:#9ca3af;">Click Refresh to load database sizes.</td></tr>
+                                </tbody>
+                            </table>
                         </div>
                     </div>
                 </div>
 
                 <!-- SUBTAB 3: DB VARIABLES -->
                 <div id="perf-subtab-db-vars" class="perf-subtab-content" style="display: none;">
-                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
-                        <input type="text" id="perf-vars-search" placeholder="Search configuration variable..." oninput="window.filterPerfVarsTable()" style="width: 100%; max-width: 400px; padding: 8px 12px; border: 1px solid var(--border); border-radius: 6px; font-size: 0.9rem; outline: none;">
+                    <div style="display:flex;align-items:center;gap:10px;margin-bottom:14px;flex-wrap:wrap;">
+                        <div style="display:flex;gap:4px;background:#f3f4f6;border-radius:6px;padding:3px;">
+                            <button id="vars-filter-all" onclick="window.setVarsFilter('all',this)" style="padding:5px 12px;border:none;border-radius:4px;background:#4f46e5;color:white;font-size:12px;font-weight:500;cursor:pointer;">All</button>
+                            <button id="vars-filter-diff" onclick="window.setVarsFilter('diff',this)" style="padding:5px 12px;border:none;border-radius:4px;background:transparent;color:#6b7280;font-size:12px;cursor:pointer;">Different across nodes</button>
+                        </div>
+                        <div style="position:relative;flex:1;max-width:360px;">
+                            <input type="text" id="perf-vars-search" placeholder="Search variable..." oninput="window.filterPerfVarsTable()" style="width:100%;padding:7px 12px 7px 32px;border:1px solid var(--border);border-radius:6px;font-size:13px;outline:none;box-sizing:border-box;">
+                            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#9ca3af" stroke-width="2" style="position:absolute;left:10px;top:50%;transform:translateY(-50%);"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+                        </div>
+                        <button onclick="window.loadDbVars()" style="padding:7px 14px;background:white;border:1px solid var(--border);border-radius:6px;font-size:13px;cursor:pointer;display:flex;align-items:center;gap:6px;margin-left:auto;"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21.5 2v6h-6M2.5 22v-6h6M2 11.5a10 10 0 0 1 18.8-4.3M22 12.5a10 10 0 0 1-18.8 4.2"/></svg>Refresh</button>
                     </div>
-                    <div style="border: 1px solid var(--border); border-radius: 8px; overflow: hidden; background: white;">
-                        <table style="width: 100%; border-collapse: collapse; font-size: 0.88rem;">
-                            <thead style="background: #f9fafb; border-bottom: 1px solid var(--border); color: #4b5563;">
-                                <tr>
-                                    <th style="padding: 10px 16px; text-align: left; font-weight: 600;">Variable</th>
-                                    <th style="padding: 10px 16px; text-align: left; font-weight: 600;">Current Value</th>
-                                    <th style="padding: 10px 16px; text-align: left; font-weight: 600;">Unit</th>
-                                    <th style="padding: 10px 16px; text-align: left; font-weight: 600;">Description</th>
+                    <div style="border:1px solid var(--border);border-radius:8px;overflow:hidden;background:white;">
+                        <table style="width:100%;border-collapse:collapse;font-size:0.85rem;">
+                            <thead style="background:#f9fafb;border-bottom:1px solid var(--border);color:#4b5563;">
+                                <tr id="vars-thead-tr">
+                                    <th style="padding:10px 16px;text-align:left;font-weight:600;min-width:220px;">Variable</th>
+                                    <th style="padding:10px 16px;text-align:left;font-weight:600;" id="vars-col-node1">Node 1</th>
+                                    <th style="padding:10px 16px;text-align:left;font-weight:600;" id="vars-col-node2">Node 2</th>
                                 </tr>
                             </thead>
                             <tbody id="perf-vars-tbody">
-                                <tr><td colspan="4" style="padding: 30px; text-align: center; color: #9ca3af;">Loading variables...</td></tr>
+                                <tr><td colspan="3" style="padding:30px;text-align:center;color:#9ca3af;">Click Refresh to load configuration variables.</td></tr>
                             </tbody>
                         </table>
                     </div>
@@ -871,22 +905,95 @@
 
                 <!-- SUBTAB 4: QUERY MONITOR -->
                 <div id="perf-subtab-query-monitor" class="perf-subtab-content" style="display: none;">
-                    <div style="border: 1px solid var(--border); border-radius: 8px; overflow: hidden; background: white;">
-                        <table style="width: 100%; border-collapse: collapse; font-size: 0.88rem;">
-                            <thead style="background: #f9fafb; border-bottom: 1px solid var(--border); color: #4b5563;">
-                                <tr>
-                                    <th style="padding: 10px 16px; text-align: left; font-weight: 600;">PID</th>
-                                    <th style="padding: 10px 16px; text-align: left; font-weight: 600;">User</th>
-                                    <th style="padding: 10px 16px; text-align: left; font-weight: 600;">Client</th>
-                                    <th style="padding: 10px 16px; text-align: left; font-weight: 600;">State</th>
-                                    <th style="padding: 10px 16px; text-align: left; font-weight: 600;">Duration</th>
-                                    <th style="padding: 10px 16px; text-align: left; font-weight: 600;">Query</th>
-                                </tr>
-                            </thead>
-                            <tbody id="perf-query-tbody">
-                                <tr><td colspan="6" style="padding: 30px; text-align: center; color: #9ca3af;">No long-running queries currently active.</td></tr>
-                            </tbody>
-                        </table>
+                    <!-- Inner sub-navigation -->
+                    <div style="display:flex;gap:0;margin-bottom:16px;border-bottom:1px solid var(--border);">
+                        <button class="qm-inner-tab active" data-tab="connections" onclick="window.switchQmTab('connections',this)" style="padding:10px 18px;background:none;border:none;border-bottom:2px solid #4f46e5;color:#4f46e5;font-size:13px;font-weight:600;cursor:pointer;margin-bottom:-1px;">DB connections</button>
+                        <button class="qm-inner-tab" data-tab="top-queries" onclick="window.switchQmTab('top-queries',this)" style="padding:10px 18px;background:none;border:none;border-bottom:2px solid transparent;color:#6b7280;font-size:13px;cursor:pointer;margin-bottom:-1px;">Top queries</button>
+                        <button class="qm-inner-tab" data-tab="outliers" onclick="window.switchQmTab('outliers',this)" style="padding:10px 18px;background:none;border:none;border-bottom:2px solid transparent;color:#6b7280;font-size:13px;cursor:pointer;margin-bottom:-1px;">Query outliers</button>
+                    </div>
+
+                    <!-- DB Connections sub-panel -->
+                    <div id="qm-panel-connections">
+                        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;flex-wrap:wrap;gap:8px;">
+                            <div style="display:flex;align-items:center;gap:8px;">
+                                <select id="qm-conn-filter" onchange="window.filterQmConnections()" style="padding:6px 10px;border:1px solid var(--border);border-radius:6px;font-size:13px;outline:none;background:white;">
+                                    <option value="all">All states</option>
+                                    <option value="active">Active</option>
+                                    <option value="idle">Idle</option>
+                                    <option value="idle in transaction">Idle in transaction</option>
+                                </select>
+                            </div>
+                            <div style="display:flex;align-items:center;gap:8px;">
+                                <span id="qm-conn-refresh-badge" style="font-size:12px;color:#9ca3af;">Auto-refresh: 4s</span>
+                                <button onclick="window.loadActiveQueries()" style="padding:6px 12px;background:white;border:1px solid var(--border);border-radius:5px;font-size:12px;cursor:pointer;display:flex;align-items:center;gap:4px;"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21.5 2v6h-6M2.5 22v-6h6M2 11.5a10 10 0 0 1 18.8-4.3M22 12.5a10 10 0 0 1-18.8 4.2"/></svg>Refresh now</button>
+                            </div>
+                        </div>
+                        <div style="border:1px solid var(--border);border-radius:8px;overflow:hidden;background:white;">
+                            <table style="width:100%;border-collapse:collapse;font-size:13px;">
+                                <thead style="background:#f9fafb;border-bottom:1px solid var(--border);">
+                                    <tr>
+                                        <th style="padding:10px 12px;text-align:left;font-weight:600;color:#374151;">Hostname</th>
+                                        <th style="padding:10px 12px;text-align:left;font-weight:600;color:#374151;">ID</th>
+                                        <th style="padding:10px 12px;text-align:left;font-weight:600;color:#374151;">Schema</th>
+                                        <th style="padding:10px 12px;text-align:left;font-weight:600;color:#374151;">User</th>
+                                        <th style="padding:10px 12px;text-align:right;font-weight:600;color:#374151;">Time (s)</th>
+                                        <th style="padding:10px 12px;text-align:left;font-weight:600;color:#374151;">Client</th>
+                                        <th style="padding:10px 12px;text-align:left;font-weight:600;color:#374151;">Info</th>
+                                        <th style="padding:10px 12px;text-align:left;font-weight:600;color:#374151;">State</th>
+                                        <th style="padding:10px 12px;text-align:left;font-weight:600;color:#374151;">Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="perf-query-tbody">
+                                    <tr><td colspan="9" style="padding:40px;text-align:center;color:#9ca3af;">Loading connections...</td></tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    <!-- Top Queries sub-panel -->
+                    <div id="qm-panel-top-queries" style="display:none;">
+                        <div style="display:flex;justify-content:flex-end;margin-bottom:12px;">
+                            <button onclick="window.loadTopQueries()" style="padding:7px 14px;background:white;border:1px solid var(--border);border-radius:6px;font-size:13px;cursor:pointer;display:flex;align-items:center;gap:6px;"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21.5 2v6h-6M2.5 22v-6h6M2 11.5a10 10 0 0 1 18.8-4.3M22 12.5a10 10 0 0 1-18.8 4.2"/></svg>Refresh</button>
+                        </div>
+                        <div style="border:1px solid var(--border);border-radius:8px;overflow:hidden;background:white;">
+                            <table style="width:100%;border-collapse:collapse;font-size:13px;">
+                                <thead style="background:#f9fafb;border-bottom:1px solid var(--border);">
+                                    <tr>
+                                        <th style="padding:10px 16px;text-align:left;font-weight:600;color:#374151;min-width:200px;">Query</th>
+                                        <th style="padding:10px 16px;text-align:right;font-weight:600;color:#374151;">Calls</th>
+                                        <th style="padding:10px 16px;text-align:right;font-weight:600;color:#374151;">Total time (ms)</th>
+                                        <th style="padding:10px 16px;text-align:right;font-weight:600;color:#374151;">Avg time (ms)</th>
+                                        <th style="padding:10px 16px;text-align:right;font-weight:600;color:#374151;">Rows</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="top-queries-tbody">
+                                    <tr><td colspan="5" style="padding:30px;text-align:center;color:#9ca3af;">Click Refresh to load top queries.</td></tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    <!-- Outliers sub-panel -->
+                    <div id="qm-panel-outliers" style="display:none;">
+                        <div style="display:flex;justify-content:flex-end;margin-bottom:12px;">
+                            <button onclick="window.loadQueryOutliers()" style="padding:7px 14px;background:white;border:1px solid var(--border);border-radius:6px;font-size:13px;cursor:pointer;display:flex;align-items:center;gap:6px;"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21.5 2v6h-6M2.5 22v-6h6M2 11.5a10 10 0 0 1 18.8-4.3M22 12.5a10 10 0 0 1-18.8 4.2"/></svg>Refresh</button>
+                        </div>
+                        <div style="border:1px solid var(--border);border-radius:8px;overflow:hidden;background:white;">
+                            <table style="width:100%;border-collapse:collapse;font-size:13px;">
+                                <thead style="background:#f9fafb;border-bottom:1px solid var(--border);">
+                                    <tr>
+                                        <th style="padding:10px 16px;text-align:left;font-weight:600;color:#374151;min-width:200px;">Query</th>
+                                        <th style="padding:10px 16px;text-align:right;font-weight:600;color:#374151;">Calls</th>
+                                        <th style="padding:10px 16px;text-align:right;font-weight:600;color:#374151;">Avg time (ms)</th>
+                                        <th style="padding:10px 16px;text-align:right;font-weight:600;color:#374151;">Std dev (ms)</th>
+                                        <th style="padding:10px 16px;text-align:right;font-weight:600;color:#374151;">Variability</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="outliers-tbody">
+                                    <tr><td colspan="5" style="padding:30px;text-align:center;color:#9ca3af;">Click Refresh to load query outliers.</td></tr>
+                                </tbody>
+                            </table>
+                        </div>
                     </div>
                 </div>
 
@@ -929,20 +1036,50 @@
 
                 <!-- SUBTAB 7: SCHEMA ANALYZER -->
                 <div id="perf-subtab-schema-analyzer" class="perf-subtab-content" style="display: none;">
-                    <div style="border: 1px solid var(--border); border-radius: 8px; overflow: hidden; background: white;">
-                        <table style="width: 100%; border-collapse: collapse; font-size: 0.88rem;">
-                            <thead style="background: #f9fafb; border-bottom: 1px solid var(--border); color: #4b5563;">
-                                <tr>
-                                    <th style="padding: 10px 16px; text-align: left; font-weight: 600;">Table Name</th>
-                                    <th style="padding: 10px 16px; text-align: left; font-weight: 600;">Columns</th>
-                                    <th style="padding: 10px 16px; text-align: left; font-weight: 600;">Row Count</th>
-                                    <th style="padding: 10px 16px; text-align: left; font-weight: 600;">Status</th>
-                                </tr>
-                            </thead>
-                            <tbody id="perf-schema-tbody">
-                                <tr><td colspan="4" style="padding: 30px; text-align: center; color: #9ca3af;">Loading schema tables...</td></tr>
-                            </tbody>
-                        </table>
+                    <!-- Section: Unused Indexes -->
+                    <div style="margin-bottom:20px;">
+                        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
+                            <h3 style="margin:0;font-size:14px;font-weight:600;color:#374151;">Unused Indexes <span style="font-size:12px;color:#9ca3af;font-weight:400;">(idx_scan = 0 since last VACUUM)</span></h3>
+                            <button onclick="window.loadSchemaAnalyzer()" style="padding:7px 14px;background:white;border:1px solid var(--border);border-radius:6px;font-size:13px;cursor:pointer;display:flex;align-items:center;gap:6px;"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21.5 2v6h-6M2.5 22v-6h6M2 11.5a10 10 0 0 1 18.8-4.3M22 12.5a10 10 0 0 1-18.8 4.2"/></svg>Analyze</button>
+                        </div>
+                        <div style="border:1px solid var(--border);border-radius:8px;overflow:hidden;background:white;">
+                            <table style="width:100%;border-collapse:collapse;font-size:13px;">
+                                <thead style="background:#f9fafb;border-bottom:1px solid var(--border);">
+                                    <tr>
+                                        <th style="padding:10px 16px;text-align:left;font-weight:600;color:#374151;">Schema</th>
+                                        <th style="padding:10px 16px;text-align:left;font-weight:600;color:#374151;">Table</th>
+                                        <th style="padding:10px 16px;text-align:left;font-weight:600;color:#374151;">Index name</th>
+                                        <th style="padding:10px 16px;text-align:right;font-weight:600;color:#374151;">Scans</th>
+                                        <th style="padding:10px 16px;text-align:right;font-weight:600;color:#374151;">Index size</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="schema-unused-tbody">
+                                    <tr><td colspan="5" style="padding:30px;text-align:center;color:#9ca3af;">Click Analyze to load unused indexes.</td></tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                    <!-- Section: High Sequential Scan Tables -->
+                    <div>
+                        <h3 style="margin:0 0 10px 0;font-size:14px;font-weight:600;color:#374151;">High Sequential Scan Tables <span style="font-size:12px;color:#9ca3af;font-weight:400;">(may benefit from indexes)</span></h3>
+                        <div style="border:1px solid var(--border);border-radius:8px;overflow:hidden;background:white;">
+                            <table style="width:100%;border-collapse:collapse;font-size:13px;">
+                                <thead style="background:#f9fafb;border-bottom:1px solid var(--border);">
+                                    <tr>
+                                        <th style="padding:10px 16px;text-align:left;font-weight:600;color:#374151;">Table</th>
+                                        <th style="padding:10px 16px;text-align:right;font-weight:600;color:#374151;">Seq scans</th>
+                                        <th style="padding:10px 16px;text-align:right;font-weight:600;color:#374151;">Index scans</th>
+                                        <th style="padding:10px 16px;text-align:right;font-weight:600;color:#374151;">Seq %</th>
+                                        <th style="padding:10px 16px;text-align:right;font-weight:600;color:#374151;">Live rows</th>
+                                        <th style="padding:10px 16px;text-align:right;font-weight:600;color:#374151;">Dead rows</th>
+                                        <th style="padding:10px 16px;text-align:right;font-weight:600;color:#374151;">Table size</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="schema-seqscan-tbody">
+                                    <tr><td colspan="7" style="padding:30px;text-align:center;color:#9ca3af;">Click Analyze to load table scan statistics.</td></tr>
+                                </tbody>
+                            </table>
+                        </div>
                     </div>
                 </div>
 
@@ -5839,6 +5976,6 @@
 </div>
 </div>
 
-<script src="/static/main.js?v=130"></script>
+<script src="/static/main.js?v=131"></script>
 </body>
 </html>

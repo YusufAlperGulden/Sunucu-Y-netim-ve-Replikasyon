@@ -848,6 +848,226 @@ async def get_db_users(project_id: int, db: Session = Depends(get_db)):
     except Exception as e:
         return JSONResponse(status_code=500, content={'message': str(e)})
 
+@app.get('/api/projects/{project_id}/db-growth', dependencies=[Depends(verify_credentials)])
+async def get_db_growth(project_id: int, db: Session = Depends(get_db)):
+    """Return database sizes and top 10 table sizes from primary node."""
+    import asyncpg
+    from ha_manager import decrypt_url
+    proj = db.query(Project).filter(Project.id == project_id).first()
+    if not proj:
+        return JSONResponse(status_code=404, content={'message': 'Project not found'})
+    primary = next((n for n in proj.nodes if n.role.lower() in ('primary','master','standalone')), None)
+    if not primary:
+        primary = proj.nodes[0] if proj.nodes else None
+    if not primary:
+        return JSONResponse(status_code=404, content={'message': 'No nodes'})
+    try:
+        url = decrypt_url(primary.encrypted_url)
+        conn = await asyncpg.connect(dsn=url, timeout=10, ssl='require')
+        # Database sizes
+        db_rows = await conn.fetch("""
+            SELECT datname AS name,
+                   pg_database_size(datname) AS db_size_bytes,
+                   pg_size_pretty(pg_database_size(datname)) AS db_size
+            FROM pg_database
+            WHERE datistemplate = false
+            ORDER BY db_size_bytes DESC
+            LIMIT 10
+        """)
+        # Per-database table/row stats (for the current database)
+        tbl_rows = await conn.fetch("""
+            SELECT schemaname, relname AS table_name,
+                   pg_total_relation_size(c.oid) AS total_bytes,
+                   pg_relation_size(c.oid)       AS data_bytes,
+                   pg_indexes_size(c.oid)        AS index_bytes,
+                   pg_size_pretty(pg_total_relation_size(c.oid)) AS total_size,
+                   pg_size_pretty(pg_relation_size(c.oid))       AS data_size,
+                   pg_size_pretty(pg_indexes_size(c.oid))        AS index_size,
+                   n_live_tup AS rows,
+                   n_dead_tup AS dead_rows
+            FROM pg_stat_user_tables s
+            JOIN pg_class c ON c.relname = s.relname
+            ORDER BY total_bytes DESC
+            LIMIT 10
+        """)
+        await conn.close()
+        return {
+            'node': primary.name,
+            'databases': [dict(r) for r in db_rows],
+            'tables': [dict(r) for r in tbl_rows]
+        }
+    except Exception as e:
+        return JSONResponse(status_code=500, content={'message': str(e)})
+
+
+@app.get('/api/projects/{project_id}/active-queries', dependencies=[Depends(verify_credentials)])
+async def get_active_queries(project_id: int, db: Session = Depends(get_db)):
+    """Return live pg_stat_activity from all nodes."""
+    import asyncpg, asyncio
+    from ha_manager import decrypt_url
+    proj = db.query(Project).filter(Project.id == project_id).first()
+    if not proj:
+        return JSONResponse(status_code=404, content={'message': 'Project not found'})
+
+    async def query_node(node):
+        try:
+            url = decrypt_url(node.encrypted_url)
+            conn = await asyncpg.connect(dsn=url, timeout=8, ssl='require')
+            rows = await conn.fetch("""
+                SELECT pid, datname, usename, application_name,
+                       client_addr::text AS client_addr,
+                       state, wait_event_type, wait_event,
+                       COALESCE(EXTRACT(EPOCH FROM (now() - query_start))::int, 0) AS duration_s,
+                       LEFT(COALESCE(query,''), 120) AS query_text
+                FROM pg_stat_activity
+                WHERE pid <> pg_backend_pid()
+                ORDER BY duration_s DESC
+                LIMIT 50
+            """)
+            await conn.close()
+            result = []
+            for r in rows:
+                d = dict(r)
+                d['node_name'] = node.name
+                d['node_role'] = node.role
+                result.append(d)
+            return result
+        except Exception as e:
+            return [{'node_name': node.name, 'error': str(e)}]
+
+    tasks = [query_node(n) for n in proj.nodes]
+    results = await asyncio.gather(*tasks)
+    flat = []
+    for r in results:
+        flat.extend(r)
+    return {'connections': flat}
+
+
+@app.get('/api/projects/{project_id}/top-queries', dependencies=[Depends(verify_credentials)])
+async def get_top_queries(project_id: int, kind: str = 'top', db: Session = Depends(get_db)):
+    """Return top/outlier queries from pg_stat_statements on primary node."""
+    import asyncpg
+    from ha_manager import decrypt_url
+    proj = db.query(Project).filter(Project.id == project_id).first()
+    if not proj:
+        return JSONResponse(status_code=404, content={'message': 'Project not found'})
+    primary = next((n for n in proj.nodes if n.role.lower() in ('primary','master','standalone')), None)
+    if not primary:
+        primary = proj.nodes[0] if proj.nodes else None
+    if not primary:
+        return JSONResponse(status_code=404, content={'message': 'No nodes'})
+    try:
+        url = decrypt_url(primary.encrypted_url)
+        conn = await asyncpg.connect(dsn=url, timeout=10, ssl='require')
+        # Check if pg_stat_statements exists
+        check = await conn.fetchval("SELECT count(*) FROM pg_extension WHERE extname='pg_stat_statements'")
+        if not check:
+            await conn.close()
+            return {'available': False, 'message': 'pg_stat_statements extension is not installed.'}
+        if kind == 'outliers':
+            rows = await conn.fetch("""
+                SELECT LEFT(query, 120) AS query, calls,
+                       ROUND(mean_exec_time::numeric, 2) AS mean_exec_time,
+                       ROUND(stddev_exec_time::numeric, 2) AS stddev_exec_time,
+                       ROUND((stddev_exec_time / NULLIF(mean_exec_time, 0) * 100)::numeric, 1) AS variability_pct,
+                       rows
+                FROM pg_stat_statements
+                WHERE calls > 5
+                ORDER BY stddev_exec_time DESC NULLS LAST
+                LIMIT 20
+            """)
+        else:
+            rows = await conn.fetch("""
+                SELECT LEFT(query, 120) AS query, calls,
+                       ROUND(total_exec_time::numeric, 2) AS total_exec_time,
+                       ROUND(mean_exec_time::numeric, 2) AS mean_exec_time,
+                       rows
+                FROM pg_stat_statements
+                ORDER BY total_exec_time DESC NULLS LAST
+                LIMIT 20
+            """)
+        await conn.close()
+        return {'available': True, 'queries': [dict(r) for r in rows]}
+    except Exception as e:
+        return JSONResponse(status_code=500, content={'message': str(e)})
+
+
+@app.get('/api/projects/{project_id}/schema-analyzer', dependencies=[Depends(verify_credentials)])
+async def get_schema_analyzer(project_id: int, db: Session = Depends(get_db)):
+    """Return unused indexes and high-seq-scan tables from primary."""
+    import asyncpg
+    from ha_manager import decrypt_url
+    proj = db.query(Project).filter(Project.id == project_id).first()
+    if not proj:
+        return JSONResponse(status_code=404, content={'message': 'Project not found'})
+    primary = next((n for n in proj.nodes if n.role.lower() in ('primary','master','standalone')), None)
+    if not primary:
+        primary = proj.nodes[0] if proj.nodes else None
+    if not primary:
+        return JSONResponse(status_code=404, content={'message': 'No nodes'})
+    try:
+        url = decrypt_url(primary.encrypted_url)
+        conn = await asyncpg.connect(dsn=url, timeout=10, ssl='require')
+        unused = await conn.fetch("""
+            SELECT schemaname, tablename, indexname, idx_scan,
+                   pg_size_pretty(pg_relation_size(indexrelid)) AS index_size
+            FROM pg_stat_user_indexes
+            WHERE idx_scan = 0
+              AND indexname NOT LIKE '%pkey'
+              AND indexname NOT LIKE '%unique%'
+            ORDER BY pg_relation_size(indexrelid) DESC NULLS LAST
+            LIMIT 20
+        """)
+        seq_scans = await conn.fetch("""
+            SELECT relname AS table_name,
+                   seq_scan, idx_scan,
+                   ROUND((seq_scan::numeric / NULLIF(seq_scan + idx_scan, 0) * 100), 1) AS seq_pct,
+                   n_live_tup, n_dead_tup,
+                   pg_size_pretty(pg_total_relation_size(c.oid)) AS table_size
+            FROM pg_stat_user_tables s
+            JOIN pg_class c ON c.relname = s.relname
+            WHERE seq_scan + idx_scan > 10
+            ORDER BY seq_pct DESC NULLS LAST
+            LIMIT 20
+        """)
+        await conn.close()
+        return {
+            'node': primary.name,
+            'unused_indexes': [dict(r) for r in unused],
+            'seq_scan_tables': [dict(r) for r in seq_scans]
+        }
+    except Exception as e:
+        return JSONResponse(status_code=500, content={'message': str(e)})
+
+
+@app.get('/api/projects/{project_id}/db-vars', dependencies=[Depends(verify_credentials)])
+async def get_db_vars(project_id: int, db: Session = Depends(get_db)):
+    """Return pg_settings from all nodes for side-by-side comparison."""
+    import asyncpg, asyncio
+    from ha_manager import decrypt_url
+    proj = db.query(Project).filter(Project.id == project_id).first()
+    if not proj:
+        return JSONResponse(status_code=404, content={'message': 'Project not found'})
+
+    async def fetch_settings(node):
+        try:
+            url = decrypt_url(node.encrypted_url)
+            conn = await asyncpg.connect(dsn=url, timeout=8, ssl='require')
+            rows = await conn.fetch("""
+                SELECT name, setting, unit, category, short_desc, source
+                FROM pg_settings
+                ORDER BY category, name
+            """)
+            await conn.close()
+            return {'node': node.name, 'role': node.role, 'settings': [dict(r) for r in rows]}
+        except Exception as e:
+            return {'node': node.name, 'role': node.role, 'error': str(e), 'settings': []}
+
+    tasks = [fetch_settings(n) for n in proj.nodes]
+    results = await asyncio.gather(*tasks)
+    return {'nodes': list(results)}
+
+
 class NodeUpdate(BaseModel):
     url: str
     # SSH Credentials (opsiyonel)
