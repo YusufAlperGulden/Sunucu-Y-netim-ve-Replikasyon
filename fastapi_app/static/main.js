@@ -3435,7 +3435,6 @@ function renderBackups() {
     // or fetch from /api/users/me — whichever is available first
     async function loadCurrentUserFallback() {
         try {
-            // Use the already-fetched profile data (same source as Settings page)
             let profile = window.cachedProfileData;
             if (!profile) {
                 try {
@@ -3474,7 +3473,6 @@ function renderBackups() {
         }
     }
 
-
     // Expose so the router can call it when navigating to users-view
     window.reloadUsers = loadUsersFromAPI;
 
@@ -3489,7 +3487,6 @@ function renderBackups() {
         }
         tbody.innerHTML = '';
 
-
         let sorted = [...usersData];
         if (currentSort === 'asc') sorted.sort((a, b) => a.username.localeCompare(b.username));
         else if (currentSort === 'desc') sorted.sort((a, b) => b.username.localeCompare(a.username));
@@ -3499,14 +3496,17 @@ function renderBackups() {
             tr.style.cssText = 'border-bottom:1px solid #f3f4f6;cursor:pointer;transition:background 0.12s;';
             tr.onmouseenter = () => tr.style.background = '#f9fafb';
             tr.onmouseleave = () => tr.style.background = '';
-            tr.onclick = () => openUserDetails(u);
+            tr.onclick = () => window.openUserDetails(u);
 
-            const avatar = `<div style="width:32px;height:32px;border-radius:50%;background:${u.bg};color:${u.color};display:flex;align-items:center;justify-content:center;font-size:0.8rem;font-weight:700;flex-shrink:0;">${u.initial}</div>`;
+            const avatar = `<div style="width:32px;height:32px;border-radius:50%;background:${u.bg || '#e0f2fe'};color:${u.color || '#0284c7'};display:flex;align-items:center;justify-content:center;font-size:0.8rem;font-weight:700;flex-shrink:0;">${u.initial || (u.username ? u.username.slice(0, 2).toUpperCase() : 'US')}</div>`;
             const statusColor = u.status === 'Enabled' ? '#16a34a' : '#9ca3af';
             const createdLabel = u.created_at ? u.created_at : (u.id === 0 ? 'System' : '—');
 
             tr.innerHTML = `
-                <td style="padding:14px 24px;display:flex;align-items:center;gap:10px;font-weight:500;color:#111827;">${avatar}<span>${escapeHTML(u.username)}</span></td>
+                <td style="padding:14px 24px;display:flex;align-items:center;gap:10px;font-weight:500;color:#111827;">
+                    ${avatar}
+                    <span style="color:#4f46e5;font-weight:600;cursor:pointer;text-decoration:none;" onmouseover="this.style.textDecoration='underline'" onmouseout="this.style.textDecoration='none'" onclick="event.stopPropagation(); window.openUserDetails('${escapeHTML(u.username)}')">${escapeHTML(u.username)}</span>
+                </td>
                 <td style="padding:14px 24px;font-size:0.88rem;color:#374151;">${escapeHTML(u.email || '')}</td>
                 <td style="padding:14px 24px;font-size:0.88rem;color:#374151;">${escapeHTML(u.team || '')}</td>
                 <td style="padding:14px 24px;font-size:0.88rem;color:#374151;">${escapeHTML(u.first_name || '')}</td>
@@ -3514,7 +3514,7 @@ function renderBackups() {
                 <td style="padding:14px 24px;font-size:0.88rem;font-weight:600;color:${statusColor};">${escapeHTML(u.status || 'Enabled')}</td>
                 <td style="padding:14px 24px;font-size:0.88rem;color:#6b7280;">${escapeHTML(createdLabel)}</td>
                 <td style="padding:14px 24px;">
-                    <button onclick="event.stopPropagation();" style="background:transparent;border:1px solid #e5e7eb;border-radius:4px;padding:4px 10px;cursor:pointer;color:#6b7280;font-size:0.82rem;">···</button>
+                    <button onclick="event.stopPropagation(); window.openEditUserModal(${JSON.stringify(u).replace(/"/g,'&quot;')})" style="background:transparent;border:1px solid #e5e7eb;border-radius:4px;padding:4px 10px;cursor:pointer;color:#6b7280;font-size:0.82rem;">···</button>
                 </td>`;
             tbody.appendChild(tr);
         });
@@ -3527,8 +3527,32 @@ function renderBackups() {
         }
     }
 
-    // ── User details panel ─────────────────────────────────────────────────
-    function openUserDetails(u) {
+    // ── User details panel (Matching Severalnines ClusterControl Modal) ─────────
+    window.openUserDetails = function(u) {
+        if (typeof u === 'string') {
+            const found = (usersData || []).find(x => x.username.toLowerCase() === u.toLowerCase());
+            if (found) {
+                u = found;
+            } else {
+                const uname = u;
+                u = {
+                    id: 0,
+                    username: uname,
+                    email: `${uname}@severalnines.com`,
+                    first_name: uname.charAt(0).toUpperCase() + uname.slice(1),
+                    last_name: '',
+                    role: (uname === 'admin' || uname === 'demo') ? 'admin' : 'viewer',
+                    team: 'admins',
+                    timezone: 'UTC',
+                    origin: 'cmon',
+                    status: 'Enabled',
+                    bg: '#e0f2fe',
+                    color: '#0284c7',
+                    initial: uname.slice(0, 2).toUpperCase()
+                };
+            }
+        }
+
         let overlay = document.getElementById('modal-user-details');
         if (!overlay) {
             overlay = document.createElement('div');
@@ -3538,35 +3562,127 @@ function renderBackups() {
             document.body.appendChild(overlay);
         }
 
-        const isAdmin = u.role === 'admin';
+        const isAdmin = (u.role === 'admin' || (u.team && u.team.toLowerCase() === 'admins') || u.username === 'admin' || u.username === 'demo');
         const fullName = [u.first_name, u.last_name].filter(Boolean).join(' ') || u.username;
+        const avatarBg = u.bg || '#e0f2fe';
+        const avatarColor = u.color || '#0284c7';
+        const avatarInit = u.initial || (u.username ? u.username.slice(0, 2).toUpperCase() : 'US');
+
+        const perm = (label, ok) => `
+            <div style="display:flex;align-items:center;justify-content:space-between;padding:2px 0;">
+                <span style="color:#374151;font-size:0.88rem;">${escapeHTML(label)}:</span>
+                <span style="color:${ok ? '#16a34a' : '#9ca3af'};font-weight:600;font-size:0.88rem;">${ok ? 'Yes' : 'No'}</span>
+            </div>`;
 
         overlay.innerHTML = `
-        <div style="background:white;border-radius:12px;width:600px;max-width:94vw;max-height:90vh;overflow-y:auto;box-shadow:0 20px 60px rgba(0,0,0,0.25);padding:32px 36px;position:relative;">
-            <button onclick="document.getElementById('modal-user-details').style.display='none'"
-              style="position:absolute;top:16px;right:18px;border:none;background:none;font-size:1.4rem;cursor:pointer;color:#6b7280;line-height:1;">✕</button>
-
-            <!-- Name header -->
-            <div style="text-align:center;margin-bottom:20px;">
-                <div style="width:64px;height:64px;border-radius:50%;background:${u.bg};color:${u.color};display:flex;align-items:center;justify-content:center;font-size:1.4rem;font-weight:700;margin:0 auto 12px;">${u.initial}</div>
-                <div style="font-size:1.25rem;font-weight:700;color:#111827;">${escapeHTML(fullName)}</div>
-                <div style="font-size:0.88rem;color:#6b7280;margin-top:2px;">${escapeHTML(u.email || '')}</div>
+        <div style="background:white;border-radius:14px;width:560px;max-width:94vw;max-height:90vh;overflow-y:auto;box-shadow:0 20px 60px rgba(0,0,0,0.25);position:relative;animation:fadeInModal 0.2s ease-out;display:flex;flex-direction:column;">
+            
+            <!-- Modal Header Bar -->
+            <div style="display:flex;justify-content:space-between;align-items:center;padding:18px 24px;border-bottom:1px solid #f3f4f6;">
+                <h3 style="margin:0;font-size:1.15rem;font-weight:600;color:#111827;">User details</h3>
+                <button onclick="document.getElementById('modal-user-details').style.display='none'"
+                  style="border:none;background:transparent;font-size:1.25rem;cursor:pointer;color:#9ca3af;padding:4px;display:flex;align-items:center;justify-content:center;border-radius:6px;"
+                  onmouseover="this.style.color='#111827'" onmouseout="this.style.color='#9ca3af'">✕</button>
             </div>
 
-            <!-- Profile fields -->
-            <div style="display:grid;grid-template-columns:auto 1fr;gap:7px 16px;font-size:0.88rem;margin-bottom:20px;padding:16px;background:#f9fafb;border-radius:8px;">
-                <span style="color:#6b7280;">Time zone:</span>  <span style="color:#111827;">${escapeHTML(u.timezone || 'UTC')}</span>
-                <span style="color:#6b7280;">Username:</span>   <span style="color:#111827;font-weight:500;">${escapeHTML(u.username)}</span>
-                <span style="color:#6b7280;">Team:</span>       <span style="color:#111827;">${escapeHTML(u.team || 'admins')}</span>
-                <span style="color:#6b7280;">Origin:</span>     <span style="color:#111827;">${escapeHTML(u.origin || 'cmon')}</span>
+            <div style="padding:28px 32px;">
+                <!-- Profile Avatar & Title (Matching Screenshot 1) -->
+                <div style="text-align:center;margin-bottom:24px;">
+                    <div style="width:76px;height:76px;border-radius:50%;background:${avatarBg};color:${avatarColor};display:flex;align-items:center;justify-content:center;font-size:1.6rem;font-weight:700;margin:0 auto 12px;box-shadow:0 2px 6px rgba(0,0,0,0.06);">
+                        <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="${avatarColor}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
+                            <circle cx="12" cy="7" r="4"></circle>
+                        </svg>
+                    </div>
+                    <div style="font-size:1.65rem;font-weight:700;color:#111827;margin-bottom:2px;">${escapeHTML(u.username)}</div>
+                    <div style="font-size:0.92rem;color:#6b7280;">${escapeHTML(u.email || `${u.username}@severalnines.com`)}</div>
+                </div>
+
+                <!-- Attributes Grid (Timezone, Username, Team, Origin) -->
+                <div style="display:flex;flex-direction:column;gap:8px;font-size:0.9rem;margin-bottom:28px;padding:16px 20px;background:#f9fafb;border-radius:8px;border:1px solid #f3f4f6;">
+                    <div style="display:flex;gap:12px;"><span style="color:#6b7280;width:100px;">Time zone:</span><span style="color:#111827;font-weight:500;">${escapeHTML(u.timezone || 'UTC')}</span></div>
+                    <div style="display:flex;gap:12px;"><span style="color:#6b7280;width:100px;">Username:</span><span style="color:#111827;font-weight:500;">${escapeHTML(u.username)}</span></div>
+                    <div style="display:flex;gap:12px;"><span style="color:#6b7280;width:100px;">Team:</span><span style="color:#111827;font-weight:500;">${escapeHTML(u.team || 'admins')}</span></div>
+                    <div style="display:flex;gap:12px;"><span style="color:#6b7280;width:100px;">Origin:</span><span style="color:#111827;font-weight:500;">${escapeHTML(u.origin || 'cmon')}</span></div>
+                </div>
+
+                <!-- Permissions Section (Matching Screenshot 1 Grid) -->
+                <div style="margin-bottom:28px;">
+                    <div style="font-size:0.95rem;font-weight:600;color:#111827;margin-bottom:12px;">Permissions</div>
+                    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px 32px;background:white;">
+                        ${perm('Change controller configuration', isAdmin)}
+                        ${perm('Manage users and teams', isAdmin)}
+                        ${perm('Change LDAP settings', isAdmin)}
+                        ${perm('Deploy clusters', isAdmin)}
+                    </div>
+                </div>
+
+                <!-- Cluster Access Section (Matching Screenshot 1 Table) -->
+                <div style="margin-bottom:12px;">
+                    <div style="font-size:0.95rem;font-weight:600;color:#111827;margin-bottom:12px;">Cluster</div>
+                    <div id="ud-cluster-access" style="font-size:0.88rem;color:#6b7280;">Loading clusters…</div>
+                </div>
             </div>
 
-            <!-- Permissions -->
-            <div style="margin-bottom:20px;">
-                <div style="font-size:0.9rem;font-weight:600;color:#111827;margin-bottom:10px;">Permissions</div>
-                <div style="display:grid;grid-template-columns:1fr 1fr;gap:7px 24px;font-size:0.85rem;">
-                    ${perm('Change controller configuration', isAdmin)}
-                    ${perm('Manage users and teams', isAdmin)}
+            <!-- Footer: Edit + Close -->
+            <div style="display:flex;justify-content:space-between;align-items:center;padding:16px 28px;border-top:1px solid #f3f4f6;background:#fafafa;">
+                <button onclick="window.openEditUserModal(${JSON.stringify(u).replace(/"/g,'&quot;')})"
+                  style="padding:9px 24px;background:#3a1c94;color:white;border:none;border-radius:6px;font-size:0.88rem;font-weight:600;cursor:pointer;transition:background 0.15s;"
+                  onmouseover="this.style.background='#2d1570'" onmouseout="this.style.background='#3a1c94'">Edit</button>
+                <button onclick="document.getElementById('modal-user-details').style.display='none'"
+                  style="padding:9px 22px;border:1px solid #d1d5db;background:white;color:#374151;border-radius:6px;font-size:0.88rem;font-weight:500;cursor:pointer;"
+                  onmouseover="this.style.background='#f9fafb'" onmouseout="this.style.background='white'">Close</button>
+            </div>
+        </div>`;
+
+        overlay.style.display = 'flex';
+
+        // Load clusters asynchronously
+        apiFetch('/api/projects').then(r => r.ok ? r.json() : []).then(projects => {
+            const el = document.getElementById('ud-cluster-access');
+            if (!el) return;
+            
+            const clusterList = (projects && projects.length > 0) ? projects : [
+                { id: 27, name: 'MSSQL', db_type: 'mssql' },
+                { id: 21, name: 'MariaDB', db_type: 'mariadb' },
+                { id: 30, name: 'MongoDB Replicaset', db_type: 'mongo' },
+                { id: 28, name: 'Percona MySQL Replication', db_type: 'mysql' },
+                { id: 23, name: 'Percona XtraDB Cluster', db_type: 'galera' },
+                { id: 7, name: 'PostgreSQL Streaming Cluster', db_type: 'postgresql' }
+            ];
+
+            let rows = clusterList.map(p => {
+                const dbName = p.name || 'PostgreSQL';
+                let icon = '🐘';
+                if (dbName.toLowerCase().includes('mssql') || p.db_type === 'mssql') icon = '🗄️';
+                else if (dbName.toLowerCase().includes('maria')) icon = '🦭';
+                else if (dbName.toLowerCase().includes('mongo')) icon = '🍃';
+                else if (dbName.toLowerCase().includes('percona') || dbName.toLowerCase().includes('mysql')) icon = '🐬';
+                else if (dbName.toLowerCase().includes('redis') || dbName.toLowerCase().includes('valkey')) icon = '⚡';
+
+                return `
+                <div style="display:grid;grid-template-columns:1.2fr 1.2fr auto;gap:8px 16px;padding:9px 0;border-bottom:1px solid #f3f4f6;align-items:center;">
+                    <span style="color:#111827;font-weight:500;display:flex;align-items:center;gap:6px;">
+                        <span style="font-size:1.05rem;">${icon}</span>
+                        ${escapeHTML(dbName)}
+                    </span>
+                    <span style="color:#6b7280;font-size:0.85rem;">${escapeHTML(dbName)} (ID:${p.id})</span>
+                    <span style="color:#374151;font-size:0.82rem;background:#f3f4f6;padding:3px 10px;border-radius:12px;font-weight:500;border:1px solid #e5e7eb;">Manage</span>
+                </div>`;
+            }).join('');
+
+            el.innerHTML = `
+                <div style="display:grid;grid-template-columns:1.2fr 1.2fr auto;gap:8px 16px;padding:6px 0;border-bottom:1.5px solid #e5e7eb;margin-bottom:4px;">
+                    <span style="font-weight:600;font-size:0.8rem;color:#6b7280;text-transform:uppercase;">Cluster</span>
+                    <span style="font-weight:600;font-size:0.8rem;color:#6b7280;text-transform:uppercase;">More info</span>
+                    <span style="font-weight:600;font-size:0.8rem;color:#6b7280;text-transform:uppercase;">Access level</span>
+                </div>
+                ${rows}`;
+        }).catch(() => {
+            const el = document.getElementById('ud-cluster-access');
+            if (el) el.textContent = 'Unable to load clusters.';
+        });
+    }; and teams', isAdmin)}
                     ${perm('Change LDAP settings', isAdmin)}
                     ${perm('Deploy clusters', isAdmin)}
                 </div>
@@ -7527,16 +7643,37 @@ window.submitEnableOpsCenter = async function() {
 };
 
 window.toggleK8sAddon = async function() {
-    const res = await apiFetch('/api/addons');
-    const d = await res.json();
-    if (d.kubernetes?.enabled) {
-        if (confirm('Are you sure you want to disable Kubernetes feature?')) {
-            const disRes = await apiFetch('/api/addons/kubernetes/disable', { method: 'POST' });
-            if (disRes.ok) {
-                loadAddons();
+    try {
+        const res = await apiFetch('/api/addons');
+        const d = await res.json();
+        const isEnabled = !!(d.kubernetes?.enabled);
+
+        const titleEl = document.getElementById('modal-enable-k8s-title');
+        const desc1El = document.getElementById('modal-enable-k8s-desc1');
+        const desc2El = document.getElementById('modal-enable-k8s-desc2');
+        const btnSubmit = document.getElementById('btn-submit-enable-k8s');
+
+        if (isEnabled) {
+            if (titleEl) titleEl.innerText = 'Disable kubernetes';
+            if (desc1El) desc1El.innerHTML = 'Are you sure you want to disable kubernetes feature?<br>Page will reload after the operation is complete.';
+            if (desc2El) desc2El.innerText = 'Disabling Kubernetes will unregister active database operators from this console.';
+            if (btnSubmit) {
+                btnSubmit.innerText = 'Disable';
+                btnSubmit.style.background = '#dc2626';
+                btnSubmit.onclick = submitDisableK8s;
+            }
+        } else {
+            if (titleEl) titleEl.innerText = 'Enable kubernetes';
+            if (desc1El) desc1El.innerHTML = 'Are you sure you want to enable kubernetes feature?<br>Page will reload after the operation is complete.';
+            if (desc2El) desc2El.innerText = 'Enabling Kubernetes will allow you to manage Kubernetes clusters from the system.';
+            if (btnSubmit) {
+                btnSubmit.innerText = 'Enable';
+                btnSubmit.style.background = '#3a1c94';
+                btnSubmit.onclick = submitEnableK8s;
             }
         }
-    } else {
+        openEnableK8sModal();
+    } catch(e) {
         openEnableK8sModal();
     }
 };
@@ -7558,13 +7695,30 @@ window.submitEnableK8s = async function() {
         const res = await apiFetch('/api/addons/kubernetes/enable', { method: 'POST' });
         if (res.ok) {
             closeEnableK8sModal();
-            loadAddons();
-            alert('✓ Kubernetes feature enabled.');
+            await loadAddons();
+            if (typeof showToast === 'function') showToast('✓ Kubernetes feature enabled.', 'success');
         }
     } catch(e) {
         alert('Failed to enable Kubernetes.');
     } finally {
         if (btn) { btn.disabled = false; btn.innerText = 'Enable'; }
+    }
+};
+
+window.submitDisableK8s = async function() {
+    const btn = document.getElementById('btn-submit-enable-k8s');
+    if (btn) { btn.disabled = true; btn.innerText = 'Disabling...'; }
+    try {
+        const res = await apiFetch('/api/addons/kubernetes/disable', { method: 'POST' });
+        if (res.ok) {
+            closeEnableK8sModal();
+            await loadAddons();
+            if (typeof showToast === 'function') showToast('✓ Kubernetes feature disabled.', 'info');
+        }
+    } catch(e) {
+        alert('Failed to disable Kubernetes.');
+    } finally {
+        if (btn) { btn.disabled = false; btn.innerText = 'Disable'; }
     }
 };
 

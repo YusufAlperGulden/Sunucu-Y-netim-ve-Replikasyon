@@ -5351,12 +5351,12 @@ Real OS metrics (CPU, RAM, Disk I/O) cannot be fetched directly from PostgreSQL 
 <div class="modal-overlay" id="modal-enable-k8s" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:99999;align-items:center;justify-content:center;">
   <div style="background:white;border-radius:14px;width:440px;max-width:95vw;box-shadow:0 20px 25px -5px rgba(0,0,0,0.15);overflow:hidden;animation:fadeInModal 0.2s ease-out;">
     <div style="display:flex;align-items:center;justify-content:space-between;padding:18px 24px;border-bottom:1px solid #f3f4f6;">
-      <h3 style="margin:0;font-size:1.15rem;font-weight:600;color:#111827;">Enable kubernetes</h3>
+      <h3 id="modal-enable-k8s-title" style="margin:0;font-size:1.15rem;font-weight:600;color:#111827;">Enable kubernetes</h3>
       <button onclick="closeEnableK8sModal()" style="background:transparent;border:none;font-size:1.2rem;color:#9ca3af;cursor:pointer;">✕</button>
     </div>
     <div style="padding:22px 24px;">
-      <p style="margin:0 0 16px 0;font-size:0.92rem;color:#374151;line-height:1.5;">Are you sure you want to enable kubernetes feature?<br>Page will reload after the operation is complete.</p>
-      <p style="margin:0;font-size:0.9rem;color:#4b5563;line-height:1.5;">Enabling Kubernetes will allow you to manage Kubernetes clusters from the system.</p>
+      <p id="modal-enable-k8s-desc1" style="margin:0 0 16px 0;font-size:0.92rem;color:#374151;line-height:1.5;">Are you sure you want to enable kubernetes feature?<br>Page will reload after the operation is complete.</p>
+      <p id="modal-enable-k8s-desc2" style="margin:0;font-size:0.9rem;color:#4b5563;line-height:1.5;">Enabling Kubernetes will allow you to manage Kubernetes clusters from the system.</p>
     </div>
     <div style="display:flex;justify-content:flex-end;gap:12px;padding:16px 24px;border-top:1px solid #f3f4f6;background:#fafafa;">
       <button onclick="closeEnableK8sModal()" style="padding:9px 20px;background:white;border:1px solid #d1d5db;border-radius:8px;font-size:0.9rem;font-weight:500;color:#374151;cursor:pointer;">Cancel</button>
@@ -5548,6 +5548,6 @@ Real OS metrics (CPU, RAM, Disk I/O) cannot be fetched directly from PostgreSQL 
 </div>
 </div>
 
-<script src="/static/main.js?v=121"></script>
+<script src="/static/main.js?v=123"></script>
 </body>
 </html>
