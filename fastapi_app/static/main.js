@@ -1078,6 +1078,8 @@ document.addEventListener('DOMContentLoaded', () => {
                     document.getElementById('modal-edit-project').style.display = 'flex';
                 });
 
+                clusterCard.setAttribute('data-proj-id', proj.id);
+                clusterCard.setAttribute('data-proj-name', (proj.name || '').toLowerCase());
                 if (document.getElementById('cc-clusters-list')) { document.getElementById('cc-clusters-list').appendChild(clusterCard); }
                 if (tbody) { tbody.appendChild(tr); }
             });
@@ -1085,6 +1087,8 @@ document.addEventListener('DOMContentLoaded', () => {
             // ── Multi-Segment Donut Chart ──────────────────────────────────
             const el_cc_total_clusters = document.getElementById('cc-total-clusters');
             if (el_cc_total_clusters) el_cc_total_clusters.innerText = `${data.length} Clusters`;
+            var savedSort = localStorage.getItem('clusters_sort_by') || 'name';
+            if (typeof window.applyClustersSort === 'function') window.applyClustersSort(savedSort);
 
             const centerText = document.getElementById('cc-donut-center-text');
             if (centerText) {
@@ -10781,4 +10785,36 @@ window.loadHeaderAuditTable = async function() {
                 '</tr>';
         }).join('');
     } catch(e) {}
+};
+
+
+// ═══════════════════════════════════════════════════════════════════════════
+// Cluster Sorting (Cluster name / Cluster ID)
+// ═══════════════════════════════════════════════════════════════════════════
+
+window.applyClustersSort = function(sortKey) {
+    var selectEl = document.getElementById('select-clusters-sort');
+    var key = sortKey || (selectEl ? selectEl.value : 'name');
+    if (selectEl && selectEl.value !== key) selectEl.value = key;
+    var container = document.getElementById('cc-clusters-list');
+    if (!container) return;
+    var cards = Array.from(container.children);
+    if (!cards.length) return;
+    cards.sort(function(a, b) {
+        if (key === 'id') {
+            var idA = parseInt(a.getAttribute('data-proj-id')) || 0;
+            var idB = parseInt(b.getAttribute('data-proj-id')) || 0;
+            return idA - idB;
+        } else {
+            var nameA = a.getAttribute('data-proj-name') || '';
+            var nameB = b.getAttribute('data-proj-name') || '';
+            return nameA.localeCompare(nameB, undefined, { numeric: true, sensitivity: 'base' });
+        }
+    });
+    cards.forEach(function(c) { container.appendChild(c); });
+};
+
+window.onClusterSortChange = function(val) {
+    localStorage.setItem('clusters_sort_by', val);
+    window.applyClustersSort(val);
 };

@@ -116,7 +116,7 @@
             <div style="height: 60px; min-height: 60px; display: flex; justify-content: flex-end; align-items: center; padding: 0 40px; gap: 24px; z-index: 100; border-bottom: 1px solid var(--glass-border);">
                 <div id="app-version-badge" style="display: flex; align-items: center; gap: 6px; font-size: 0.82rem; font-weight: 600; color: #4338ca; background: #e0e7ff; padding: 5px 14px; border-radius: 20px; border: 1px solid #c7d2fe; margin-right: auto; letter-spacing: 0.02em; box-shadow: 0 1px 2px rgba(0,0,0,0.04);">
                     <span style="display: inline-block; width: 7px; height: 7px; border-radius: 50%; background: #4f46e5;"></span>
-                    <span>v1.6.8</span>
+                    <span>v1.6.9</span>
                 </div>
 
 
@@ -277,9 +277,33 @@
 <!-- ===== MAIN VIEW SECTIONS (clusters, projects, detail) ===== -->
 <!-- CLUSTERS VIEW -->
             <div id="clusters-view" class="view-section" style="display: none;">
-                <header class="top-header">
-                    <h1>Clusters</h1>
-                    
+                <header class="top-header" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px;">
+                    <div style="display: flex; align-items: center; gap: 10px;">
+                        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#4b5563" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <rect x="2" y="2" width="6" height="6" rx="1"></rect>
+                            <rect x="16" y="2" width="6" height="6" rx="1"></rect>
+                            <rect x="9" y="16" width="6" height="6" rx="1"></rect>
+                            <path d="M5 8v3a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8"></path>
+                            <line x1="12" y1="13" x2="12" y2="16"></line>
+                        </svg>
+                        <h1 style="font-size: 1.25rem; font-weight: 500; color: var(--text-main); margin: 0;">Clusters</h1>
+                    </div>
+                    <div style="display: flex; align-items: center; gap: 16px;">
+                        <button id="btn-cluster-filters" style="display: flex; align-items: center; gap: 6px; padding: 6px 14px; background: white; border: 1px solid #d1d5db; border-radius: 6px; font-size: 0.85rem; color: #374151; font-weight: 500; cursor: pointer; box-shadow: 0 1px 2px rgba(0,0,0,0.05); transition: background 0.15s;" onmouseover="this.style.background='#f9fafb'" onmouseout="this.style.background='white'">
+                            <span>Filters</span>
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"></polyline></svg>
+                        </button>
+                        <div style="display: flex; align-items: center; gap: 8px; font-size: 0.88rem; color: #4b5563;">
+                            <span>Sort by:</span>
+                            <div style="position: relative; display: inline-block;">
+                                <select id="select-clusters-sort" onchange="window.onClusterSortChange(this.value)" style="appearance: none; -webkit-appearance: none; background: white; border: 1px solid #d1d5db; border-radius: 6px; padding: 6px 32px 6px 14px; font-size: 0.85rem; font-weight: 500; color: #111827; cursor: pointer; outline: none; box-shadow: 0 1px 2px rgba(0,0,0,0.05); min-width: 145px; transition: border-color 0.15s, box-shadow 0.15s;" onfocus="this.style.borderColor='#7c3aed'; this.style.boxShadow='0 0 0 2px rgba(124, 58, 237, 0.1)';" onblur="this.style.borderColor='#d1d5db'; this.style.boxShadow='0 1px 2px rgba(0,0,0,0.05)';">
+                                    <option value="name" selected>Cluster name</option>
+                                    <option value="id">Cluster ID</option>
+                                </select>
+                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#6b7280" stroke-width="2" style="position: absolute; right: 10px; top: 50%; transform: translateY(-50%); pointer-events: none;"><polyline points="6 9 12 15 18 9"></polyline></svg>
+                            </div>
+                        </div>
+                    </div>
                 </header>
                 <div id="cc-clusters-list" style="display: flex; flex-direction: column; gap: 16px;">
                     <!-- Injected by JS -->
@@ -1911,7 +1935,8 @@
                 <!-- Left Sidebar (Fixed / Non-scrolling) -->
                 <div style="width: 250px; flex-shrink: 0; border-right: 1px solid #e5e7eb; padding: 32px 24px; display: flex; flex-direction: column; gap: 16px; font-size: 0.9rem; background: #fafafa; position: sticky; top: 0; align-self: flex-start; height: 100%; overflow-y: auto; user-select: none;">
                     <div style="color: #c026d3; font-weight: 600; margin-bottom: 8px;">Release Notes</div>
-                    <a href="#changelog-view" onclick="event.preventDefault(); document.getElementById('v1-6-8').scrollIntoView({behavior:'smooth'}); document.querySelectorAll('#changelog-view .cl-sidebar-link').forEach(e=>e.style.fontWeight='normal'); this.style.fontWeight='bold';" class="cl-sidebar-link" style="color: #4b5563; text-decoration: none; font-weight: bold;">v1.6.8 (Latest)</a>
+                    <a href="#changelog-view" onclick="event.preventDefault(); document.getElementById('v1-6-9').scrollIntoView({behavior:'smooth'}); document.querySelectorAll('#changelog-view .cl-sidebar-link').forEach(e=>e.style.fontWeight='normal'); this.style.fontWeight='bold';" class="cl-sidebar-link" style="color: #4b5563; text-decoration: none; font-weight: bold;">v1.6.9 (Latest)</a>
+                    <a href="#changelog-view" onclick="event.preventDefault(); document.getElementById('v1-6-8').scrollIntoView({behavior:'smooth'}); document.querySelectorAll('#changelog-view .cl-sidebar-link').forEach(e=>e.style.fontWeight='normal'); this.style.fontWeight='bold';" class="cl-sidebar-link" style="color: #4b5563; text-decoration: none;">v1.6.8</a>
                     <a href="#changelog-view" onclick="event.preventDefault(); document.getElementById('v1-6-7').scrollIntoView({behavior:'smooth'}); document.querySelectorAll('#changelog-view .cl-sidebar-link').forEach(e=>e.style.fontWeight='normal'); this.style.fontWeight='bold';" class="cl-sidebar-link" style="color: #4b5563; text-decoration: none;">v1.6.7</a>
                     <a href="#changelog-view" onclick="event.preventDefault(); document.getElementById('v1-6-6').scrollIntoView({behavior:'smooth'}); document.querySelectorAll('#changelog-view .cl-sidebar-link').forEach(e=>e.style.fontWeight='normal'); this.style.fontWeight='bold';" class="cl-sidebar-link" style="color: #4b5563; text-decoration: none;">v1.6.6</a>
                     <a href="#changelog-view" onclick="event.preventDefault(); document.getElementById('v1-6-5').scrollIntoView({behavior:'smooth'}); document.querySelectorAll('#changelog-view .cl-sidebar-link').forEach(e=>e.style.fontWeight='normal'); this.style.fontWeight='bold';" class="cl-sidebar-link" style="color: #4b5563; text-decoration: none;">v1.6.5</a>
@@ -1951,6 +1976,12 @@
                     <h1 style="color: #4b5563; font-weight: 300; font-size: 2.2rem; margin-bottom: 24px;">Release Notes</h1>
                     <p style="color: #4b5563; line-height: 1.6; margin-bottom: 40px; font-size: 1.05rem;">Use this page as your guide to stay up to date on the latest enhancements and changes, ensuring you can make the most of ClusterControl's powerful capabilities.</p>
                     
+                    <h2 id="v1-6-9" style="color: #4b5563; font-weight: 300; font-size: 1.8rem; margin-bottom: 20px; border-top: 1px solid #e5e7eb; padding-top: 32px;">v1.6.9</h2>
+                    <h3 id="whats-new-1-6-9" style="color: #4b5563; font-weight: 400; font-size: 1.4rem; margin-bottom: 16px;">What's New</h3>
+                    <ul style="color: #4b5563; line-height: 1.7; padding-left: 20px; margin-bottom: 40px;">
+                        <li><span style="font-weight: 600;">Cluster Sorting Options in Clusters View:</span> Added ClusterControl-style <code>Sort by:</code> dropdown in the top header of the Clusters view with interactive sorting by <b>Cluster name</b> (A-Z) and <b>Cluster ID</b> (Ascending), alongside a <b>Filters</b> button.</li>
+                    </ul>
+
                     <h2 id="v1-6-8" style="color: #4b5563; font-weight: 300; font-size: 1.8rem; margin-bottom: 20px; border-top: 1px solid #e5e7eb; padding-top: 32px;">v1.6.8</h2>
                     <h3 id="whats-new-1-6-8" style="color: #4b5563; font-weight: 400; font-size: 1.4rem; margin-bottom: 16px;">What's New</h3>
                     <ul style="color: #4b5563; line-height: 1.7; padding-left: 20px; margin-bottom: 40px;">
@@ -2157,6 +2188,14 @@
                     
                     <div style="display: flex; flex-direction: column; gap: 16px; color: #4b5563;">
                         
+                        <!-- v1.6.9 -->
+                        <div style="display: flex; flex-direction: column; gap: 6px;">
+                            <a href="#changelog-view" onclick="event.preventDefault(); document.getElementById('v1-6-9').scrollIntoView({behavior:'smooth'});" style="color: #111827; text-decoration: none; font-weight: 600; font-size: 0.88rem;">v1.6.9 Release</a>
+                            <div style="margin-left: 12px; display: flex; flex-direction: column; gap: 4px;">
+                                <a href="#changelog-view" onclick="event.preventDefault(); document.getElementById('whats-new-1-6-9').scrollIntoView({behavior:'smooth'});" style="color: #6b7280; text-decoration: none; font-size: 0.82rem;">What's New</a>
+                            </div>
+                        </div>
+
                         <!-- v1.6.8 -->
                         <div style="display: flex; flex-direction: column; gap: 6px;">
                             <a href="#changelog-view" onclick="event.preventDefault(); document.getElementById('v1-6-8').scrollIntoView({behavior:'smooth'});" style="color: #111827; text-decoration: none; font-weight: 600; font-size: 0.88rem;">v1.6.8 Release</a>
@@ -6408,7 +6447,7 @@
 </div>
 </div>
 
-<script src="/static/main.js?v=141"></script>
+<script src="/static/main.js?v=142"></script>
 
 <!-- Modal: Add an external email -->
 <div id="modal-add-external-email" style="display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 9999; align-items: center; justify-content: center;">
