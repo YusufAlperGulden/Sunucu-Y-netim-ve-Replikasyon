@@ -1080,6 +1080,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
                 clusterCard.setAttribute('data-proj-id', proj.id);
                 clusterCard.setAttribute('data-proj-name', (proj.name || '').toLowerCase());
+                clusterCard.setAttribute('data-proj-status', clusterStatusKey);
+                clusterCard.setAttribute('data-proj-vendor', vendorType);
+                clusterCard.setAttribute('data-proj-tags', ((proj.name || '') + ' ' + (proj.description || '')).toLowerCase());
                 if (document.getElementById('cc-clusters-list')) { document.getElementById('cc-clusters-list').appendChild(clusterCard); }
                 if (tbody) { tbody.appendChild(tr); }
             });
@@ -10817,4 +10820,55 @@ window.applyClustersSort = function(sortKey) {
 window.onClusterSortChange = function(val) {
     localStorage.setItem('clusters_sort_by', val);
     window.applyClustersSort(val);
+};
+
+
+// ═══════════════════════════════════════════════════════════════════════════
+// Cluster Filters Popover Logic (Status, Cluster types, Node types, Tags)
+// ═══════════════════════════════════════════════════════════════════════════
+
+window.toggleClusterFiltersPopover = function(e) {
+    if (e) e.stopPropagation();
+    var pop = document.getElementById('popover-cluster-filters');
+    if (!pop) return;
+    pop.style.display = (pop.style.display === 'none' || !pop.style.display) ? 'block' : 'none';
+};
+
+document.addEventListener('click', function(e) {
+    var pop = document.getElementById('popover-cluster-filters');
+    var btn = document.getElementById('btn-cluster-filters');
+    if (pop && pop.style.display !== 'none') {
+        if (!pop.contains(e.target) && btn && !btn.contains(e.target)) {
+            pop.style.display = 'none';
+        }
+    }
+});
+
+window.applyClusterFilters = function() {
+    var statusVal = (document.getElementById('filter-cluster-status') || {}).value || '';
+    var typeVal = (document.getElementById('filter-cluster-type') || {}).value || '';
+    var nodeVal = (document.getElementById('filter-node-type') || {}).value || '';
+    var tagVal = ((document.getElementById('filter-cluster-tags') || {}).value || '').toLowerCase().trim();
+    var container = document.getElementById('cc-clusters-list');
+    if (!container) return;
+    var cards = Array.from(container.children);
+    cards.forEach(function(card) {
+        var cardStatus = card.getAttribute('data-proj-status') || '';
+        var cardVendor = card.getAttribute('data-proj-vendor') || '';
+        var cardTags = card.getAttribute('data-proj-tags') || '';
+        var match = true;
+        if (statusVal && cardStatus !== statusVal) match = false;
+        if (typeVal && !cardVendor.includes(typeVal)) match = false;
+        if (nodeVal && !cardVendor.includes(nodeVal)) match = false;
+        if (tagVal && !cardTags.includes(tagVal)) match = false;
+        card.style.display = match ? '' : 'none';
+    });
+};
+
+window.resetClusterFilters = function() {
+    if (document.getElementById('filter-cluster-status')) document.getElementById('filter-cluster-status').value = '';
+    if (document.getElementById('filter-cluster-type')) document.getElementById('filter-cluster-type').value = '';
+    if (document.getElementById('filter-node-type')) document.getElementById('filter-node-type').value = '';
+    if (document.getElementById('filter-cluster-tags')) document.getElementById('filter-cluster-tags').value = '';
+    window.applyClusterFilters();
 };
