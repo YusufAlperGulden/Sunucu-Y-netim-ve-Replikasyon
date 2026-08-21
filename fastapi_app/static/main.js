@@ -33,6 +33,24 @@ async function apiFetch(url, options = {}) {
         }
     }
 }
+
+// ── Chart.js cluster dashboard state ─────────────────────────────────────────
+window._clusterCharts = {};          // keyed: 'ops' | 'conn' | 'cache' | 'xact'
+window._clusterChartHistory = {      // rolling time-series, max 10 samples
+    labels: [],                      // ISO timestamps → displayed as relative "Xm ago"
+    ops: {},                         // { nodeName: [values...] }
+    conn: {}                         // { nodeName: [values...] }
+};
+window._clusterPrevSnapshot = {};    // { nodeId: { tup_fetched, tup_inserted, … , ts } }
+const CHART_MAX_POINTS = 10;
+const CHART_OPS_COLORS = {
+    select:  '#3b82f6',
+    insert:  '#10b981',
+    update:  '#f59e0b',
+    delete:  '#ef4444',
+    tps:     '#8b5cf6'
+};
+
 document.addEventListener('DOMContentLoaded', () => {
 
     // --- LOGIN CANVAS ANIMATION (ANTIGRAVITY STYLE) ---
@@ -9263,3 +9281,64 @@ window.saveChangePassword = async function() {
 };
 
 
+
+
+// -- Error Report Modal --------------------------------------------------------
+window.openErrorReportModal = function() {
+    var modal = document.getElementById('modal-error-report');
+    if (!modal) return;
+    var dest = document.getElementById('error-report-destination');
+    if (dest) dest.value = '';
+    var chk = document.getElementById('error-report-mask-pw');
+    if (chk) { chk.checked = true; window.updateReportToggle(chk); }
+    modal.style.display = 'flex';
+    if (dest) setTimeout(function(){ dest.focus(); }, 60);
+};
+window.closeErrorReportModal = function() {
+    var modal = document.getElementById('modal-error-report');
+    if (modal) modal.style.display = 'none';
+};
+document.addEventListener('click', function(e) {
+    var modal = document.getElementById('modal-error-report');
+    if (modal && e.target === modal) window.closeErrorReportModal();
+});
+window.updateReportToggle = function(chk) {
+    var track = document.getElementById('error-report-toggle-track');
+    var knob  = document.getElementById('error-report-toggle-knob');
+    if (!track || !knob) return;
+    if (chk.checked) { track.style.background = '#4f46e5'; knob.style.transform = 'translateX(22px)'; }
+    else { track.style.background = '#d1d5db'; knob.style.transform = 'translateX(0)'; }
+};
+window.generateErrorReport = function() {
+    var dest    = document.getElementById('error-report-destination');
+    var destVal = (dest && dest.value.trim()) ? dest.value.trim() : '/tmp/error_report';
+    var tbody   = document.getElementById('reports-table-tbody');
+    if (tbody) {
+        var emptyCell = tbody.querySelector('td[colspan]');
+        if (emptyCell) { emptyCell.closest('tr').remove(); }
+        var now = new Date();
+        var pad = function(n){ return String(n).padStart(2,'0'); };
+        var created  = pad(now.getDate())+'.'+pad(now.getMonth()+1)+'.'+now.getFullYear()+' '+pad(now.getHours())+':'+pad(now.getMinutes());
+        var ts       = now.getFullYear()+'-'+pad(now.getMonth()+1)+'-'+pad(now.getDate())+'T'+pad(now.getHours())+'-'+pad(now.getMinutes())+'-'+pad(now.getSeconds());
+        var filename = 'error_report_' + ts + '.tar.gz';
+        var filePath = destVal.replace(/\/$/,'') + '/' + filename;
+        var esc = function(s){ return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); };
+        var row = document.createElement('tr');
+        row.style.borderBottom = '1px solid #f3f4f6';
+        row.innerHTML = '<td style="padding:12px 20px;font-family:monospace;font-size:12px;color:#374151;">'+esc(filePath)+'</td>'
+            + '<td style="padding:12px 20px;color:#6b7280;">—</td>'
+            + '<td style="padding:12px 20px;color:#6b7280;">'+esc(created)+'</td>'
+            + '<td style="padding:12px 20px;"><button class="rpt-del" style="padding:5px 12px;background:white;border:1px solid #e5e7eb;border-radius:5px;font-size:12px;color:#ef4444;cursor:pointer;">Delete</button></td>';
+        row.querySelector('.rpt-del').addEventListener('click', (function(r) {
+            return function() {
+                r.remove();
+                var tb = document.getElementById('reports-table-tbody');
+                if (tb && !tb.querySelector('tr')) {
+                    tb.innerHTML = '<tr><td colspan="4" style="padding:60px 20px;text-align:center;"><div style="color:#6b7280;font-size:14px;">You haven\'t created reports yet. When you do, it\'ll show up here.</div></td></tr>';
+                }
+            };
+        })(row));
+        tbody.appendChild(row);
+    }
+    window.closeErrorReportModal();
+};
