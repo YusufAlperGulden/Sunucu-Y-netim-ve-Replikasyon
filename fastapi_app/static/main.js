@@ -7570,20 +7570,20 @@ function setOpsCenterStep(step) {
     if (step === 1) {
         if (p1) p1.style.display = 'block';
         if (p2) p2.style.display = 'none';
-        if (n1) n1.style.color = '#3a1c94';
-        if (n2) n2.style.color = '#9ca3af';
+        if (n1) { n1.style.color = '#111827'; n1.style.fontWeight = '600'; }
+        if (n2) { n2.style.color = '#9ca3af'; n2.style.fontWeight = '500'; }
         if (b1) { b1.style.background = '#3a1c94'; b1.style.color = 'white'; b1.style.border = 'none'; b1.innerHTML = '1'; }
         if (b2) { b2.style.background = 'transparent'; b2.style.color = '#9ca3af'; b2.style.border = '2px solid #d1d5db'; b2.innerHTML = '2'; }
-        if (btnBack) { btnBack.disabled = true; btnBack.style.color = '#9ca3af'; btnBack.style.cursor = 'not-allowed'; }
+        if (btnBack) { btnBack.disabled = true; btnBack.style.color = '#9ca3af'; btnBack.style.cursor = 'not-allowed'; btnBack.style.borderColor = '#d1d5db'; }
         if (btnNext) { btnNext.innerText = 'Continue'; btnNext.onclick = nextOpsCenterStep; }
     } else {
         if (p1) p1.style.display = 'none';
         if (p2) p2.style.display = 'block';
-        if (n1) n1.style.color = '#10b981';
-        if (n2) n2.style.color = '#3a1c94';
-        if (b1) { b1.style.background = '#10b981'; b1.style.color = 'white'; b1.style.border = 'none'; b1.innerHTML = '✓'; }
+        if (n1) { n1.style.color = '#374151'; n1.style.fontWeight = '500'; }
+        if (n2) { n2.style.color = '#111827'; n2.style.fontWeight = '600'; }
+        if (b1) { b1.style.background = '#3a1c94'; b1.style.color = 'white'; b1.style.border = 'none'; b1.innerHTML = '✓'; }
         if (b2) { b2.style.background = '#3a1c94'; b2.style.color = 'white'; b2.style.border = 'none'; b2.innerHTML = '2'; }
-        if (btnBack) { btnBack.disabled = false; btnBack.style.color = '#374151'; btnBack.style.cursor = 'pointer'; }
+        if (btnBack) { btnBack.disabled = false; btnBack.style.color = '#374151'; btnBack.style.cursor = 'pointer'; btnBack.style.borderColor = '#d1d5db'; }
         if (btnNext) { btnNext.innerText = 'Finish'; btnNext.onclick = submitEnableOpsCenter; }
     }
 }
@@ -7596,12 +7596,25 @@ window.prevOpsCenterStep = function() {
     setOpsCenterStep(1);
 };
 
+window.togglePasswordVisibility = function(inputId, btn) {
+    const input = document.getElementById(inputId);
+    if (!input) return;
+    if (input.type === 'password') {
+        input.type = 'text';
+        if (btn) btn.innerHTML = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"></path><line x1="1" y1="1" x2="23" y2="23"></line></svg>';
+    } else {
+        input.type = 'password';
+        if (btn) btn.innerHTML = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>';
+    }
+};
+
 window.submitEnableOpsCenter = async function() {
     const user = document.getElementById('ops-root-user')?.value.trim() || '';
     const email = document.getElementById('ops-root-email')?.value.trim() || '';
     const pass = document.getElementById('ops-root-pass')?.value || '';
     const confirmPass = document.getElementById('ops-root-confirm')?.value || '';
     const errEl = document.getElementById('ops-root-error');
+    const btn = document.getElementById('btn-ops-next');
 
     if (errEl) errEl.style.display = 'none';
 
@@ -7618,6 +7631,8 @@ window.submitEnableOpsCenter = async function() {
         return;
     }
 
+    if (btn) { btn.disabled = true; btn.innerText = 'Enabling...'; }
+
     try {
         const res = await apiFetch('/api/addons/ops-center/enable', {
             method: 'POST',
@@ -7632,13 +7647,15 @@ window.submitEnableOpsCenter = async function() {
         const resData = await res.json();
         if (res.ok && resData.success) {
             closeEnableOpsCenterModal();
-            loadAddons();
-            alert('✓ Ops-Center successfully enabled in Multi-Controller mode.');
+            await loadAddons();
+            if (typeof showToast === 'function') showToast('✓ Ops-Center successfully enabled in Multi-Controller mode.', 'success');
         } else {
             if (errEl) { errEl.innerText = resData.message || 'Failed to enable Ops-Center'; errEl.style.display = 'block'; }
         }
     } catch(e) {
         if (errEl) { errEl.innerText = 'Connection error'; errEl.style.display = 'block'; }
+    } finally {
+        if (btn) { btn.disabled = false; btn.innerText = 'Finish'; }
     }
 };
 
