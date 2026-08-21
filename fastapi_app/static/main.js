@@ -5941,6 +5941,15 @@ window.deployGoToStage = function(stage) {
         if (titleEl) {
             titleEl.textContent = `${deployWizard.mode === 'import' ? 'Import' : 'Deploy'} ${dbInfo.name} cluster`;
         }
+        // Reset SSH skip state
+        deployWizard.sshSkipped = false;
+        const skipCb = document.getElementById('deploy-skip-ssh');
+        if (skipCb) skipCb.checked = false;
+        const fw = document.getElementById('deploy-ssh-fields-wrap');
+        const sb = document.getElementById('deploy-ssh-skipped-banner');
+        if (fw) fw.style.display = 'block';
+        if (sb) sb.style.display = 'none';
+
         deployWizard.currentStep = 1;
         deployUpdateStepperUI();
         initDeployNodes();
@@ -6032,21 +6041,33 @@ window.deployJumpToStep = function(step) {
     deployUpdateStepperUI();
 };
 
+window.toggleSkipSsh = function() {
+    const skip = document.getElementById('deploy-skip-ssh')?.checked;
+    const fieldsWrap = document.getElementById('deploy-ssh-fields-wrap');
+    const skippedBanner = document.getElementById('deploy-ssh-skipped-banner');
+    if (fieldsWrap) fieldsWrap.style.display = skip ? 'none' : 'block';
+    if (skippedBanner) skippedBanner.style.display = skip ? 'flex' : 'none';
+    // Store skip state
+    deployWizard.sshSkipped = !!skip;
+};
+
 window.deployStepperNext = function() {
     const step = deployWizard.currentStep;
     const isImport = deployWizard.mode === 'import';
     const maxSteps = isImport ? 5 : 6;
 
+    // Step 3: DB password required only when NOT using a connection URL
     if (step === 3) {
+        const connUrl = document.getElementById('deploy-conn-url')?.value.trim();
         const pass = document.getElementById('deploy-db-pass')?.value;
-        if (!pass) {
-            alert(isImport ? 'Existing database password is required.' : 'DB Admin password is required.');
+        if (!connUrl && !pass) {
+            alert(isImport ? 'Please enter a Connection URL or the existing database password.' : 'Please enter a Connection URL or an Admin Password.');
             return;
         }
     } else if (step === 4) {
-        const validNodes = collectDeployNodes().filter(n => n.ip);
+        const validNodes = collectDeployNodes().filter(n => n.ip || n.url);
         if (validNodes.length === 0 || !validNodes.some(n => n.role === 'primary')) {
-            alert('At least 1 Primary node IP address is required.');
+            alert('At least 1 Primary node (IP address or Connection URL) is required.');
             return;
         }
         deployWizard.nodes = validNodes;
@@ -6086,10 +6107,14 @@ function deployUpdateStepperUI() {
             const labelColor = isActive ? '#111827' : isDone ? '#374151' : '#6b7280';
             const fontW = isActive ? '700' : '500';
 
+            const sshSkipped = deployWizard.sshSkipped && s.num === 2;
+            const displayLabel = sshSkipped
+                ? `${s.label} <span style="font-size:0.72rem;background:#dbeafe;color:#1d4ed8;border-radius:4px;padding:1px 5px;font-weight:600;">Skipped</span>`
+                : s.label;
             return `
                 <div onclick="deployJumpToStep(${s.num})" style="display:flex;align-items:center;gap:12px;cursor:pointer;">
                     <div style="width:28px;height:28px;border-radius:50%;background:${bg};border:2px solid ${border};color:${color};display:flex;align-items:center;justify-content:center;font-size:0.8rem;font-weight:600;flex-shrink:0;">${text}</div>
-                    <span style="font-size:0.88rem;color:${labelColor};font-weight:${fontW};">${s.label}</span>
+                    <span style="font-size:0.88rem;color:${labelColor};font-weight:${fontW};">${displayLabel}</span>
                 </div>
             `;
         }).join('');

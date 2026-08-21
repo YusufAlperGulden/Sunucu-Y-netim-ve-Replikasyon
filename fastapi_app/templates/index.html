@@ -1662,7 +1662,7 @@ Real OS metrics (CPU, RAM, Disk I/O) cannot be fetched directly from PostgreSQL 
         </div>
     </div>
 
-    <script src="/static/main.js?v=95"></script>
+    <script src="/static/main.js?v=101"></script>
 
 
 
@@ -3429,55 +3429,81 @@ Real OS metrics (CPU, RAM, Disk I/O) cannot be fetched directly from PostgreSQL 
           <!-- Step 2: SSH Configuration -->
           <div id="wizard-pane-2" class="wizard-pane" style="display:none;">
             <h3 style="margin:0 0 6px;font-size:1.15rem;font-weight:700;color:#111827;">SSH configuration</h3>
-            <p id="pane2-desc" style="margin:0 0 20px;font-size:0.85rem;color:#6b7280;">Enter SSH credentials to access the target hosts. All nodes will inherit these credentials.</p>
-            <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px;">
-              <div>
-                <label style="font-size:0.85rem;font-weight:500;color:#374151;display:block;margin-bottom:5px;"><span style="color:#ef4444;">*</span> SSH User</label>
-                <input id="deploy-ssh-user" type="text" value="root" placeholder="root" style="width:100%;padding:9px 12px;border:1px solid #d1d5db;border-radius:8px;font-size:0.88rem;box-sizing:border-box;">
-              </div>
-              <div>
-                <label style="font-size:0.85rem;font-weight:500;color:#374151;display:block;margin-bottom:5px;"><span style="color:#ef4444;">*</span> SSH Port</label>
-                <input id="deploy-ssh-port" type="number" value="22" min="1" max="65535" style="width:100%;padding:9px 12px;border:1px solid #d1d5db;border-radius:8px;font-size:0.88rem;box-sizing:border-box;">
-              </div>
-              <div style="grid-column:1/-1;">
-                <label style="font-size:0.85rem;font-weight:500;color:#374151;display:block;margin-bottom:5px;">Authentication Method</label>
-                <select id="deploy-ssh-auth-type" onchange="toggleSshAuthFields()" style="width:100%;padding:9px 12px;border:1px solid #d1d5db;border-radius:8px;font-size:0.88rem;box-sizing:border-box;background:white;">
-                  <option value="password">Password</option>
-                  <option value="key">PEM Private Key</option>
-                </select>
-              </div>
-              <div id="deploy-ssh-pass-field" style="grid-column:1/-1;">
-                <label style="font-size:0.85rem;font-weight:500;color:#374151;display:block;margin-bottom:5px;">SSH Password</label>
-                <input id="deploy-ssh-password" type="password" placeholder="Enter SSH password" style="width:100%;padding:9px 12px;border:1px solid #d1d5db;border-radius:8px;font-size:0.88rem;box-sizing:border-box;">
-              </div>
-              <div id="deploy-ssh-key-field" style="grid-column:1/-1;display:none;">
-                <label style="font-size:0.85rem;font-weight:500;color:#374151;display:block;margin-bottom:5px;">PEM Private Key</label>
-                <textarea id="deploy-ssh-key" rows="4" placeholder="-----BEGIN RSA PRIVATE KEY-----&#10;...&#10;-----END RSA PRIVATE KEY-----" style="width:100%;padding:9px 12px;border:1px solid #d1d5db;border-radius:8px;font-size:0.8rem;font-family:monospace;box-sizing:border-box;resize:vertical;"></textarea>
+            <p id="pane2-desc" style="margin:0 0 14px;font-size:0.85rem;color:#6b7280;">Enter SSH credentials to access the target hosts. All nodes will inherit these credentials.</p>
+
+            <!-- Skip SSH Banner -->
+            <div style="margin-bottom:16px;background:#eff6ff;border:1px solid #bfdbfe;border-radius:8px;padding:12px 16px;display:flex;align-items:flex-start;gap:12px;">
+              <div style="color:#2563eb;font-size:1.1rem;line-height:1;padding-top:1px;">🔗</div>
+              <div style="flex:1;">
+                <div style="font-size:0.85rem;font-weight:600;color:#1e3a8a;margin-bottom:3px;">No SSH access? Using a managed database (Neon, RDS, Supabase…)?</div>
+                <div style="font-size:0.8rem;color:#1e40af;margin-bottom:8px;">SSH credentials are <strong>optional</strong> for importing managed databases. You can skip this step and use a Connection URL in the next step instead.</div>
+                <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:0.85rem;font-weight:600;color:#1d4ed8;">
+                  <input id="deploy-skip-ssh" type="checkbox" onchange="toggleSkipSsh()" style="width:16px;height:16px;accent-color:#2563eb;">
+                  Skip SSH — I'll use a Connection URL only
+                </label>
               </div>
             </div>
 
-            <!-- SSH Connection Test -->
-            <div style="margin-top:16px;">
-              <div style="display:flex;align-items:center;gap:10px;">
-                <input id="deploy-ssh-test-host" type="text" placeholder="IP to test (e.g. 192.168.1.100)" style="flex:1;padding:9px 12px;border:1px solid #d1d5db;border-radius:8px;font-size:0.88rem;">
-                <button type="button" onclick="testSshConnection()" id="btn-test-ssh" style="padding:9px 18px;background:#4338ca;color:white;border:none;border-radius:8px;font-size:0.88rem;font-weight:500;cursor:pointer;white-space:nowrap;">Test Connection</button>
+            <!-- SSH Fields (hidden when skipping) -->
+            <div id="deploy-ssh-fields-wrap">
+              <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px;">
+                <div>
+                  <label style="font-size:0.85rem;font-weight:500;color:#374151;display:block;margin-bottom:5px;">SSH User <span style="color:#6b7280;font-weight:400;">(optional if skipping)</span></label>
+                  <input id="deploy-ssh-user" type="text" value="root" placeholder="root" style="width:100%;padding:9px 12px;border:1px solid #d1d5db;border-radius:8px;font-size:0.88rem;box-sizing:border-box;">
+                </div>
+                <div>
+                  <label style="font-size:0.85rem;font-weight:500;color:#374151;display:block;margin-bottom:5px;">SSH Port</label>
+                  <input id="deploy-ssh-port" type="number" value="22" min="1" max="65535" style="width:100%;padding:9px 12px;border:1px solid #d1d5db;border-radius:8px;font-size:0.88rem;box-sizing:border-box;">
+                </div>
+                <div style="grid-column:1/-1;">
+                  <label style="font-size:0.85rem;font-weight:500;color:#374151;display:block;margin-bottom:5px;">Authentication Method</label>
+                  <select id="deploy-ssh-auth-type" onchange="toggleSshAuthFields()" style="width:100%;padding:9px 12px;border:1px solid #d1d5db;border-radius:8px;font-size:0.88rem;box-sizing:border-box;background:white;">
+                    <option value="password">Password</option>
+                    <option value="key">PEM Private Key</option>
+                  </select>
+                </div>
+                <div id="deploy-ssh-pass-field" style="grid-column:1/-1;">
+                  <label style="font-size:0.85rem;font-weight:500;color:#374151;display:block;margin-bottom:5px;">SSH Password</label>
+                  <input id="deploy-ssh-password" type="password" placeholder="Enter SSH password" style="width:100%;padding:9px 12px;border:1px solid #d1d5db;border-radius:8px;font-size:0.88rem;box-sizing:border-box;">
+                </div>
+                <div id="deploy-ssh-key-field" style="grid-column:1/-1;display:none;">
+                  <label style="font-size:0.85rem;font-weight:500;color:#374151;display:block;margin-bottom:5px;">PEM Private Key</label>
+                  <textarea id="deploy-ssh-key" rows="4" placeholder="-----BEGIN RSA PRIVATE KEY-----&#10;...&#10;-----END RSA PRIVATE KEY-----" style="width:100%;padding:9px 12px;border:1px solid #d1d5db;border-radius:8px;font-size:0.8rem;font-family:monospace;box-sizing:border-box;resize:vertical;"></textarea>
+                </div>
               </div>
-              <div id="deploy-ssh-test-result" style="margin-top:10px;font-size:0.85rem;display:none;"></div>
+
+              <!-- SSH Connection Test -->
+              <div style="margin-top:4px;">
+                <div style="display:flex;align-items:center;gap:10px;">
+                  <input id="deploy-ssh-test-host" type="text" placeholder="IP to test (e.g. 192.168.1.100)" style="flex:1;padding:9px 12px;border:1px solid #d1d5db;border-radius:8px;font-size:0.88rem;">
+                  <button type="button" onclick="testSshConnection()" id="btn-test-ssh" style="padding:9px 18px;background:#4338ca;color:white;border:none;border-radius:8px;font-size:0.88rem;font-weight:500;cursor:pointer;white-space:nowrap;">Test Connection</button>
+                </div>
+                <div id="deploy-ssh-test-result" style="margin-top:10px;font-size:0.85rem;display:none;"></div>
+              </div>
+
+              <!-- Security toggles -->
+              <div style="margin-top:20px;border-top:1px solid #f3f4f6;padding-top:16px;">
+                <div style="font-size:0.88rem;font-weight:600;color:#374151;margin-bottom:10px;">Security &amp; Provisioning</div>
+                <div style="display:flex;flex-direction:column;gap:8px;">
+                  <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:0.85rem;color:#374151;">
+                    <input id="deploy-disable-fw" type="checkbox" checked style="width:16px;height:16px;accent-color:#4338ca;"> Disable Firewall
+                  </label>
+                  <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:0.85rem;color:#374151;">
+                    <input id="deploy-disable-selinux" type="checkbox" checked style="width:16px;height:16px;accent-color:#4338ca;"> Disable SELinux / AppArmor
+                  </label>
+                  <label id="wrap-deploy-install-sw" style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:0.85rem;color:#374151;">
+                    <input id="deploy-install-sw" type="checkbox" checked style="width:16px;height:16px;accent-color:#4338ca;"> Automatically Install Database Software
+                  </label>
+                </div>
+              </div>
             </div>
 
-            <!-- Security toggles -->
-            <div style="margin-top:20px;border-top:1px solid #f3f4f6;padding-top:16px;">
-              <div style="font-size:0.88rem;font-weight:600;color:#374151;margin-bottom:10px;">Security & Provisioning</div>
-              <div style="display:flex;flex-direction:column;gap:8px;">
-                <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:0.85rem;color:#374151;">
-                  <input id="deploy-disable-fw" type="checkbox" checked style="width:16px;height:16px;accent-color:#4338ca;"> Disable Firewall
-                </label>
-                <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:0.85rem;color:#374151;">
-                  <input id="deploy-disable-selinux" type="checkbox" checked style="width:16px;height:16px;accent-color:#4338ca;"> Disable SELinux / AppArmor
-                </label>
-                <label id="wrap-deploy-install-sw" style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:0.85rem;color:#374151;">
-                  <input id="deploy-install-sw" type="checkbox" checked style="width:16px;height:16px;accent-color:#4338ca;"> Automatically Install Database Software
-                </label>
+            <!-- SSH Skipped State -->
+            <div id="deploy-ssh-skipped-banner" style="display:none;background:#f0fdf4;border:1px solid #bbf7d0;border-radius:8px;padding:16px 18px;display:none;align-items:center;gap:14px;">
+              <span style="font-size:1.4rem;">✅</span>
+              <div>
+                <div style="font-size:0.88rem;font-weight:600;color:#15803d;margin-bottom:2px;">SSH step skipped</div>
+                <div style="font-size:0.8rem;color:#166534;">You'll provide a Connection URL in the next step. This is perfect for managed databases like Neon, AWS RDS, Supabase, or Google Cloud SQL.</div>
               </div>
             </div>
           </div>
