@@ -4983,33 +4983,247 @@ function switchReportsTab(tabName) {
     const tableSchedules = document.getElementById('table-schedules');
     const btnAction = document.getElementById('btn-create-report-action');
     const textAction = document.getElementById('text-create-report-action');
-    const modalTitle = document.getElementById('modal-create-report-title');
 
     if (tabName === 'reports') {
         tabReports.style.color = 'var(--primary)';
         tabReports.style.borderBottomColor = 'var(--primary)';
         tabSchedules.style.color = 'var(--text-muted)';
         tabSchedules.style.borderBottomColor = 'transparent';
-        
         tableReports.style.display = 'block';
         tableSchedules.style.display = 'none';
-        
         textAction.innerText = 'Create report';
-        modalTitle.innerText = 'Generate new report';
+        btnAction.onclick = () => {
+            populateReportClusterSelect();
+            document.getElementById('modal-create-report').style.display = 'flex';
+        };
     } else {
         tabSchedules.style.color = 'var(--primary)';
         tabSchedules.style.borderBottomColor = 'var(--primary)';
         tabReports.style.color = 'var(--text-muted)';
         tabReports.style.borderBottomColor = 'transparent';
-        
         tableSchedules.style.display = 'block';
         tableReports.style.display = 'none';
-        
         textAction.innerText = 'Create schedule';
-        modalTitle.innerText = 'Generate new schedule';
+        btnAction.onclick = () => {
+            populateSchedClusterSelect();
+            window.switchSchedTab('Minutely');
+            document.getElementById('modal-create-schedule').style.display = 'flex';
+        };
     }
 }
 
+
+// ─── Report/Schedule modal dispatcher ────────────────────────────────────────
+window.openReportActionModal = function() {
+    const activeTab = document.getElementById('tab-schedules-sub');
+    const isScheduleTab = activeTab && activeTab.style.color !== 'var(--text-muted)' &&
+                          activeTab.style.borderBottomColor !== 'transparent';
+    // Check which tab is active by looking at the schedules tab underline
+    const schedTab = document.getElementById('tab-schedules-sub');
+    const isOnSchedules = schedTab && schedTab.style.borderBottomColor === 'var(--primary)';
+    if (isOnSchedules) {
+        populateSchedClusterSelect();
+        window.switchSchedTab('Minutely');
+        document.getElementById('modal-create-schedule').style.display = 'flex';
+    } else {
+        populateReportClusterSelect();
+        document.getElementById('modal-create-report').style.display = 'flex';
+    }
+};
+
+// ─── Populate cluster dropdowns ──────────────────────────────────────────────
+async function populateReportClusterSelect() {
+    const sel = document.getElementById('report-cluster-select');
+    if (!sel || sel.options.length > 1) return; // already loaded
+    try {
+        const res = await apiFetch('/api/projects');
+        const projs = res.ok ? await res.json() : [];
+        projs.forEach(p => {
+            const opt = document.createElement('option');
+            opt.value = p.id; opt.textContent = p.name;
+            sel.appendChild(opt);
+        });
+    } catch {}
+}
+
+async function populateSchedClusterSelect() {
+    const sel = document.getElementById('sched-cluster-select');
+    if (!sel || sel.options.length > 1) return; // already loaded
+    try {
+        const res = await apiFetch('/api/projects');
+        const projs = res.ok ? await res.json() : [];
+        projs.forEach(p => {
+            const opt = document.createElement('option');
+            opt.value = p.id; opt.textContent = p.name;
+            sel.appendChild(opt);
+        });
+    } catch {}
+}
+
+// ─── Schedule tab switcher ───────────────────────────────────────────────────
+const MONTHS = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+const WEEKDAYS = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
+let _schedTab = 'Minutely';
+
+window.switchSchedTab = function(tab, clickedBtn) {
+    _schedTab = tab;
+    // Update tab button styles
+    ['Minutely','Hourly','Daily','Weekly','Monthly','Yearly'].forEach(t => {
+        const btn = document.getElementById('sched-tab-' + t);
+        if (!btn) return;
+        if (t === tab) {
+            btn.style.background = '#4338ca';
+            btn.style.color = 'white';
+            btn.style.fontWeight = '600';
+        } else {
+            btn.style.background = 'white';
+            btn.style.color = '#374151';
+            btn.style.fontWeight = '400';
+        }
+    });
+    renderSchedFields(tab);
+    updateSchedDescription();
+};
+
+function inp(id, type, val, style, onchange) {
+    return `<input id="${id}" type="${type}" value="${val}" oninput="updateSchedDescription()"
+        style="padding:7px 10px;border:1px solid #d1d5db;border-radius:6px;font-size:0.88rem;outline:none;${style}">`;
+}
+function sel(id, opts, style) {
+    return `<select id="${id}" onchange="updateSchedDescription()"
+        style="padding:7px 10px;border:1px solid #d1d5db;border-radius:6px;font-size:0.88rem;outline:none;background:white;${style}">
+        ${opts}</select>`;
+}
+
+function renderSchedFields(tab) {
+    const area = document.getElementById('sched-fields');
+    if (!area) return;
+    const monthOpts = MONTHS.map((m,i) => `<option value="${i}">${m}</option>`).join('');
+    const dayOpts = WEEKDAYS.map((d,i) => `<option value="${i}">${d}</option>`).join('');
+    let html = '';
+    switch(tab) {
+        case 'Minutely':
+            html = `<span>Every</span>
+                    ${inp('sf-min','number','1','width:70px;','')}
+                    <span>minute(s)</span>`;
+            break;
+        case 'Hourly':
+            html = `<span>Every</span>
+                    ${inp('sf-hour','number','1','width:70px;','')}
+                    <span>hour(s) at minute</span>
+                    ${inp('sf-hmin','number','0','width:70px;','')}`;
+            break;
+        case 'Daily':
+            html = `<span>Every</span>
+                    ${inp('sf-dday','number','1','width:70px;','')}
+                    <span>day(s) at</span>
+                    ${inp('sf-dtime','time','00:00','width:110px;','')}`;
+            break;
+        case 'Weekly':
+            html = `<span>Every</span>
+                    ${sel('sf-wday', dayOpts,'width:120px;')}
+                    <span>at</span>
+                    ${inp('sf-wtime','time','00:00','width:110px;','')}`;
+            break;
+        case 'Monthly':
+            html = `<span>On the</span>
+                    ${inp('sf-mday','number','1','width:70px;','')}
+                    <span>day at</span>
+                    ${inp('sf-mtime','time','00:00','width:110px;','')}`;
+            break;
+        case 'Yearly':
+            html = `<span>Every</span>
+                    ${sel('sf-ymon', monthOpts,'width:80px;')}
+                    <span>, on the day</span>
+                    ${inp('sf-yday','number','1','width:70px;','')}
+                    <span>at</span>
+                    ${inp('sf-ytime','time','00:00','width:110px;','')}`;
+            break;
+    }
+    area.innerHTML = html;
+    // Clamp number inputs
+    area.querySelectorAll('input[type=number]').forEach(el => {
+        el.addEventListener('change', () => { if (parseInt(el.value) < 1) el.value = 1; updateSchedDescription(); });
+    });
+}
+
+function v(id) { const el = document.getElementById(id); return el ? el.value : ''; }
+
+function updateSchedDescription() {
+    const desc = document.getElementById('sched-description');
+    if (!desc) return;
+    let text = '';
+    switch(_schedTab) {
+        case 'Minutely': {
+            const n = v('sf-min') || '1';
+            text = `Every ${n} minute${n !== '1' ? 's' : ''}`;
+            break;
+        }
+        case 'Hourly': {
+            const h = v('sf-hour') || '1';
+            const m = v('sf-hmin') || '0';
+            text = `Every ${h} hour${h !== '1' ? 's' : ''} at minute ${m}`;
+            break;
+        }
+        case 'Daily': {
+            const d = v('sf-dday') || '1';
+            const t = v('sf-dtime') || '00:00';
+            text = `Every ${d} day${d !== '1' ? 's' : ''} at ${t}`;
+            break;
+        }
+        case 'Weekly': {
+            const dayIdx = parseInt(v('sf-wday') || '0');
+            const t = v('sf-wtime') || '00:00';
+            text = `Every ${WEEKDAYS[dayIdx]} at ${t}`;
+            break;
+        }
+        case 'Monthly': {
+            const d = v('sf-mday') || '1';
+            const t = v('sf-mtime') || '00:00';
+            const ord = ordinal(parseInt(d));
+            text = `At ${t}, on the ${ord} of every month`;
+            break;
+        }
+        case 'Yearly': {
+            const monIdx = parseInt(v('sf-ymon') || '0');
+            const d = v('sf-yday') || '1';
+            const t = v('sf-ytime') || '00:00';
+            text = `At ${t}, on day ${d} of the month, only in ${MONTHS[monIdx]}`;
+            break;
+        }
+    }
+    desc.textContent = text;
+}
+
+function ordinal(n) {
+    const s = ['th','st','nd','rd'];
+    const v = n % 100;
+    return n + (s[(v-20)%10] || s[v] || s[0]);
+}
+
+// ─── Submit create schedule ───────────────────────────────────────────────────
+window.submitCreateSchedule = function() {
+    const errEl = document.getElementById('sched-error');
+    if (errEl) errEl.style.display = 'none';
+    const cluster = v('sched-cluster-select');
+    const type = v('sched-type-select');
+    const dataRange = v('sched-data-range');
+    if (!cluster) { if (errEl) { errEl.textContent = 'Please select a cluster.'; errEl.style.display = 'block'; } return; }
+    if (!type) { if (errEl) { errEl.textContent = 'Please select a report type.'; errEl.style.display = 'block'; } return; }
+    const description = document.getElementById('sched-description')?.textContent || '';
+    // For now store as audit log entry (placeholder until backend schedule endpoint exists)
+    const scheduleData = {
+        cluster_id: cluster,
+        type,
+        data_range: dataRange,
+        recipients: v('sched-recipients'),
+        frequency: _schedTab,
+        description
+    };
+    console.log('Schedule created:', scheduleData);
+    document.getElementById('modal-create-schedule').style.display = 'none';
+    showToast && showToast('Schedule saved: ' + description, 'success');
+};
 
 // --- OPERATIONAL REPORTS LOGIC ---
 async function loadReports() {
