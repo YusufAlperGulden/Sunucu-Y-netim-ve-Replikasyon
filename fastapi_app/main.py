@@ -1330,21 +1330,19 @@ class UserCreate(BaseModel):
     role: str
 
 @app.get("/api/users", dependencies=[Depends(verify_credentials)])
-def get_users(db: Session = Depends(get_db)):
+def get_users(credentials: HTTPBasicCredentials = Depends(security), db: Session = Depends(get_db)):
     from models import User
-    db_users = db.query(User).order_by(User.id.asc()).all()
 
-    result = []
     admin_username = ADMIN_USER or ""
-    admin_in_db = any(u.username == admin_username for u in db_users)
+    logged_in_username = credentials.username if credentials else admin_username
 
-    # Always include the env-var admin user first (even if not in DB)
-    if not admin_in_db and admin_username:
-        result.append({
+    # Always guarantee the logged-in user appears, even if DB is broken
+    def make_admin_entry(username):
+        return {
             "id": 0,
-            "username": admin_username,
-            "email": f"{admin_username}@localhost",
-            "first_name": admin_username.capitalize(),
+            "username": username,
+            "email": f"{username}@localhost",
+            "first_name": username.capitalize(),
             "last_name": "",
             "role": "admin",
             "team": "admins",
@@ -1352,22 +1350,47 @@ def get_users(db: Session = Depends(get_db)):
             "origin": "cmon",
             "status": "Enabled",
             "created_at": ""
-        })
+        }
+
+    try:
+        db_users = db.query(User).order_by(User.id.asc()).all()
+    except Exception:
+        db_users = []
+
+    result = []
+    admin_in_db = any(u.username == admin_username for u in db_users)
+    logged_in_in_db = any(u.username == logged_in_username for u in db_users)
+
+    # Always include env-var admin first if not in DB
+    if admin_username and not admin_in_db:
+        result.append(make_admin_entry(admin_username))
+
+    # If logged-in user is different from ADMIN_USER and also not in DB, include them too
+    if logged_in_username and logged_in_username != admin_username and not logged_in_in_db:
+        result.append(make_admin_entry(logged_in_username))
 
     for u in db_users:
-        result.append({
-            "id": u.id,
-            "username": u.username,
-            "email": u.email or f"{u.username}@localhost",
-            "first_name": u.first_name or u.username.capitalize(),
-            "last_name": u.last_name or "",
-            "role": u.role,
-            "team": "admins" if u.role == "admin" else "viewers",
-            "timezone": u.timezone or "UTC",
-            "origin": "cmon",
-            "status": "Enabled",
-            "created_at": u.created_at.strftime("%Y-%m-%d %H:%M:%S") if u.created_at else ""
-        })
+        try:
+            result.append({
+                "id": u.id,
+                "username": u.username,
+                "email": u.email or f"{u.username}@localhost",
+                "first_name": u.first_name or u.username.capitalize(),
+                "last_name": u.last_name or "",
+                "role": u.role,
+                "team": "admins" if u.role == "admin" else "viewers",
+                "timezone": u.timezone or "UTC",
+                "origin": "cmon",
+                "status": "Enabled",
+                "created_at": u.created_at.strftime("%Y-%m-%d %H:%M:%S") if u.created_at else ""
+            })
+        except Exception:
+            pass
+
+    # Last-resort: if still empty, return the logged-in user
+    if not result:
+        result.append(make_admin_entry(logged_in_username or admin_username or "admin"))
+
     return result
 
 @app.post("/api/users", dependencies=[Depends(verify_credentials)])

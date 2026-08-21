@@ -3067,6 +3067,11 @@ function wlNoNodes() {
                 // Only fetch initial data after successful login
                 fetchProjects();
         fetchRecentAlarms();
+                // Re-run routing so view-specific loaders (incl. users) fire with valid credentials
+                setTimeout(() => {
+                    if (typeof handleRouting === 'function') handleRouting();
+                    if (typeof window.reloadUsers === 'function') window.reloadUsers();
+                }, 150);
             } else {
                 loginError.style.display = 'block';
                 loginError.innerText = 'Invalid username or password';
