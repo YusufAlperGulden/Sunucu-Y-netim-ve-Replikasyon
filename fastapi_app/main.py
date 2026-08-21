@@ -95,12 +95,15 @@ def run_background_db_init():
                 id SERIAL PRIMARY KEY,
                 provider VARCHAR(50) NOT NULL,
                 label VARCHAR(100) NOT NULL,
-                encrypted_key_id VARCHAR(500),
-                encrypted_secret VARCHAR(500),
+                encrypted_key_id TEXT,
+                encrypted_secret TEXT,
                 bucket VARCHAR(255),
                 region VARCHAR(100),
                 created_at TIMESTAMP DEFAULT NOW()
             )""",
+            "ALTER TABLE cloud_credentials ALTER COLUMN encrypted_key_id TYPE TEXT",
+            "ALTER TABLE cloud_credentials ALTER COLUMN encrypted_secret TYPE TEXT",
+
             """CREATE TABLE IF NOT EXISTS notification_services (
                 id SERIAL PRIMARY KEY,
                 service_type VARCHAR(50) NOT NULL,
